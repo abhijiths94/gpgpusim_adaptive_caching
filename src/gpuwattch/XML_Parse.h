@@ -43,10 +43,10 @@
 //#define _CRT_SECURE_NO_DEPRECATE
 //#endif
 
+#include "xmlParser.h"
+#include <iostream>
 #include <stdio.h>
 #include <string.h>
-#include <iostream>
-#include "xmlParser.h"
 using namespace std;
 
 /*
@@ -66,7 +66,7 @@ ToXMLStringTool tx,tx2;
 //           where this header is included but they don't use the variable.  Now
 //           this is extern'd here and the storage/definition is in the
 //           XML_Parse.cc file
-extern const char* perf_count_label[];
+extern const char *perf_count_label[];
 
 enum perf_count_t {
   TOT_INST = 0,
@@ -117,8 +117,8 @@ typedef struct {
 } predictor_systemcore;
 typedef struct {
   int number_entries;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   double total_hits;
   double total_accesses;
   double total_misses;
@@ -128,8 +128,8 @@ typedef struct {
   // params
   double icache_config[20];
   int buffer_sizes[20];
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   // stats
   double total_accesses;
   double read_accesses;
@@ -149,8 +149,8 @@ typedef struct {
 typedef struct {
   // params
   int number_entries;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   // stats
   double total_accesses;
   double read_accesses;
@@ -167,8 +167,8 @@ typedef struct {
   // params
   double dcache_config[20];
   int buffer_sizes[20];
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   // stats
   double total_accesses;
   double read_accesses;
@@ -340,11 +340,11 @@ typedef struct {
 
   double num_idle_cores;
 
-  int rf_banks;             // (4)
-  int simd_width;           // (8)
-  int collector_units;      // (4)
-  double core_clock_ratio;  // (2.0)
-  int warp_size;            // (32)
+  int rf_banks;            // (4)
+  int simd_width;          // (8)
+  int collector_units;     // (4)
+  double core_clock_ratio; // (2.0)
+  int warp_size;           // (32)
 
   // all subnodes at the level of system.core(0-n)
   predictor_systemcore predictor;
@@ -354,7 +354,7 @@ typedef struct {
   dcache_systemcore dcache;
   dcache_systemcore ccache;
   dcache_systemcore tcache;
-  dcache_systemcore sharedmemory;  // added by Jingwen
+  dcache_systemcore sharedmemory; // added by Jingwen
   BTB_systemcore BTB;
 
 } system_core;
@@ -366,8 +366,8 @@ typedef struct {
   int clockrate;
   int ports[20];
   int device_type;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   char threeD_stack[20];
   // stats
   double total_accesses;
@@ -386,8 +386,8 @@ typedef struct {
   int clockrate;
   int ports[20];
   int device_type;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   char threeD_stack[20];
   // stats
   double total_accesses;
@@ -404,8 +404,8 @@ typedef struct {
   int clockrate;
   int ports[20];
   int device_type;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   char threeD_stack[20];
   int buffer_sizes[20];
   // stats
@@ -446,8 +446,8 @@ typedef struct {
   int clockrate;
   int ports[20];
   int device_type;
-  int cache_policy;  // 0 no write or write-though with non-write allocate;1
-                     // write-back with write-allocate
+  int cache_policy; // 0 no write or write-though with non-write allocate;1
+                    // write-back with write-allocate
   char threeD_stack[20];
   int buffer_sizes[20];
   // stats
@@ -680,11 +680,11 @@ typedef struct {
 } root_system;
 
 class ParseXML {
- public:
-  void parse(char* filepath);
+public:
+  void parse(char *filepath);
   void initialize();
 
- public:
+public:
   root_system sys;
 };
 

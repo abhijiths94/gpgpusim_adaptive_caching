@@ -31,28 +31,25 @@
 
 #define GLOBALVAR
 #include "array.h"
-#include <assert.h>
-#include <math.h>
-#include <iostream>
 #include "cacti/area.h"
 #include "decoder.h"
 #include "globalvar.h"
 #include "parameter.h"
+#include <assert.h>
+#include <iostream>
+#include <math.h>
 
 using namespace std;
 
 ArrayST::ArrayST(const InputParameter *configure_interface, string _name,
                  enum Device_ty device_ty_, bool opt_local_,
                  enum Core_type core_ty_, bool _is_default)
-    : l_ip(*configure_interface),
-      name(_name),
-      device_ty(device_ty_),
-      opt_local(opt_local_),
-      core_ty(core_ty_),
-      is_default(_is_default) {
-  if (l_ip.cache_sz < 64) l_ip.cache_sz = 64;
-  l_ip.error_checking();  // not only do the error checking but also fill some
-                          // missing parameters
+    : l_ip(*configure_interface), name(_name), device_ty(device_ty_),
+      opt_local(opt_local_), core_ty(core_ty_), is_default(_is_default) {
+  if (l_ip.cache_sz < 64)
+    l_ip.cache_sz = 64;
+  l_ip.error_checking(); // not only do the error checking but also fill some
+                         // missing parameters
   optimize_array();
 }
 
@@ -75,47 +72,48 @@ void ArrayST::optimize_array() {
 
   if ((local_result.cycle_time - throughput) <= 1e-10)
     throughput_overflow = false;
-  if ((local_result.access_time - latency) <= 1e-10) latency_overflow = false;
+  if ((local_result.access_time - latency) <= 1e-10)
+    latency_overflow = false;
 
   if (opt_for_clk && opt_local) {
     if (throughput_overflow || latency_overflow) {
       l_ip.ed = 0;
 
-      l_ip.delay_wt = 100;  // Fixed number, make sure timing can be satisfied.
+      l_ip.delay_wt = 100; // Fixed number, make sure timing can be satisfied.
       l_ip.cycle_time_wt = 1000;
 
-      l_ip.area_wt = 10;  // Fixed number, This is used to exhaustive search for
-                          // individual components.
-      l_ip.dynamic_power_wt = 10;  // Fixed number, This is used to exhaustive
-                                   // search for individual components.
+      l_ip.area_wt = 10; // Fixed number, This is used to exhaustive search for
+                         // individual components.
+      l_ip.dynamic_power_wt = 10; // Fixed number, This is used to exhaustive
+                                  // search for individual components.
       l_ip.leakage_power_wt = 10;
 
       l_ip.delay_dev =
-          1000000;  // Fixed number, make sure timing can be satisfied.
+          1000000; // Fixed number, make sure timing can be satisfied.
       l_ip.cycle_time_dev = 100;
 
-      l_ip.area_dev = 1000000;  // Fixed number, This is used to exhaustive
-                                // search for individual components.
+      l_ip.area_dev = 1000000; // Fixed number, This is used to exhaustive
+                               // search for individual components.
       l_ip.dynamic_power_dev =
-          1000000;  // Fixed number, This is used to exhaustive search for
-                    // individual components.
+          1000000; // Fixed number, This is used to exhaustive search for
+                   // individual components.
       l_ip.leakage_power_dev = 1000000;
 
       throughput_overflow =
-          true;  // Reset overflow flag before start optimization iterations
+          true; // Reset overflow flag before start optimization iterations
       latency_overflow = true;
 
-      temp_res = &local_result;  // Clean up the result for optimized for ED^2P
+      temp_res = &local_result; // Clean up the result for optimized for ED^2P
       temp_res->cleanup();
     }
 
     while ((throughput_overflow || latency_overflow) &&
-           l_ip.cycle_time_dev > 10)  // && l_ip.delay_dev > 10
+           l_ip.cycle_time_dev > 10) // && l_ip.delay_dev > 10
     {
       compute_base_power();
 
       l_ip.cycle_time_dev -=
-          10;  // This is the time_dev to be used for next iteration
+          10; // This is the time_dev to be used for next iteration
 
       //		from best area to worst area -->worst timing to best
       // timing
@@ -123,8 +121,8 @@ void ArrayST::optimize_array() {
            (local_result.access_time - latency) <= 1e-10) ||
           (local_result.data_array2->area_efficiency <
                area_efficiency_threshold &&
-           l_ip.assoc == 0)) {  // if no satisfiable solution is found,the most
-                                // aggressive one is left
+           l_ip.assoc == 0)) { // if no satisfiable solution is found,the most
+                               // aggressive one is left
         candidate_solutions.push_back(local_result);
         // output_data_csv(candidate_solutions.back());
         if (((local_result.cycle_time - throughput) <= 1e-10) &&
@@ -143,10 +141,10 @@ void ArrayST::optimize_array() {
         if ((local_result.access_time - latency) <= 1e-10)
           latency_overflow = false;
 
-        if (l_ip.cycle_time_dev > 10) {  // if not >10 local_result is the last
-                                         // result, it cannot be cleaned up
-          temp_res = &local_result;      // Only solutions not saved in the list
-                                         // need to be cleaned up
+        if (l_ip.cycle_time_dev > 10) { // if not >10 local_result is the last
+                                        // result, it cannot be cleaned up
+          temp_res = &local_result;     // Only solutions not saved in the list
+                                        // need to be cleaned up
           temp_res->cleanup();
         }
       }

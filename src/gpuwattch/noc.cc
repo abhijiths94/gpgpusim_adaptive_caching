@@ -37,26 +37,21 @@
  ********************************************************************/
 
 #include "noc.h"
-#include <assert.h>
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include <string>
 #include "XML_Parse.h"
 #include "cacti/basic_circuit.h"
 #include "const.h"
 #include "io.h"
 #include "parameter.h"
+#include <algorithm>
+#include <assert.h>
+#include <cmath>
+#include <iostream>
+#include <string>
 
-NoC::NoC(ParseXML* XML_interface, int ithNoC_, InputParameter* interface_ip_,
+NoC::NoC(ParseXML *XML_interface, int ithNoC_, InputParameter *interface_ip_,
          double M_traffic_pattern_, double link_len_)
-    : XML(XML_interface),
-      ithNoC(ithNoC_),
-      interface_ip(*interface_ip_),
-      router(0),
-      link_bus(0),
-      link_bus_exist(false),
-      router_exist(false),
+    : XML(XML_interface), ithNoC(ithNoC_), interface_ip(*interface_ip_),
+      router(0), link_bus(0), link_bus_exist(false), router_exist(false),
       M_traffic_pattern(M_traffic_pattern_) {
   /*
    * initialize, compute and optimize individual components.
@@ -82,7 +77,7 @@ NoC::NoC(ParseXML* XML_interface, int ithNoC_, InputParameter* interface_ip_,
                        */
     init_router();
   } else {
-    init_link_bus(link_len_);  // if bus compute bus
+    init_link_bus(link_len_); // if bus compute bus
   }
 
   //  //clock power
@@ -133,7 +128,7 @@ void NoC ::init_link_bus(double link_len_) {
   link_len /= (nocdynp.horizontal_nodes + nocdynp.vertical_nodes) / 2;
 
   if (nocdynp.total_nodes > 1)
-    link_len /= 2;  // All links are shared by neighbors
+    link_len /= 2; // All links are shared by neighbors
   link_bus = new interconnect(name, Uncore_device, 1, 1, nocdynp.flit_size,
                               link_len, &interface_ip, 3, true /*pipelinable*/,
                               nocdynp.route_over_perc);
@@ -158,7 +153,7 @@ void NoC::computeEnergy(bool is_tdp) {
     stats_t.readAc.access = M;
     tdp_stats = stats_t;
     if (router_exist) {
-      set_pppm(pppm_t, 1 * M, 1, 1, 1);  // reset traffic pattern
+      set_pppm(pppm_t, 1 * M, 1, 1, 1); // reset traffic pattern
       router->power = router->power * pppm_t;
       set_pppm(pppm_t, nocdynp.total_nodes, nocdynp.total_nodes,
                nocdynp.total_nodes, nocdynp.total_nodes);
@@ -173,7 +168,7 @@ void NoC::computeEnergy(bool is_tdp) {
       else
         set_pppm(pppm_t, 1 * M_traffic_pattern * M * (nocdynp.min_ports),
                  nocdynp.global_linked_ports, nocdynp.global_linked_ports,
-                 nocdynp.global_linked_ports);  // reset traffic pattern
+                 nocdynp.global_linked_ports); // reset traffic pattern
 
       link_bus_tot_per_Router.power = link_bus->power * pppm_t;
 
@@ -209,7 +204,7 @@ void NoC::computeEnergy(bool is_tdp) {
           (router->buffer.rt_power + router->crossbar.rt_power +
            router->arbiter.rt_power) *
               pppm_t +
-          router->power * pppm_lkg;  // TDP power must be calculated first!
+          router->power * pppm_lkg; // TDP power must be calculated first!
       rt_power = rt_power + router->rt_power;
     }
     if (link_bus_exist) {
@@ -402,7 +397,7 @@ void NoC::set_noc_param() {
   nocdynp.flit_size = XML->sys.NoC[ithNoC].flit_bits;
   if (nocdynp.type) {
     nocdynp.input_ports = XML->sys.NoC[ithNoC].input_ports;
-    nocdynp.output_ports = XML->sys.NoC[ithNoC].output_ports;  // later minus 1
+    nocdynp.output_ports = XML->sys.NoC[ithNoC].output_ports; // later minus 1
     nocdynp.min_ports = min(nocdynp.input_ports, nocdynp.output_ports);
     nocdynp.global_linked_ports =
         (nocdynp.input_ports - 1) + (nocdynp.output_ports - 1);

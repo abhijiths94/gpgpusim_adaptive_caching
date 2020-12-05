@@ -31,21 +31,21 @@
 
 #ifndef SHAREDCACHE_H_
 #define SHAREDCACHE_H_
-#include <vector>
 #include "XML_Parse.h"
 #include "array.h"
 #include "basic_components.h"
 #include "cacti/area.h"
 #include "cacti/parameter.h"
 #include "logic.h"
+#include <vector>
 
 class SharedCache : public Component {
- public:
-  ParseXML* XML;
+public:
+  ParseXML *XML;
   int ithCache;
   InputParameter interface_ip;
   enum cache_level cacheL;
-  DataCache unicache;  // Shared cache
+  DataCache unicache; // Shared cache
   CacheDynParam cachep;
   statsDef homenode_tdp_stats;
   statsDef homenode_rtp_stats;
@@ -58,8 +58,8 @@ class SharedCache : public Component {
   double scktRatio, executionTime;
   //   Component L2Tot, cc, cc1, ccTot;
 
-  SharedCache(ParseXML* XML_interface, int ithCache_,
-              InputParameter* interface_ip_, enum cache_level cacheL_ = L2);
+  SharedCache(ParseXML *XML_interface, int ithCache_,
+              InputParameter *interface_ip_, enum cache_level cacheL_ = L2);
   void set_cache_param();
   void computeEnergy(bool is_tdp = true);
   void displayEnergy(uint32_t indent = 0, bool is_tdp = true);
@@ -67,12 +67,12 @@ class SharedCache : public Component {
 };
 
 class CCdir : public Component {
- public:
-  ParseXML* XML;
+public:
+  ParseXML *XML;
   int ithCache;
   InputParameter interface_ip;
-  DataCache dc;  // Shared cache
-  ArrayST* shadow_dir;
+  DataCache dc; // Shared cache
+  ArrayST *shadow_dir;
   //	cache_processor llCache,directory, directory1, inv_dir;
 
   // pipeline pipeLogicCache, pipeLogicDirectory;
@@ -80,7 +80,7 @@ class CCdir : public Component {
   double scktRatio, clockRate, executionTime;
   Component L2Tot, cc, cc1, ccTot;
 
-  CCdir(ParseXML* XML_interface, int ithCache_, InputParameter* interface_ip_);
+  CCdir(ParseXML *XML_interface, int ithCache_, InputParameter *interface_ip_);
   void computeEnergy(bool is_tdp = true);
   void displayEnergy(uint32_t indent = 0, bool is_tdp = true);
   ~CCdir();

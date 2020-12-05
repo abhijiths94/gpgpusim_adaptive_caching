@@ -90,25 +90,27 @@ void gpgpusim_cuda_vprintf(const ptx_instruction *pI, ptx_thread_info *thread,
     assert(size < 1024 * sizeof(unsigned long long));
     thread->m_local_mem->read(from_addr, size, buffer);
     addr_t addr =
-        (addr_t)buffer[0];  // should be pointer to generic memory location
+        (addr_t)buffer[0]; // should be pointer to generic memory location
     memory_space *mem = NULL;
     memory_space_t space = generic_space;
     decode_space(space, thread, actual_param_op, mem,
-                 addr);  // figure out which space
+                 addr); // figure out which space
     if (arg == 0) {
       unsigned len = 0;
       char b = 0;
-      do {  // figure out length
+      do { // figure out length
         mem->read(addr + len, 1, &b);
         len++;
       } while (b);
       fmtstr = (char *)malloc(len + 64);
-      for (int i = 0; i < len; i++) mem->read(addr + i, 1, fmtstr + i);
+      for (int i = 0; i < len; i++)
+        mem->read(addr + i, 1, fmtstr + i);
       // mem->read(addr,len,fmtstr);
     } else {
       unsigned len = thread->get_finfo()->local_mem_framesize();
       arg_list = (char *)malloc(len + 64);
-      for (int i = 0; i < len; i++) mem->read(addr + i, 1, arg_list + i);
+      for (int i = 0; i < len; i++)
+        mem->read(addr + i, 1, arg_list + i);
       // mem->read(addr,len,arg_list);
     }
   }

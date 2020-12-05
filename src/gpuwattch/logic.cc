@@ -48,11 +48,8 @@ selection_logic::selection_logic(bool _is_default, int win_entries_,
                                  enum Device_ty device_ty_,
                                  enum Core_type core_ty_)
     // const ParseXML *_XML_interface)
-    : is_default(_is_default),
-      win_entries(win_entries_),
-      issue_width(issue_width_),
-      device_ty(device_ty_),
-      core_ty(core_ty_) {
+    : is_default(_is_default), win_entries(win_entries_),
+      issue_width(issue_width_), device_ty(device_ty_), core_ty(core_ty_) {
   // uca_org_t result2;
   l_ip = *configure_interface;
   local_result = init_interface(&l_ip);
@@ -71,24 +68,24 @@ selection_logic::selection_logic(bool _is_default, int win_entries_,
       power.readOp.leakage * long_channel_device_reduction;
 }
 
-void selection_logic::selection_power() {  // based on cost effective
-                                           // superscalar processor TR pp27-31
+void selection_logic::selection_power() { // based on cost effective
+                                          // superscalar processor TR pp27-31
   double Ctotal, Cor, Cpencode;
   int num_arbiter;
   double WSelORn, WSelORprequ, WSelPn, WSelPp, WSelEnn, WSelEnp;
 
   // TODO: the 0.8um process data is used.
   WSelORn =
-      12.5 * l_ip.F_sz_um;  // this was 10 micron for the 0.8 micron process
+      12.5 * l_ip.F_sz_um; // this was 10 micron for the 0.8 micron process
   WSelORprequ =
-      50 * l_ip.F_sz_um;  // this was 40 micron for the 0.8 micron process
-  WSelPn = 12.5 * l_ip.F_sz_um;  // this was 10mcron for the 0.8 micron process
+      50 * l_ip.F_sz_um;        // this was 40 micron for the 0.8 micron process
+  WSelPn = 12.5 * l_ip.F_sz_um; // this was 10mcron for the 0.8 micron process
   WSelPp =
-      18.75 * l_ip.F_sz_um;  // this was 15 micron for the 0.8 micron process
-  WSelEnn = 6.25 * l_ip.F_sz_um;  // this was 5 micron for the 0.8 micron
-                                  // process
+      18.75 * l_ip.F_sz_um; // this was 15 micron for the 0.8 micron process
+  WSelEnn = 6.25 * l_ip.F_sz_um; // this was 5 micron for the 0.8 micron
+                                 // process
   WSelEnp =
-      12.5 * l_ip.F_sz_um;  // this was 10 micron for the 0.8 micron process
+      12.5 * l_ip.F_sz_um; // this was 10 micron for the 0.8 micron process
 
   Ctotal = 0;
   num_arbiter = 1;
@@ -112,42 +109,42 @@ void selection_logic::selection_power() {  // based on cost effective
       drain_C_(WSelPp, PCH, 3, 1, g_tp.cell_h_def) +
       4 * drain_C_(WSelPn, NCH, 1, 1, g_tp.cell_h_def) +
       drain_C_(WSelPp, PCH, 4, 1,
-               g_tp.cell_h_def) +  // precompute priority logic
+               g_tp.cell_h_def) + // precompute priority logic
       2 * 4 * gate_C(WSelEnn + WSelEnp, 20.0) +
       4 * drain_C_(WSelEnn, NCH, 1, 1, g_tp.cell_h_def) +
-      2 * 4 * drain_C_(WSelEnp, PCH, 1, 1, g_tp.cell_h_def) +  // enable logic
+      2 * 4 * drain_C_(WSelEnp, PCH, 1, 1, g_tp.cell_h_def) + // enable logic
       (2 * 4 + 2 * 3 + 2 * 2 + 2) *
-          gate_C(WSelPn + WSelPp, 10.0);  // requests signal
+          gate_C(WSelPn + WSelPp, 10.0); // requests signal
 
   Ctotal += issue_width * num_arbiter * (Cor + Cpencode);
 
   power.readOp.dynamic =
       Ctotal * g_tp.peri_global.Vdd * g_tp.peri_global.Vdd *
-      2;  // 2 means the abitration signal need to travel round trip
+      2; // 2 means the abitration signal need to travel round trip
   power.readOp.leakage =
       issue_width * num_arbiter *
       (cmos_Isub_leakage(
            WSelPn, WSelPp, 2,
-           nor) /*approximate precompute with a nor gate*/  // grant1p
-       + cmos_Isub_leakage(WSelPn, WSelPp, 3, nor)          // grant2p
-       + cmos_Isub_leakage(WSelPn, WSelPp, 4, nor)          // grant3p
-       + cmos_Isub_leakage(WSelEnn, WSelEnp, 2, nor) * 4    // enable logic
+           nor) /*approximate precompute with a nor gate*/ // grant1p
+       + cmos_Isub_leakage(WSelPn, WSelPp, 3, nor)         // grant2p
+       + cmos_Isub_leakage(WSelPn, WSelPp, 4, nor)         // grant3p
+       + cmos_Isub_leakage(WSelEnn, WSelEnp, 2, nor) * 4   // enable logic
        + cmos_Isub_leakage(WSelEnn, WSelEnp, 1, inv) * 2 *
-             3  // for each grant there are two inverters, there are 3 grant
-                // sIsubnals
+             3 // for each grant there are two inverters, there are 3 grant
+               // sIsubnals
        ) *
       g_tp.peri_global.Vdd;
   power.readOp.gate_leakage =
       issue_width * num_arbiter *
       (cmos_Ig_leakage(
            WSelPn, WSelPp, 2,
-           nor) /*approximate precompute with a nor gate*/  // grant1p
-       + cmos_Ig_leakage(WSelPn, WSelPp, 3, nor)            // grant2p
-       + cmos_Ig_leakage(WSelPn, WSelPp, 4, nor)            // grant3p
-       + cmos_Ig_leakage(WSelEnn, WSelEnp, 2, nor) * 4      // enable logic
+           nor) /*approximate precompute with a nor gate*/ // grant1p
+       + cmos_Ig_leakage(WSelPn, WSelPp, 3, nor)           // grant2p
+       + cmos_Ig_leakage(WSelPn, WSelPp, 4, nor)           // grant3p
+       + cmos_Ig_leakage(WSelEnn, WSelEnp, 2, nor) * 4     // enable logic
        + cmos_Ig_leakage(WSelEnn, WSelEnp, 1, inv) * 2 *
-             3  // for each grant there are two inverters, there are 3 grant
-                // signals
+             3 // for each grant there are two inverters, there are 3 grant
+               // signals
        ) *
       g_tp.peri_global.Vdd;
 }
@@ -155,28 +152,26 @@ void selection_logic::selection_power() {  // based on cost effective
 dep_resource_conflict_check::dep_resource_conflict_check(
     const InputParameter *configure_interface, const CoreDynParam &dyn_p_,
     int compare_bits_, bool _is_default)
-    : l_ip(*configure_interface),
-      coredynp(dyn_p_),
-      compare_bits(compare_bits_),
+    : l_ip(*configure_interface), coredynp(dyn_p_), compare_bits(compare_bits_),
       is_default(_is_default) {
-  Wcompn = 25 * l_ip.F_sz_um;  // this was 20.0 micron for the 0.8 micron
-                               // process
+  Wcompn = 25 * l_ip.F_sz_um; // this was 20.0 micron for the 0.8 micron
+                              // process
   Wevalinvp =
-      25 * l_ip.F_sz_um;  // this was 20.0 micron for the 0.8 micron process
+      25 * l_ip.F_sz_um; // this was 20.0 micron for the 0.8 micron process
   Wevalinvn =
-      100 * l_ip.F_sz_um;  // this was 80.0 mcron for the 0.8 micron process
+      100 * l_ip.F_sz_um; // this was 80.0 mcron for the 0.8 micron process
   Wcomppreequ =
-      50 * l_ip.F_sz_um;  // this was 40.0  micron for the 0.8 micron process
-  WNORn = 6.75 * l_ip.F_sz_um;  // this was 5.4 micron for the 0.8 micron
-                                // process
+      50 * l_ip.F_sz_um; // this was 40.0  micron for the 0.8 micron process
+  WNORn = 6.75 * l_ip.F_sz_um; // this was 5.4 micron for the 0.8 micron
+                               // process
   WNORp =
-      38.125 * l_ip.F_sz_um;  // this was 30.5 micron for the 0.8 micron process
+      38.125 * l_ip.F_sz_um; // this was 30.5 micron for the 0.8 micron process
 
   local_result = init_interface(&l_ip);
 
   if (coredynp.core_ty == Inorder)
-    compare_bits += 16 + 8 + 8;  // TODO: opcode bits + log(shared resources) +
-                                 // REG TAG BITS-->opcode comparator
+    compare_bits += 16 + 8 + 8; // TODO: opcode bits + log(shared resources) +
+                                // REG TAG BITS-->opcode comparator
   else
     compare_bits += 16 + 8 + 8;
 
@@ -191,10 +186,9 @@ void dep_resource_conflict_check::conflict_check_power() {
   double Ctotal;
   int num_comparators;
   num_comparators =
-      3 *
-      ((coredynp.decodeW) * (coredynp.decodeW) -
-       coredynp.decodeW);  // 2(N*N-N) is used for source to dest comparison,
-                           // (N*N-N) is used for dest to dest comparision.
+      3 * ((coredynp.decodeW) * (coredynp.decodeW) -
+           coredynp.decodeW); // 2(N*N-N) is used for source to dest comparison,
+                              // (N*N-N) is used for dest to dest comparision.
   // When decode-width ==1, no dcl logic
 
   Ctotal = num_comparators * compare_cap();
@@ -219,7 +213,7 @@ double dep_resource_conflict_check::compare_cap() {
   double c1, c2;
 
   WNORp = WNORp * compare_bits /
-          2.0;  // resize the big NOR gate at the DCL according to fan in.
+          2.0; // resize the big NOR gate at the DCL according to fan in.
   /* bottom part of comparator */
   c2 = (compare_bits) * (drain_C_(Wcompn, NCH, 1, 1, g_tp.cell_h_def) +
                          drain_C_(Wcompn, NCH, 2, 1, g_tp.cell_h_def)) +
@@ -238,14 +232,13 @@ double dep_resource_conflict_check::compare_cap() {
 
 void dep_resource_conflict_check::leakage_feedback(double temperature) {
   l_ip.temp = (unsigned int)round(temperature / 10.0) * 10;
-  uca_org_t init_result = init_interface(&l_ip);  // init_result is dummy
+  uca_org_t init_result = init_interface(&l_ip); // init_result is dummy
 
   // This is part of conflict_check_power()
   int num_comparators =
-      3 *
-      ((coredynp.decodeW) * (coredynp.decodeW) -
-       coredynp.decodeW);  // 2(N*N-N) is used for source to dest comparison,
-                           // (N*N-N) is used for dest to dest comparision.
+      3 * ((coredynp.decodeW) * (coredynp.decodeW) -
+           coredynp.decodeW); // 2(N*N-N) is used for source to dest comparison,
+                              // (N*N-N) is used for dest to dest comparision.
   power.readOp.leakage = num_comparators * compare_bits * 2 *
                          simplified_nmos_leakage(Wcompn, false);
 
@@ -261,10 +254,8 @@ void dep_resource_conflict_check::leakage_feedback(double temperature) {
 
 DFFCell::DFFCell(bool _is_dram, double _WdecNANDn, double _WdecNANDp,
                  double _cell_load, const InputParameter *configure_interface)
-    : is_dram(_is_dram),
-      cell_load(_cell_load),
-      WdecNANDn(_WdecNANDn),
-      WdecNANDp(_WdecNANDp) {  // this model is based on the NAND2 based DFF.
+    : is_dram(_is_dram), cell_load(_cell_load), WdecNANDn(_WdecNANDn),
+      WdecNANDp(_WdecNANDp) { // this model is based on the NAND2 based DFF.
   l_ip = *configure_interface;
   //			area.set_area(730*l_ip.F_sz_um*l_ip.F_sz_um);
   area.set_area(
@@ -312,12 +303,12 @@ void DFFCell::compute_DFF_cell() {
   /* static power */
   e_switch.readOp.leakage +=
       (cmos_Isub_leakage(WdecNANDn, WdecNANDp, 2, nand) *
-           5  // 5 NAND2 and 1 NAND3 in a DFF
+           5 // 5 NAND2 and 1 NAND3 in a DFF
        + cmos_Isub_leakage(WdecNANDn, WdecNANDn, 3, nand)) *
       g_tp.peri_global.Vdd;
   e_switch.readOp.gate_leakage +=
       (cmos_Ig_leakage(WdecNANDn, WdecNANDp, 2, nand) *
-           5  // 5 NAND2 and 1 NAND3 in a DFF
+           5 // 5 NAND2 and 1 NAND3 in a DFF
        + cmos_Ig_leakage(WdecNANDn, WdecNANDn, 3, nand)) *
       g_tp.peri_global.Vdd;
   // printf("leakage =%E\n",cmos_Ileak(1, is_dram) );
@@ -326,11 +317,8 @@ void DFFCell::compute_DFF_cell() {
 Pipeline::Pipeline(const InputParameter *configure_interface,
                    const CoreDynParam &dyn_p_, enum Device_ty device_ty_,
                    bool _is_core_pipeline, bool _is_default)
-    : l_ip(*configure_interface),
-      coredynp(dyn_p_),
-      device_ty(device_ty_),
-      is_core_pipeline(_is_core_pipeline),
-      is_default(_is_default),
+    : l_ip(*configure_interface), coredynp(dyn_p_), device_ty(device_ty_),
+      is_core_pipeline(_is_core_pipeline), is_default(_is_default),
       num_piperegs(0.0)
 
 {
@@ -342,12 +330,12 @@ Pipeline::Pipeline(const InputParameter *configure_interface,
   WNANDn =
       (process_ind)
           ? 25 * l_ip.F_sz_um
-          : g_tp.min_w_nmos_;  // this was  20 micron for the 0.8 micron process
+          : g_tp.min_w_nmos_; // this was  20 micron for the 0.8 micron process
   WNANDp = (process_ind)
                ? 37.5 * l_ip.F_sz_um
                : g_tp.min_w_nmos_ *
-                     pmos_to_nmos_sz_ratio();  // this was  30 micron for the
-                                               // 0.8 micron process
+                     pmos_to_nmos_sz_ratio(); // this was  30 micron for the
+                                              // 0.8 micron process
   load_per_pipeline_stage = 2 * gate_C(WNANDn + WNANDp, 0, false);
   compute();
 }
@@ -399,9 +387,9 @@ void Pipeline::compute_stage_vector() {
 
   if (!is_core_pipeline) {
     num_piperegs = l_ip.pipeline_stages *
-                   l_ip.per_stage_vector;  // The number of pipeline stages are
-                                           // calculated based on the achievable
-                                           // throughput and required throughput
+                   l_ip.per_stage_vector; // The number of pipeline stages are
+                                          // calculated based on the achievable
+                                          // throughput and required throughput
   } else {
     if (coredynp.core_ty == Inorder) {
       /* assume 6 pipe stages and try to estimate bits per pipe stage */
@@ -414,7 +402,7 @@ void Pipeline::compute_stage_vector() {
       /* pipe stage IF/ThreadSEL */
       if (coredynp.multithreaded)
         num_piperegs += coredynp.num_hthreads *
-                        coredynp.perThreadState;  // 8 bit thread states
+                        coredynp.perThreadState; // 8 bit thread states
       /* pipe stage ID/EXE */
       num_piperegs += coredynp.decodeW *
                       (coredynp.instruction_length + coredynp.pc_width +
@@ -451,15 +439,15 @@ void Pipeline::compute_stage_vector() {
 
       /* pipe stage 0/1F*/
       num_piperegs +=
-          coredynp.pc_width * 2 * coredynp.num_hthreads;  // PC and Next PC
+          coredynp.pc_width * 2 * coredynp.num_hthreads; // PC and Next PC
       /* pipe stage IF/ID */
       num_piperegs +=
           coredynp.fetchW * (coredynp.instruction_length + coredynp.pc_width) *
-          coredynp.num_hthreads;  // PC is used to feed branch predictor in ID
+          coredynp.num_hthreads; // PC is used to feed branch predictor in ID
       /* pipe stage 1D/Renaming*/
       num_piperegs +=
           coredynp.decodeW * (coredynp.instruction_length + coredynp.pc_width) *
-          coredynp.num_hthreads;  // PC is for branch exe in later stage.
+          coredynp.num_hthreads; // PC is for branch exe in later stage.
       /* pipe stage Renaming/wire_drive */
       num_piperegs +=
           coredynp.decodeW * (coredynp.instruction_length + coredynp.pc_width);
@@ -467,8 +455,8 @@ void Pipeline::compute_stage_vector() {
       num_piperegs += coredynp.issueW *
                       (coredynp.instruction_length + coredynp.pc_width +
                        3 * coredynp.phy_ireg_width) *
-                      coredynp.num_hthreads;  // 3*coredynp.phy_ireg_width means
-                                              // 2 sources and 1 dest
+                      coredynp.num_hthreads; // 3*coredynp.phy_ireg_width means
+                                             // 2 sources and 1 dest
       /* pipe stage IssueQ/Dispatch */
       num_piperegs += coredynp.issueW * (coredynp.instruction_length +
                                          3 * coredynp.phy_ireg_width);
@@ -491,9 +479,9 @@ void Pipeline::compute_stage_vector() {
           coredynp.issueW *
           (coredynp.int_data_width + coredynp.v_address_width +
            pow(2.0,
-               opcode_length) /*+2*powers (2,reg_length)*/);  // memory Opcode
-                                                              // still need to
-                                                              // be passed
+               opcode_length) /*+2*powers (2,reg_length)*/); // memory Opcode
+                                                             // still need to
+                                                             // be passed
       /* pipe stage MEM/WB; result data, writeback regs */
       num_piperegs +=
           coredynp.issueW * (coredynp.int_data_width + coredynp.phy_ireg_width /* powers (2,opcode_length) + (2,opcode_length)+2*powers (2,reg_length)*/);
@@ -519,7 +507,7 @@ void Pipeline::compute_stage_vector() {
     if (coredynp.core_ty == Inorder) {
       if (coredynp.pipeline_stages > 6)
         num_piperegs = per_stage_vector * coredynp.pipeline_stages;
-    } else  // OOO
+    } else // OOO
     {
       if (coredynp.pipeline_stages > 12)
         num_piperegs = per_stage_vector * coredynp.pipeline_stages;
@@ -531,14 +519,11 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
                                InputParameter *interface_ip_,
                                const CoreDynParam &dyn_p_,
                                enum FU_type fu_type_, double exClockRate)
-    : XML(XML_interface),
-      ithCore(ithCore_),
-      interface_ip(*interface_ip_),
-      coredynp(dyn_p_),
-      fu_type(fu_type_) {
-  double area_t;  //, leakage, gate_leakage;
+    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
+      coredynp(dyn_p_), fu_type(fu_type_) {
+  double area_t; //, leakage, gate_leakage;
   double pmos_to_nmos_sizing_r = pmos_to_nmos_sz_ratio();
-  clockRate = exClockRate;  // coredynp.clockRate;
+  clockRate = exClockRate; // coredynp.clockRate;
   executionTime = coredynp.executionTime;
   // cout<<"FU executionTime: "<<executionTime<<endl;
 
@@ -552,22 +537,22 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       // um^2
       area_t = 4.47 * 1e6 *
                (g_ip->F_sz_nm * g_ip->F_sz_nm / 90.0 /
-                90.0);  // this is um^2 The base number
+                90.0); // this is um^2 The base number
       // 4.47 contains both VFP and NEON processing unit, VFP is about 40% and
       // NEON is about 60%
       if (g_ip->F_sz_nm > 90)
         area_t = 4.47 * 1e6 *
-                 g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2
+                 g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2
       leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
                 cmos_Isub_leakage(5 * g_tp.min_w_nmos_,
                                   5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r,
                                   1, inv) *
-                g_tp.peri_global.Vdd / 2;  // unit W
+                g_tp.peri_global.Vdd / 2; // unit W
       gate_leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
                      cmos_Ig_leakage(
                          5 * g_tp.min_w_nmos_,
                          5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-                     g_tp.peri_global.Vdd / 2;  // unit W
+                     g_tp.peri_global.Vdd / 2; // unit W
       // energy = 0.3529/10*1e-9;//this is the energy(nJ) for a FP instruction
       // in FPU usually it can have up to 20 cycles.
       //			base_energy = coredynp.core_ty==Inorder? 0:
@@ -579,12 +564,12 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
           1.15 / 1e9 / 4 / 1.3 / 1.3 * g_tp.peri_global.Vdd *
           g_tp.peri_global.Vdd *
           (g_ip->F_sz_nm /
-           90.0);  // g_tp.peri_global.Vdd*g_tp.peri_global.Vdd/1.2/1.2);//0.00649*1e-9;
-                   // //This is per Hz energy(nJ)
+           90.0); // g_tp.peri_global.Vdd*g_tp.peri_global.Vdd/1.2/1.2);//0.00649*1e-9;
+                  // //This is per Hz energy(nJ)
       // per_access_energy*=3;
       // FPU power from Sandia's processor sizing tech report
       FU_height =
-          (18667 * num_fu) * interface_ip.F_sz_um;  // FPU from Sun's data
+          (18667 * num_fu) * interface_ip.F_sz_um; // FPU from Sun's data
     } else if (fu_type == ALU) {
       num_fu = coredynp.num_alus;
       // FIXME: The first area_t = is from updated McAPAT, the second is from
@@ -593,12 +578,12 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       // MUl
       area_t =
           71.85 * 71.85 * num_fu *
-          g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+          g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
       leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
                 cmos_Isub_leakage(20 * g_tp.min_w_nmos_,
                                   20 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r,
                                   1, inv) *
-                g_tp.peri_global.Vdd / 2;  // unit W
+                g_tp.peri_global.Vdd / 2; // unit W
       gate_leakage =
           area_t * (g_tp.scaling_factor.core_tx_density) *
           cmos_Ig_leakage(20 * g_tp.min_w_nmos_,
@@ -617,18 +602,18 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       per_access_energy = 1.29 / 1e12 / 1.3 / 1.3 * g_tp.peri_global.Vdd *
                           g_tp.peri_global.Vdd * (g_ip->F_sz_nm / 90.0);
       // per_access_energy*=3;
-      FU_height = (6222 * num_fu) * interface_ip.F_sz_um;  // integer ALU
+      FU_height = (6222 * num_fu) * interface_ip.F_sz_um; // integer ALU
 
     } else if (fu_type == MUL) {
       num_fu = coredynp.num_muls;
       area_t =
           280 * 260 * 3 *
-          g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+          g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
       leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
                 cmos_Isub_leakage(20 * g_tp.min_w_nmos_,
                                   20 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r,
                                   1, inv) *
-                g_tp.peri_global.Vdd / 2;  // unit W
+                g_tp.peri_global.Vdd / 2; // unit W
       gate_leakage =
           area_t * (g_tp.scaling_factor.core_tx_density) *
           cmos_Ig_leakage(20 * g_tp.min_w_nmos_,
@@ -644,19 +629,19 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
           1.15 * 2 / 3 / 1e9 / 1.3 / 1.3 * g_tp.peri_global.Vdd *
           g_tp.peri_global.Vdd *
           (g_ip->F_sz_nm /
-           90.0);  //(g_tp.peri_global.Vdd*g_tp.peri_global.Vdd/1.2/1.2)/24;//0.00649*1e-9;
-                   ////This is per cycle energy(nJ), coefficient based on Wattch
-                   //(24 is the division ny latency: Syed)
+           90.0); //(g_tp.peri_global.Vdd*g_tp.peri_global.Vdd/1.2/1.2)/24;//0.00649*1e-9;
+                  ////This is per cycle energy(nJ), coefficient based on Wattch
+                  //(24 is the division ny latency: Syed)
       // per_access_energy*=3;
-      FU_height = (9334 * num_fu) *
-                  interface_ip.F_sz_um;  // divider/mul from Sun's data
+      FU_height =
+          (9334 * num_fu) * interface_ip.F_sz_um; // divider/mul from Sun's data
     } else {
       cout << "Unknown Functional Unit Type" << endl;
       exit(0);
     }
-    per_access_energy *= 0.5;  // According to ARM data embedded processor has
-                               // much lower per acc energy
-  }                            /* if (XML->sys.Embedded) */
+    per_access_energy *= 0.5; // According to ARM data embedded processor has
+                              // much lower per acc energy
+  }                           /* if (XML->sys.Embedded) */
   else {
     if (fu_type == FPU) {
       num_fu = coredynp.num_fpus;
@@ -685,29 +670,28 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       */
       // area_t = 8.47*1e6*g_tp.scaling_factor.logic_scaling_co_eff;//this is
       // um^2
-      num_fu = num_fu / 2;  // 2 DP FPUs combine to for a SP FPU
+      num_fu = num_fu / 2; // 2 DP FPUs combine to for a SP FPU
       area_t = 8.47 * 1e6 *
-               (g_ip->F_sz_nm * g_ip->F_sz_nm / 90.0 / 90.0);  // this is um^2
+               (g_ip->F_sz_nm * g_ip->F_sz_nm / 90.0 / 90.0); // this is um^2
       if (g_ip->F_sz_nm > 90)
         area_t = 8.47 * 1e6 *
-                 g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2
+                 g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2
       leakage =
-          37e-3;  // area_t
-                  // *(g_tp.scaling_factor.core_tx_density)*cmos_Isub_leakage(5*g_tp.min_w_nmos_,
-                  // 5*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
-                  // inv)*g_tp.peri_global.Vdd/2;//unit W
+          37e-3; // area_t
+                 // *(g_tp.scaling_factor.core_tx_density)*cmos_Isub_leakage(5*g_tp.min_w_nmos_,
+                 // 5*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
+                 // inv)*g_tp.peri_global.Vdd/2;//unit W
       gate_leakage =
-          0;  // area_t
-              // *(g_tp.scaling_factor.core_tx_density)*cmos_Ig_leakage(5*g_tp.min_w_nmos_,
-              // 5*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
-              // inv)*g_tp.peri_global.Vdd/2;//unit W
+          0; // area_t
+             // *(g_tp.scaling_factor.core_tx_density)*cmos_Ig_leakage(5*g_tp.min_w_nmos_,
+             // 5*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
+             // inv)*g_tp.peri_global.Vdd/2;//unit W
       // energy = 0.3529/10*1e-9;//this is the energy(nJ) for a FP instruction
       // in FPU usually it can have up to 20 cycles.
-      base_energy =
-          coredynp.core_ty == Inorder
-              ? 0
-              : 89e-3 * 3;  // W The base energy of ALU average numbers from
-                            // Intel 4G and 773Mhz (Wattch)
+      base_energy = coredynp.core_ty == Inorder
+                        ? 0
+                        : 89e-3 * 3; // W The base energy of ALU average numbers
+                                     // from Intel 4G and 773Mhz (Wattch)
 
       base_energy *= (g_tp.peri_global.Vdd * g_tp.peri_global.Vdd / 1.2 / 1.2);
 
@@ -722,10 +706,10 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
           3.9 * 14.91 / 1e12 / 1.08 / 1.08 * g_tp.peri_global.Vdd *
           g_tp.peri_global.Vdd *
           (g_ip->F_sz_nm /
-           90.0);  //;4.34 is scaling factor based on hardware measurements
-                   // ALU instrucitons are also executed on FPUs so add 30%
-                   // overhead for supporting ALU instrcutions per_access_energy
-                   // = 1.3*per_access_energy;
+           90.0); //;4.34 is scaling factor based on hardware measurements
+                  // ALU instrucitons are also executed on FPUs so add 30%
+                  // overhead for supporting ALU instrcutions per_access_energy
+                  // = 1.3*per_access_energy;
 
       // ALU instrucitons are also executed on FPUs so add 10% overhead for
       // supporting ALU instrcutions
@@ -735,7 +719,7 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       // doing 8 SP operations
       // per_access_energy = per_access_energy/2;
       FU_height =
-          (38667 * num_fu) * interface_ip.F_sz_um;  // FPU from Sun's data
+          (38667 * num_fu) * interface_ip.F_sz_um; // FPU from Sun's data
       per_access_energy *= 2;
     } else if (fu_type == ALU) {
       num_fu = coredynp.num_alus;
@@ -751,7 +735,7 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       // inv)*g_tp.peri_global.Vdd/2;
       area_t =
           71.85 * 71.85 * num_fu *
-          g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+          g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
       // leakage = area_t
       // *(g_tp.scaling_factor.core_tx_density)*cmos_Isub_leakage(20*g_tp.min_w_nmos_,
       // 20*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
@@ -764,35 +748,34 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
       gate_leakage = 0;
       base_energy = coredynp.core_ty == Inorder
                         ? 0
-                        : 89e-3;  // W The base energy of ALU average numbers
-                                  // from Intel 4G and 773Mhz (Wattch)
+                        : 89e-3; // W The base energy of ALU average numbers
+                                 // from Intel 4G and 773Mhz (Wattch)
       base_energy *= (g_tp.peri_global.Vdd * g_tp.peri_global.Vdd / 1.2 / 1.2);
       // per_access_energy
       // = 1.15/1e9/4/1.3/1.3*g_tp.peri_global.Vdd*g_tp.peri_global.Vdd*(g_ip->F_sz_nm/90.0);//(g_tp.peri_global.Vdd*g_tp.peri_global.Vdd/1.2/1.2);//0.00649*1e-9;
       // //This is per cycle energy(nJ)
       per_access_energy = 0.8 * 1.29 / 1e12 / 1.3 / 1.3 * g_tp.peri_global.Vdd *
                           g_tp.peri_global.Vdd * (g_ip->F_sz_nm / 90.0);
-      FU_height = (6222 * num_fu) * interface_ip.F_sz_um;  // integer ALU
+      FU_height = (6222 * num_fu) * interface_ip.F_sz_um; // integer ALU
       per_access_energy *= 2;
     } else if (fu_type == MUL) {
       num_fu = coredynp.num_muls;
       area_t =
           280 * 260 * 2 * 3 *
-          g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+          g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
       // leakage = area_t
       // *(g_tp.scaling_factor.core_tx_density)*cmos_Isub_leakage(20*g_tp.min_w_nmos_,
       // 20*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
       // inv)*g_tp.peri_global.Vdd/2;//unit W
       leakage = 37e-3;
       gate_leakage =
-          0;  // area_t*(g_tp.scaling_factor.core_tx_density)*cmos_Ig_leakage(20*g_tp.min_w_nmos_,
-              // 20*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
-              // inv)*g_tp.peri_global.Vdd/2;
-      base_energy =
-          coredynp.core_ty == Inorder
-              ? 0
-              : 89e-3 * 2;  // W The base energy of ALU average numbers from
-                            // Intel 4G and 773Mhz (Wattch)
+          0; // area_t*(g_tp.scaling_factor.core_tx_density)*cmos_Ig_leakage(20*g_tp.min_w_nmos_,
+             // 20*g_tp.min_w_nmos_*pmos_to_nmos_sizing_r, 1,
+             // inv)*g_tp.peri_global.Vdd/2;
+      base_energy = coredynp.core_ty == Inorder
+                        ? 0
+                        : 89e-3 * 2; // W The base energy of ALU average numbers
+                                     // from Intel 4G and 773Mhz (Wattch)
       base_energy *= (g_tp.peri_global.Vdd * g_tp.peri_global.Vdd / 1.2 / 1.2);
       base_energy = SFU_BASE_POWER;
       // SFU is modelled as a double preicison FPU
@@ -800,9 +783,9 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
           8 * 14.91 / 1e12 / 1.08 / 1.08 * g_tp.peri_global.Vdd *
           g_tp.peri_global.Vdd *
           (g_ip->F_sz_nm /
-           90.0);  // 1.5 is scaling factor based on hardware measuremetns
-      FU_height = (9334 * num_fu) *
-                  interface_ip.F_sz_um;  // divider/mul from Sun's data
+           90.0); // 1.5 is scaling factor based on hardware measuremetns
+      FU_height =
+          (9334 * num_fu) * interface_ip.F_sz_um; // divider/mul from Sun's data
       per_access_energy *= 2;
     }
 
@@ -828,12 +811,12 @@ FunctionalUnit::FunctionalUnit(ParseXML *XML_interface, int ithCore_,
 
 void FunctionalUnit::computeEnergy(bool is_tdp) {
   executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);  // Syed
+      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Syed
   double pppm_t[4] = {1, 1, 1, 1};
   double FU_duty_cycle;
   if (is_tdp) {
-    set_pppm(pppm_t, 2, 2, 2, 2);  // 2 means two source operands needs to be
-                                   // passed for each int instruction.
+    set_pppm(pppm_t, 2, 2, 2, 2); // 2 means two source operands needs to be
+                                  // passed for each int instruction.
     if (fu_type == FPU) {
       stats_t.readAc.access = num_fu;
       tdp_stats = stats_t;
@@ -998,8 +981,7 @@ void FunctionalUnit::leakage_feedback(double temperature) {
   // Update the temperature and initialize the global interfaces.
   interface_ip.temp = (unsigned int)round(temperature / 10.0) * 10;
 
-  uca_org_t init_result =
-      init_interface(&interface_ip);  // init_result is dummy
+  uca_org_t init_result = init_interface(&interface_ip); // init_result is dummy
 
   // This is part of FunctionalUnit()
   double area_t, leakage, gate_leakage;
@@ -1008,43 +990,41 @@ void FunctionalUnit::leakage_feedback(double temperature) {
   if (fu_type == FPU) {
     area_t = 4.47 * 1e6 *
              (g_ip->F_sz_nm * g_ip->F_sz_nm / 90.0 /
-              90.0);  // this is um^2 The base number
+              90.0); // this is um^2 The base number
     if (g_ip->F_sz_nm > 90)
-      area_t = 4.47 * 1e6 *
-               g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2
+      area_t =
+          4.47 * 1e6 * g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2
     leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
               cmos_Isub_leakage(5 * g_tp.min_w_nmos_,
                                 5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1,
                                 inv) *
-              g_tp.peri_global.Vdd / 2;  // unit W
+              g_tp.peri_global.Vdd / 2; // unit W
     gate_leakage =
         area_t * (g_tp.scaling_factor.core_tx_density) *
         cmos_Ig_leakage(5 * g_tp.min_w_nmos_,
                         5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-        g_tp.peri_global.Vdd / 2;  // unit W
+        g_tp.peri_global.Vdd / 2; // unit W
   } else if (fu_type == ALU) {
-    area_t =
-        280 * 260 * 2 * num_fu *
-        g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+    area_t = 280 * 260 * 2 * num_fu *
+             g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
     leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
               cmos_Isub_leakage(20 * g_tp.min_w_nmos_,
                                 20 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r,
                                 1, inv) *
-              g_tp.peri_global.Vdd / 2;  // unit W
+              g_tp.peri_global.Vdd / 2; // unit W
     gate_leakage =
         area_t * (g_tp.scaling_factor.core_tx_density) *
         cmos_Ig_leakage(20 * g_tp.min_w_nmos_,
                         20 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
         g_tp.peri_global.Vdd / 2;
   } else if (fu_type == MUL) {
-    area_t =
-        280 * 260 * 2 * 3 * num_fu *
-        g_tp.scaling_factor.logic_scaling_co_eff;  // this is um^2 ALU + MUl
+    area_t = 280 * 260 * 2 * 3 * num_fu *
+             g_tp.scaling_factor.logic_scaling_co_eff; // this is um^2 ALU + MUl
     leakage = area_t * (g_tp.scaling_factor.core_tx_density) *
               cmos_Isub_leakage(20 * g_tp.min_w_nmos_,
                                 20 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r,
                                 1, inv) *
-              g_tp.peri_global.Vdd / 2;  // unit W
+              g_tp.peri_global.Vdd / 2; // unit W
     gate_leakage =
         area_t * (g_tp.scaling_factor.core_tx_density) *
         cmos_Ig_leakage(20 * g_tp.min_w_nmos_,
@@ -1064,19 +1044,15 @@ void FunctionalUnit::leakage_feedback(double temperature) {
 UndiffCore::UndiffCore(ParseXML *XML_interface, int ithCore_,
                        InputParameter *interface_ip_,
                        const CoreDynParam &dyn_p_, bool exist_, bool embedded_)
-    : XML(XML_interface),
-      ithCore(ithCore_),
-      interface_ip(*interface_ip_),
-      coredynp(dyn_p_),
-      core_ty(coredynp.core_ty),
-      embedded(XML->sys.Embedded),
+    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
+      coredynp(dyn_p_), core_ty(coredynp.core_ty), embedded(XML->sys.Embedded),
       pipeline_stage(coredynp.pipeline_stages),
-      num_hthreads(coredynp.num_hthreads),
-      issue_width(coredynp.issueW),
+      num_hthreads(coredynp.num_hthreads), issue_width(coredynp.issueW),
       exist(exist_)
 // is_default(_is_default)
 {
-  if (!exist) return;
+  if (!exist)
+    return;
   double undifferentiated_core = 0;
   double core_tx_density = 0;
   double pmos_to_nmos_sizing_r = pmos_to_nmos_sz_ratio();
@@ -1118,7 +1094,7 @@ UndiffCore::UndiffCore(ParseXML *XML_interface, int ithCore_,
   }
 
   undifferentiated_core *= g_tp.scaling_factor.logic_scaling_co_eff *
-                           1e6;  // change from mm^2 to um^2
+                           1e6; // change from mm^2 to um^2
   core_tx_density = g_tp.scaling_factor.core_tx_density;
   // undifferentiated_core 		    = 3*1e6;
   // undifferentiated_core			*=
@@ -1128,7 +1104,7 @@ UndiffCore::UndiffCore(ParseXML *XML_interface, int ithCore_,
       (core_tx_density)*cmos_Isub_leakage(
           5 * g_tp.min_w_nmos_, 5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1,
           inv) *
-      g_tp.peri_global.Vdd;  // unit W
+      g_tp.peri_global.Vdd; // unit W
   power.readOp.gate_leakage =
       undifferentiated_core *
       (core_tx_density)*cmos_Ig_leakage(
@@ -1220,11 +1196,8 @@ inst_decoder::inst_decoder(bool _is_default,
                            const InputParameter *configure_interface,
                            int opcode_length_, int num_decoders_, bool x86_,
                            enum Device_ty device_ty_, enum Core_type core_ty_)
-    : is_default(_is_default),
-      opcode_length(opcode_length_),
-      num_decoders(num_decoders_),
-      x86(x86_),
-      device_ty(device_ty_),
+    : is_default(_is_default), opcode_length(opcode_length_),
+      num_decoders(num_decoders_), x86(x86_), device_ty(device_ty_),
       core_ty(core_ty_) {
   /*
    * Instruction decoder is different from n to 2^n decoders
@@ -1261,32 +1234,33 @@ inst_decoder::inst_decoder(bool _is_default,
   cell.w = g_tp.cell_h_def;
 
   num_decoder_segments = (int)ceil(opcode_length / 18.0);
-  if (opcode_length > 18) opcode_length = 18;
+  if (opcode_length > 18)
+    opcode_length = 18;
   num_decoded_signals = (int)pow(2.0, opcode_length);
   pmos_to_nmos_sizing_r = pmos_to_nmos_sz_ratio();
   load_nmos_width = g_tp.max_w_nmos_ / 2;
   load_pmos_width = g_tp.max_w_nmos_ * pmos_to_nmos_sizing_r;
   C_driver_load =
       1024 * gate_C(load_nmos_width + load_pmos_width, 0,
-                    is_dram);  // TODO: this number 1024 needs to be revisited
+                    is_dram); // TODO: this number 1024 needs to be revisited
   R_wire_load = 3000 * l_ip.F_sz_um * g_tp.wire_outside_mat.R_per_um;
 
   final_dec = new Decoder(num_decoded_signals, false, C_driver_load,
                           R_wire_load, false /*is_fa*/, false /*is_dram*/,
-                          false /*wl_tr*/,  // to use peri device
+                          false /*wl_tr*/, // to use peri device
                           cell);
 
   PredecBlk *predec_blk1 =
       new PredecBlk(num_decoded_signals, final_dec,
-                    0,  // Assuming predec and dec are back to back
+                    0, // Assuming predec and dec are back to back
                     0,
-                    1,  // Each Predec only drives one final dec
+                    1, // Each Predec only drives one final dec
                     false /*is_dram*/, true);
   PredecBlk *predec_blk2 =
       new PredecBlk(num_decoded_signals, final_dec,
-                    0,  // Assuming predec and dec are back to back
+                    0, // Assuming predec and dec are back to back
                     0,
-                    1,  // Each Predec only drives one final dec
+                    1, // Each Predec only drives one final dec
                     false /*is_dram*/, false);
 
   PredecBlkDrv *predec_blk_drv1 = new PredecBlkDrv(0, predec_blk1, false);
@@ -1334,7 +1308,7 @@ void inst_decoder::inst_decoder_delay_power() {
 }
 void inst_decoder::leakage_feedback(double temperature) {
   l_ip.temp = (unsigned int)round(temperature / 10.0) * 10;
-  uca_org_t init_result = init_interface(&l_ip);  // init_result is dummy
+  uca_org_t init_result = init_interface(&l_ip); // init_result is dummy
 
   final_dec->leakage_feedback(temperature);
   pre_dec->leakage_feedback(temperature);

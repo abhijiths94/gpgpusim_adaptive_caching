@@ -45,7 +45,7 @@ class gpgpu_context;
 /////////////////////////////////////////////////////////////////////////////////////
 
 class snap_shot_trigger {
- public:
+public:
   snap_shot_trigger(unsigned long long interval)
       : m_snap_shot_interval(interval) {}
   virtual ~snap_shot_trigger() {}
@@ -62,7 +62,7 @@ class snap_shot_trigger {
     return m_snap_shot_interval;
   }
 
- protected:
+protected:
   unsigned long long m_snap_shot_interval;
 };
 
@@ -73,7 +73,7 @@ class snap_shot_trigger {
 /////////////////////////////////////////////////////////////////////////////////////
 
 class spill_log_interface {
- public:
+public:
   spill_log_interface() {}
   virtual ~spill_log_interface() {}
 
@@ -85,7 +85,7 @@ class spill_log_interface {
 /////////////////////////////////////////////////////////////////////////////////////
 
 class thread_insn_span {
- public:
+public:
   thread_insn_span(unsigned long long cycle, gpgpu_context *ctx);
   thread_insn_span(const thread_insn_span &other, gpgpu_context *ctx);
   ~thread_insn_span();
@@ -100,7 +100,7 @@ class thread_insn_span {
   void print_sparse_histo(FILE *fout) const;
   void print_sparse_histo(gzFile fout) const;
 
- private:
+private:
   gpgpu_context *gpgpu_ctx;
   typedef tr1_hash_map<address_type, int> span_count_map;
   unsigned long long m_cycle;
@@ -108,7 +108,7 @@ class thread_insn_span {
 };
 
 class thread_CFlocality : public snap_shot_trigger, public spill_log_interface {
- public:
+public:
   thread_CFlocality(gpgpu_context *ctx, std::string name,
                     unsigned long long snap_shot_interval, int nthreads,
                     address_type start_pc, unsigned long long start_cycle = 0);
@@ -123,7 +123,7 @@ class thread_CFlocality : public snap_shot_trigger, public spill_log_interface {
   void print_span(FILE *fout) const;
   void print_histo(FILE *fout) const;
 
- private:
+private:
   std::string m_name;
 
   int m_nthreads;
@@ -139,7 +139,7 @@ class thread_CFlocality : public snap_shot_trigger, public spill_log_interface {
 /////////////////////////////////////////////////////////////////////////////////////
 
 class insn_warp_occ_logger {
- public:
+public:
   insn_warp_occ_logger(int simd_width)
       : m_simd_width(simd_width),
         m_insn_warp_occ(1, linear_histogram(1, "", m_simd_width)),
@@ -175,7 +175,7 @@ class insn_warp_occ_logger {
     }
   }
 
- private:
+private:
   int m_simd_width;
   std::vector<linear_histogram> m_insn_warp_occ;
   int m_id;
@@ -187,7 +187,7 @@ class insn_warp_occ_logger {
 /////////////////////////////////////////////////////////////////////////////////////
 
 class linear_histogram_snapshot {
- public:
+public:
   linear_histogram_snapshot(int n_bins, unsigned long long cycle)
       : m_cycle(cycle), m_linear_histogram(n_bins, 0) {}
 
@@ -232,14 +232,14 @@ class linear_histogram_snapshot {
     }
   }
 
- private:
+private:
   unsigned long long m_cycle;
   std::vector<int> m_linear_histogram;
 };
 
 class linear_histogram_logger : public snap_shot_trigger,
                                 public spill_log_interface {
- public:
+public:
   linear_histogram_logger(int n_bins, unsigned long long snap_shot_interval,
                           const char *name, bool reset_at_snap_shot = true,
                           unsigned long long start_cycle = 0);
@@ -257,7 +257,7 @@ class linear_histogram_logger : public snap_shot_trigger,
   void print_visualizer(FILE *fout);
   void print_visualizer(gzFile fout);
 
- private:
+private:
   int m_n_bins;
   linear_histogram_snapshot m_curr_lin_hist;
   std::list<linear_histogram_snapshot> m_lin_hist_archive;

@@ -38,11 +38,11 @@
 //#include "io.h"
 #include "array.h"
 //#include "Undifferentiated_Core_Area.h"
-#include <vector>
 #include "basic_components.h"
+#include <vector>
 
 class NIUController : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   NIUParam niup;
@@ -56,7 +56,7 @@ class NIUController : public Component {
 };
 
 class PCIeController : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   PCIeParam pciep;
@@ -70,7 +70,7 @@ class PCIeController : public Component {
 };
 
 class FlashController : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   MCParam fcp;

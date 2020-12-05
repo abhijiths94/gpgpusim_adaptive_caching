@@ -33,10 +33,6 @@
 #include "ptx_ir.h"
 class ptx_recognizer;
 typedef void *yyscan_t;
-#include <stdio.h>
-#include <map>
-#include <set>
-#include <sstream>
 #include "../../libcuda/gpgpu_context.h"
 #include "../abstract_hardware_model.h"
 #include "../gpgpu-sim/gpu-sim.h"
@@ -52,6 +48,10 @@ typedef void *yyscan_t;
 #include "ptx_loader.h"
 #include "ptx_parser.h"
 #include "ptx_sim.h"
+#include <map>
+#include <set>
+#include <sstream>
+#include <stdio.h>
 
 int g_debug_execution = 0;
 // Output debug information to file options
@@ -206,27 +206,26 @@ void gpgpu_t::gpgpu_ptx_sim_bindTextureToArray(
          m_function_model_config.get_texcache_linesize());
   // first determine base Tx size for given linesize
   switch (m_function_model_config.get_texcache_linesize()) {
-    case 16:
-      Tx = 4;
-      break;
-    case 32:
-      Tx = 8;
-      break;
-    case 64:
-      Tx = 8;
-      break;
-    case 128:
-      Tx = 16;
-      break;
-    case 256:
-      Tx = 16;
-      break;
-    default:
-      printf(
-          "GPGPU-Sim PTX:   Line size of %d bytes currently not supported.\n",
-          m_function_model_config.get_texcache_linesize());
-      assert(0);
-      break;
+  case 16:
+    Tx = 4;
+    break;
+  case 32:
+    Tx = 8;
+    break;
+  case 64:
+    Tx = 8;
+    break;
+  case 128:
+    Tx = 16;
+    break;
+  case 256:
+    Tx = 16;
+    break;
+  default:
+    printf("GPGPU-Sim PTX:   Line size of %d bytes currently not supported.\n",
+           m_function_model_config.get_texcache_linesize());
+    assert(0);
+    break;
   }
   r = texel_size >> 2;
   // modify base Tx size to take into account size of each texel in bytes
@@ -283,15 +282,15 @@ void function_info::ptx_assemble() {
   std::list<ptx_instruction *>::iterator i;
 
   addr_t PC =
-      gpgpu_ctx->func_sim->g_assemble_code_next_pc;  // globally unique address
-                                                     // (across functions)
+      gpgpu_ctx->func_sim->g_assemble_code_next_pc; // globally unique address
+                                                    // (across functions)
   // start function on an aligned address
   for (unsigned i = 0; i < (PC % MAX_INST_SIZE); i++)
     gpgpu_ctx->s_g_pc_to_insn.push_back((ptx_instruction *)NULL);
   PC += PC % MAX_INST_SIZE;
   m_start_PC = PC;
 
-  addr_t n = 0;  // offset in m_instr_mem
+  addr_t n = 0; // offset in m_instr_mem
   // Why s_g_pc_to_insn.size() is needed to reserve additional memory for insts?
   // reserve is cumulative. s_g_pc_to_insn.reserve(s_g_pc_to_insn.size() +
   // MAX_INST_SIZE*m_instructions.size());
@@ -319,11 +318,11 @@ void function_info::ptx_assemble() {
   }
   gpgpu_ctx->func_sim->g_assemble_code_next_pc = PC;
   for (unsigned ii = 0; ii < n;
-       ii += m_instr_mem[ii]->inst_size()) {  // handle branch instructions
+       ii += m_instr_mem[ii]->inst_size()) { // handle branch instructions
     ptx_instruction *pI = m_instr_mem[ii];
     if (pI->get_opcode() == BRA_OP || pI->get_opcode() == BREAKADDR_OP ||
         pI->get_opcode() == CALLP_OP) {
-      operand_info &target = pI->dst();  // get operand, e.g. target name
+      operand_info &target = pI->dst(); // get operand, e.g. target name
       if (labels.find(target.name()) == labels.end()) {
         printf(
             "GPGPU-Sim PTX: Loader error (%s:%u): Branch label \"%s\" does not "
@@ -331,7 +330,7 @@ void function_info::ptx_assemble() {
             pI->source_file(), pI->source_line(), target.name().c_str());
         abort();
       }
-      unsigned index = labels[target.name()];  // determine address from name
+      unsigned index = labels[target.name()]; // determine address from name
       unsigned PC = m_instr_mem[index]->get_PC();
       m_symtab->set_label_address(target.get_symbol(), PC);
       target.set_type(label_t);
@@ -390,7 +389,8 @@ addr_t global_to_generic(addr_t addr) { return addr; }
 bool isspace_shared(unsigned smid, addr_t addr) {
   addr_t start = SHARED_GENERIC_START + smid * SHARED_MEM_SIZE_MAX;
   addr_t end = SHARED_GENERIC_START + (smid + 1) * SHARED_MEM_SIZE_MAX;
-  if ((addr >= end) || (addr < start)) return false;
+  if ((addr >= end) || (addr < start))
+    return false;
   return true;
 }
 
@@ -424,7 +424,8 @@ bool isspace_local(unsigned smid, unsigned hwtid, addr_t addr) {
                  (LOCAL_MEM_SIZE_MAX * hwtid);
   addr_t end = LOCAL_GENERIC_START + (TOTAL_LOCAL_MEM_PER_SM * smid) +
                (LOCAL_MEM_SIZE_MAX * (hwtid + 1));
-  if ((addr >= end) || (addr < start)) return false;
+  if ((addr >= end) || (addr < start))
+    return false;
   return true;
 }
 
@@ -439,30 +440,28 @@ addr_t generic_to_global(addr_t addr) { return addr; }
 void *gpgpu_t::gpu_malloc(size_t size) {
   unsigned long long result = m_dev_malloc;
   if (g_debug_execution >= 3) {
-    printf(
-        "GPGPU-Sim PTX: allocating %zu bytes on GPU starting at address "
-        "0x%Lx\n",
-        size, m_dev_malloc);
+    printf("GPGPU-Sim PTX: allocating %zu bytes on GPU starting at address "
+           "0x%Lx\n",
+           size, m_dev_malloc);
     fflush(stdout);
   }
   m_dev_malloc += size;
   if (size % 256)
-    m_dev_malloc += (256 - size % 256);  // align to 256 byte boundaries
+    m_dev_malloc += (256 - size % 256); // align to 256 byte boundaries
   return (void *)result;
 }
 
 void *gpgpu_t::gpu_mallocarray(size_t size) {
   unsigned long long result = m_dev_malloc;
   if (g_debug_execution >= 3) {
-    printf(
-        "GPGPU-Sim PTX: allocating %zu bytes on GPU starting at address "
-        "0x%Lx\n",
-        size, m_dev_malloc);
+    printf("GPGPU-Sim PTX: allocating %zu bytes on GPU starting at address "
+           "0x%Lx\n",
+           size, m_dev_malloc);
     fflush(stdout);
   }
   m_dev_malloc += size;
   if (size % 256)
-    m_dev_malloc += (256 - size % 256);  // align to 256 byte boundaries
+    m_dev_malloc += (256 - size % 256); // align to 256 byte boundaries
   return (void *)result;
 }
 
@@ -525,10 +524,9 @@ void gpgpu_t::memcpy_gpu_to_gpu(size_t dst, size_t src, size_t count) {
 
 void gpgpu_t::gpu_memset(size_t dst_start_addr, int c, size_t count) {
   if (g_debug_execution >= 3) {
-    printf(
-        "GPGPU-Sim PTX: setting %zu bytes of memory to 0x%x starting at "
-        "0x%Lx... ",
-        count, (unsigned char)c, (unsigned long long)dst_start_addr);
+    printf("GPGPU-Sim PTX: setting %zu bytes of memory to 0x%x starting at "
+           "0x%Lx... ",
+           count, (unsigned char)c, (unsigned long long)dst_start_addr);
     fflush(stdout);
   }
   unsigned char c_value = (unsigned char)c;
@@ -597,54 +595,56 @@ void ptx_instruction::set_mul_div_or_other_archop() {
     if (get_type() == F32_TYPE || get_type() == F64_TYPE ||
         get_type() == FF64_TYPE) {
       switch (get_opcode()) {
-        case MUL_OP:
-        case MAD_OP:
-          sp_op = FP_MUL_OP;
-          break;
-        case DIV_OP:
-          sp_op = FP_DIV_OP;
-          break;
-        case LG2_OP:
-          sp_op = FP_LG_OP;
-          break;
-        case RSQRT_OP:
-        case SQRT_OP:
-          sp_op = FP_SQRT_OP;
-          break;
-        case RCP_OP:
-          sp_op = FP_DIV_OP;
-          break;
-        case SIN_OP:
-        case COS_OP:
-          sp_op = FP_SIN_OP;
-          break;
-        case EX2_OP:
-          sp_op = FP_EXP_OP;
-          break;
-        default:
-          if ((op == ALU_OP) || (op == TENSOR_CORE_OP)) sp_op = FP__OP;
-          break;
+      case MUL_OP:
+      case MAD_OP:
+        sp_op = FP_MUL_OP;
+        break;
+      case DIV_OP:
+        sp_op = FP_DIV_OP;
+        break;
+      case LG2_OP:
+        sp_op = FP_LG_OP;
+        break;
+      case RSQRT_OP:
+      case SQRT_OP:
+        sp_op = FP_SQRT_OP;
+        break;
+      case RCP_OP:
+        sp_op = FP_DIV_OP;
+        break;
+      case SIN_OP:
+      case COS_OP:
+        sp_op = FP_SIN_OP;
+        break;
+      case EX2_OP:
+        sp_op = FP_EXP_OP;
+        break;
+      default:
+        if ((op == ALU_OP) || (op == TENSOR_CORE_OP))
+          sp_op = FP__OP;
+        break;
       }
     } else {
       switch (get_opcode()) {
-        case MUL24_OP:
-        case MAD24_OP:
-          sp_op = INT_MUL24_OP;
-          break;
-        case MUL_OP:
-        case MAD_OP:
-          if (get_type() == U32_TYPE || get_type() == S32_TYPE ||
-              get_type() == B32_TYPE)
-            sp_op = INT_MUL32_OP;
-          else
-            sp_op = INT_MUL_OP;
-          break;
-        case DIV_OP:
-          sp_op = INT_DIV_OP;
-          break;
-        default:
-          if ((op == ALU_OP)) sp_op = INT__OP;
-          break;
+      case MUL24_OP:
+      case MAD24_OP:
+        sp_op = INT_MUL24_OP;
+        break;
+      case MUL_OP:
+      case MAD_OP:
+        if (get_type() == U32_TYPE || get_type() == S32_TYPE ||
+            get_type() == B32_TYPE)
+          sp_op = INT_MUL32_OP;
+        else
+          sp_op = INT_MUL_OP;
+        break;
+      case DIV_OP:
+        sp_op = INT_DIV_OP;
+        break;
+      default:
+        if ((op == ALU_OP))
+          sp_op = INT__OP;
+        break;
       }
     }
   }
@@ -653,28 +653,28 @@ void ptx_instruction::set_mul_div_or_other_archop() {
 void ptx_instruction::set_bar_type() {
   if (m_opcode == BAR_OP) {
     switch (m_barrier_op) {
-      case SYNC_OPTION:
-        bar_type = SYNC;
+    case SYNC_OPTION:
+      bar_type = SYNC;
+      break;
+    case ARRIVE_OPTION:
+      bar_type = ARRIVE;
+      break;
+    case RED_OPTION:
+      bar_type = RED;
+      switch (m_atomic_spec) {
+      case ATOMIC_POPC:
+        red_type = POPC_RED;
         break;
-      case ARRIVE_OPTION:
-        bar_type = ARRIVE;
+      case ATOMIC_AND:
+        red_type = AND_RED;
         break;
-      case RED_OPTION:
-        bar_type = RED;
-        switch (m_atomic_spec) {
-          case ATOMIC_POPC:
-            red_type = POPC_RED;
-            break;
-          case ATOMIC_AND:
-            red_type = AND_RED;
-            break;
-          case ATOMIC_OR:
-            red_type = OR_RED;
-            break;
-        }
+      case ATOMIC_OR:
+        red_type = OR_RED;
         break;
-      default:
-        abort();
+      }
+      break;
+    default:
+      abort();
     }
   } else if (m_opcode == SST_OP) {
     bar_type = SYNC;
@@ -740,213 +740,215 @@ void ptx_instruction::set_opcode_and_latency() {
   mem_op = NOT_TEX;
   initiation_interval = latency = 1;
   switch (m_opcode) {
-    case MOV_OP:
-      assert(!(has_memory_read() && has_memory_write()));
-      if (has_memory_read()) op = LOAD_OP;
-      if (has_memory_write()) op = STORE_OP;
-      break;
-    case LD_OP:
+  case MOV_OP:
+    assert(!(has_memory_read() && has_memory_write()));
+    if (has_memory_read())
       op = LOAD_OP;
-      break;
-    case MMA_LD_OP:
-      op = TENSOR_CORE_LOAD_OP;
-      break;
-    case LDU_OP:
-      op = LOAD_OP;
-      break;
-    case ST_OP:
+    if (has_memory_write())
       op = STORE_OP;
+    break;
+  case LD_OP:
+    op = LOAD_OP;
+    break;
+  case MMA_LD_OP:
+    op = TENSOR_CORE_LOAD_OP;
+    break;
+  case LDU_OP:
+    op = LOAD_OP;
+    break;
+  case ST_OP:
+    op = STORE_OP;
+    break;
+  case MMA_ST_OP:
+    op = TENSOR_CORE_STORE_OP;
+    break;
+  case BRA_OP:
+    op = BRANCH_OP;
+    break;
+  case BREAKADDR_OP:
+    op = BRANCH_OP;
+    break;
+  case TEX_OP:
+    op = LOAD_OP;
+    mem_op = TEX;
+    break;
+  case ATOM_OP:
+    op = LOAD_OP;
+    break;
+  case BAR_OP:
+    op = BARRIER_OP;
+    break;
+  case SST_OP:
+    op = BARRIER_OP;
+    break;
+  case MEMBAR_OP:
+    op = MEMORY_BARRIER_OP;
+    break;
+  case CALL_OP: {
+    if (m_is_printf || m_is_cdp) {
+      op = ALU_OP;
+    } else
+      op = CALL_OPS;
+    break;
+  }
+  case CALLP_OP: {
+    if (m_is_printf || m_is_cdp) {
+      op = ALU_OP;
+    } else
+      op = CALL_OPS;
+    break;
+  }
+  case RET_OP:
+  case RETP_OP:
+    op = RET_OPS;
+    break;
+  case ADD_OP:
+  case ADDP_OP:
+  case ADDC_OP:
+  case SUB_OP:
+  case SUBC_OP:
+    // ADD,SUB latency
+    switch (get_type()) {
+    case F32_TYPE:
+      latency = fp_latency[0];
+      initiation_interval = fp_init[0];
+      op = SP_OP;
       break;
-    case MMA_ST_OP:
-      op = TENSOR_CORE_STORE_OP;
+    case F64_TYPE:
+    case FF64_TYPE:
+      latency = dp_latency[0];
+      initiation_interval = dp_init[0];
+      op = DP_OP;
       break;
-    case BRA_OP:
-      op = BRANCH_OP;
-      break;
-    case BREAKADDR_OP:
-      op = BRANCH_OP;
-      break;
-    case TEX_OP:
-      op = LOAD_OP;
-      mem_op = TEX;
-      break;
-    case ATOM_OP:
-      op = LOAD_OP;
-      break;
-    case BAR_OP:
-      op = BARRIER_OP;
-      break;
-    case SST_OP:
-      op = BARRIER_OP;
-      break;
-    case MEMBAR_OP:
-      op = MEMORY_BARRIER_OP;
-      break;
-    case CALL_OP: {
-      if (m_is_printf || m_is_cdp) {
-        op = ALU_OP;
-      } else
-        op = CALL_OPS;
+    case B32_TYPE:
+    case U32_TYPE:
+    case S32_TYPE:
+    default: // Use int settings for default
+      latency = int_latency[0];
+      initiation_interval = int_init[0];
+      op = INTP_OP;
       break;
     }
-    case CALLP_OP: {
-      if (m_is_printf || m_is_cdp) {
-        op = ALU_OP;
-      } else
-        op = CALL_OPS;
+    break;
+  case MAX_OP:
+  case MIN_OP:
+    // MAX,MIN latency
+    switch (get_type()) {
+    case F32_TYPE:
+      latency = fp_latency[1];
+      initiation_interval = fp_init[1];
+      op = SP_OP;
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      latency = dp_latency[1];
+      initiation_interval = dp_init[1];
+      op = DP_OP;
+      break;
+    case B32_TYPE:
+    case U32_TYPE:
+    case S32_TYPE:
+    default: // Use int settings for default
+      latency = int_latency[1];
+      initiation_interval = int_init[1];
+      op = INTP_OP;
       break;
     }
-    case RET_OP:
-    case RETP_OP:
-      op = RET_OPS;
+    break;
+  case MUL_OP:
+    // MUL latency
+    switch (get_type()) {
+    case F32_TYPE:
+      latency = fp_latency[2];
+      initiation_interval = fp_init[2];
+      op = SP_OP;
       break;
-    case ADD_OP:
-    case ADDP_OP:
-    case ADDC_OP:
-    case SUB_OP:
-    case SUBC_OP:
-      // ADD,SUB latency
-      switch (get_type()) {
-        case F32_TYPE:
-          latency = fp_latency[0];
-          initiation_interval = fp_init[0];
-          op = SP_OP;
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          latency = dp_latency[0];
-          initiation_interval = dp_init[0];
-          op = DP_OP;
-          break;
-        case B32_TYPE:
-        case U32_TYPE:
-        case S32_TYPE:
-        default:  // Use int settings for default
-          latency = int_latency[0];
-          initiation_interval = int_init[0];
-          op = INTP_OP;
-          break;
-      }
+    case F64_TYPE:
+    case FF64_TYPE:
+      latency = dp_latency[2];
+      initiation_interval = dp_init[2];
+      op = DP_OP;
       break;
-    case MAX_OP:
-    case MIN_OP:
-      // MAX,MIN latency
-      switch (get_type()) {
-        case F32_TYPE:
-          latency = fp_latency[1];
-          initiation_interval = fp_init[1];
-          op = SP_OP;
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          latency = dp_latency[1];
-          initiation_interval = dp_init[1];
-          op = DP_OP;
-          break;
-        case B32_TYPE:
-        case U32_TYPE:
-        case S32_TYPE:
-        default:  // Use int settings for default
-          latency = int_latency[1];
-          initiation_interval = int_init[1];
-          op = INTP_OP;
-          break;
-      }
+    case B32_TYPE:
+    case U32_TYPE:
+    case S32_TYPE:
+    default: // Use int settings for default
+      latency = int_latency[2];
+      initiation_interval = int_init[2];
+      op = INTP_OP;
       break;
-    case MUL_OP:
-      // MUL latency
-      switch (get_type()) {
-        case F32_TYPE:
-          latency = fp_latency[2];
-          initiation_interval = fp_init[2];
-          op = SP_OP;
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          latency = dp_latency[2];
-          initiation_interval = dp_init[2];
-          op = DP_OP;
-          break;
-        case B32_TYPE:
-        case U32_TYPE:
-        case S32_TYPE:
-        default:  // Use int settings for default
-          latency = int_latency[2];
-          initiation_interval = int_init[2];
-          op = INTP_OP;
-          break;
-      }
+    }
+    break;
+  case MAD_OP:
+  case MADC_OP:
+  case MADP_OP:
+    // MAD latency
+    switch (get_type()) {
+    case F32_TYPE:
+      latency = fp_latency[3];
+      initiation_interval = fp_init[3];
+      op = SP_OP;
       break;
-    case MAD_OP:
-    case MADC_OP:
-    case MADP_OP:
-      // MAD latency
-      switch (get_type()) {
-        case F32_TYPE:
-          latency = fp_latency[3];
-          initiation_interval = fp_init[3];
-          op = SP_OP;
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          latency = dp_latency[3];
-          initiation_interval = dp_init[3];
-          op = DP_OP;
-          break;
-        case B32_TYPE:
-        case U32_TYPE:
-        case S32_TYPE:
-        default:  // Use int settings for default
-          latency = int_latency[3];
-          initiation_interval = int_init[3];
-          op = INTP_OP;
-          break;
-      }
+    case F64_TYPE:
+    case FF64_TYPE:
+      latency = dp_latency[3];
+      initiation_interval = dp_init[3];
+      op = DP_OP;
       break;
-    case DIV_OP:
-      // Floating point only
-      op = SFU_OP;
-      switch (get_type()) {
-        case F32_TYPE:
-          latency = fp_latency[4];
-          initiation_interval = fp_init[4];
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          latency = dp_latency[4];
-          initiation_interval = dp_init[4];
-          break;
-        case B32_TYPE:
-        case U32_TYPE:
-        case S32_TYPE:
-        default:  // Use int settings for default
-          latency = int_latency[4];
-          initiation_interval = int_init[4];
-          break;
-      }
+    case B32_TYPE:
+    case U32_TYPE:
+    case S32_TYPE:
+    default: // Use int settings for default
+      latency = int_latency[3];
+      initiation_interval = int_init[3];
+      op = INTP_OP;
       break;
-    case SQRT_OP:
-    case SIN_OP:
-    case COS_OP:
-    case EX2_OP:
-    case LG2_OP:
-    case RSQRT_OP:
-    case RCP_OP:
-      latency = sfu_latency;
-      initiation_interval = sfu_init;
-      op = SFU_OP;
+    }
+    break;
+  case DIV_OP:
+    // Floating point only
+    op = SFU_OP;
+    switch (get_type()) {
+    case F32_TYPE:
+      latency = fp_latency[4];
+      initiation_interval = fp_init[4];
       break;
-    case MMA_OP:
-      latency = tensor_latency;
-      initiation_interval = tensor_init;
-      op = TENSOR_CORE_OP;
+    case F64_TYPE:
+    case FF64_TYPE:
+      latency = dp_latency[4];
+      initiation_interval = dp_init[4];
       break;
-    case SHFL_OP:
-      latency = int_latency[5];
-      initiation_interval = int_init[5];
+    case B32_TYPE:
+    case U32_TYPE:
+    case S32_TYPE:
+    default: // Use int settings for default
+      latency = int_latency[4];
+      initiation_interval = int_init[4];
       break;
-    default:
-      break;
+    }
+    break;
+  case SQRT_OP:
+  case SIN_OP:
+  case COS_OP:
+  case EX2_OP:
+  case LG2_OP:
+  case RSQRT_OP:
+  case RCP_OP:
+    latency = sfu_latency;
+    initiation_interval = sfu_init;
+    op = SFU_OP;
+    break;
+  case MMA_OP:
+    latency = tensor_latency;
+    initiation_interval = tensor_init;
+    op = TENSOR_CORE_OP;
+    break;
+  case SHFL_OP:
+    latency = int_latency[5];
+    initiation_interval = int_init[5];
+    break;
+  default:
+    break;
   }
   set_fp_or_int_archop();
   set_mul_div_or_other_archop();
@@ -962,37 +964,37 @@ void ptx_thread_info::ptx_fetch_inst(inst_t &inst) const {
 static unsigned datatype2size(unsigned data_type) {
   unsigned data_size;
   switch (data_type) {
-    case B8_TYPE:
-    case S8_TYPE:
-    case U8_TYPE:
-      data_size = 1;
-      break;
-    case B16_TYPE:
-    case S16_TYPE:
-    case U16_TYPE:
-    case F16_TYPE:
-      data_size = 2;
-      break;
-    case B32_TYPE:
-    case S32_TYPE:
-    case U32_TYPE:
-    case F32_TYPE:
-      data_size = 4;
-      break;
-    case B64_TYPE:
-    case BB64_TYPE:
-    case S64_TYPE:
-    case U64_TYPE:
-    case F64_TYPE:
-    case FF64_TYPE:
-      data_size = 8;
-      break;
-    case BB128_TYPE:
-      data_size = 16;
-      break;
-    default:
-      assert(0);
-      break;
+  case B8_TYPE:
+  case S8_TYPE:
+  case U8_TYPE:
+    data_size = 1;
+    break;
+  case B16_TYPE:
+  case S16_TYPE:
+  case U16_TYPE:
+  case F16_TYPE:
+    data_size = 2;
+    break;
+  case B32_TYPE:
+  case S32_TYPE:
+  case U32_TYPE:
+  case F32_TYPE:
+    data_size = 4;
+    break;
+  case B64_TYPE:
+  case BB64_TYPE:
+  case S64_TYPE:
+  case U64_TYPE:
+  case F64_TYPE:
+  case FF64_TYPE:
+    data_size = 8;
+    break;
+  case BB128_TYPE:
+    data_size = 16;
+    break;
+  default:
+    assert(0);
+    break;
   }
   return data_size;
 }
@@ -1027,57 +1029,57 @@ void ptx_instruction::pre_decode() {
   bool has_dst = false;
 
   switch (get_opcode()) {
-#define OP_DEF(OP, FUNC, STR, DST, CLASSIFICATION) \
-  case OP:                                         \
-    has_dst = (DST != 0);                          \
+#define OP_DEF(OP, FUNC, STR, DST, CLASSIFICATION)                             \
+  case OP:                                                                     \
+    has_dst = (DST != 0);                                                      \
     break;
-#define OP_W_DEF(OP, FUNC, STR, DST, CLASSIFICATION) \
-  case OP:                                           \
-    has_dst = (DST != 0);                            \
+#define OP_W_DEF(OP, FUNC, STR, DST, CLASSIFICATION)                           \
+  case OP:                                                                     \
+    has_dst = (DST != 0);                                                      \
     break;
 #include "opcodes.def"
 #undef OP_DEF
 #undef OP_W_DEF
-    default:
-      printf("Execution error: Invalid opcode (0x%x)\n", get_opcode());
-      break;
+  default:
+    printf("Execution error: Invalid opcode (0x%x)\n", get_opcode());
+    break;
   }
 
   switch (m_cache_option) {
-    case CA_OPTION:
+  case CA_OPTION:
+    cache_op = CACHE_ALL;
+    break;
+  case NC_OPTION:
+    cache_op = CACHE_L1;
+    break;
+  case CG_OPTION:
+    cache_op = CACHE_GLOBAL;
+    break;
+  case CS_OPTION:
+    cache_op = CACHE_STREAMING;
+    break;
+  case LU_OPTION:
+    cache_op = CACHE_LAST_USE;
+    break;
+  case CV_OPTION:
+    cache_op = CACHE_VOLATILE;
+    break;
+  case WB_OPTION:
+    cache_op = CACHE_WRITE_BACK;
+    break;
+  case WT_OPTION:
+    cache_op = CACHE_WRITE_THROUGH;
+    break;
+  default:
+    // if( m_opcode == LD_OP || m_opcode == LDU_OP )
+    if (m_opcode == MMA_LD_OP || m_opcode == LD_OP || m_opcode == LDU_OP)
       cache_op = CACHE_ALL;
-      break;
-    case NC_OPTION:
-      cache_op = CACHE_L1;
-      break;
-    case CG_OPTION:
-      cache_op = CACHE_GLOBAL;
-      break;
-    case CS_OPTION:
-      cache_op = CACHE_STREAMING;
-      break;
-    case LU_OPTION:
-      cache_op = CACHE_LAST_USE;
-      break;
-    case CV_OPTION:
-      cache_op = CACHE_VOLATILE;
-      break;
-    case WB_OPTION:
+    // else if( m_opcode == ST_OP )
+    else if (m_opcode == MMA_ST_OP || m_opcode == ST_OP)
       cache_op = CACHE_WRITE_BACK;
-      break;
-    case WT_OPTION:
-      cache_op = CACHE_WRITE_THROUGH;
-      break;
-    default:
-      // if( m_opcode == LD_OP || m_opcode == LDU_OP )
-      if (m_opcode == MMA_LD_OP || m_opcode == LD_OP || m_opcode == LDU_OP)
-        cache_op = CACHE_ALL;
-      // else if( m_opcode == ST_OP )
-      else if (m_opcode == MMA_ST_OP || m_opcode == ST_OP)
-        cache_op = CACHE_WRITE_BACK;
-      else if (m_opcode == ATOM_OP)
-        cache_op = CACHE_GLOBAL;
-      break;
+    else if (m_opcode == ATOM_OP)
+      cache_op = CACHE_GLOBAL;
+    break;
   }
 
   set_opcode_and_latency();
@@ -1085,7 +1087,7 @@ void ptx_instruction::pre_decode() {
   // Get register operands
   int n = 0, m = 0;
   ptx_instruction::const_iterator opr = op_iter_begin();
-  for (; opr != op_iter_end(); opr++, n++) {  // process operands
+  for (; opr != op_iter_end(); opr++, n++) { // process operands
     const operand_info &o = *opr;
     if (has_dst && n == 0) {
       // Do not set the null register "_" as an architectural register
@@ -1095,32 +1097,41 @@ void ptx_instruction::pre_decode() {
       } else if (o.is_vector()) {
         is_vectorin = 1;
         unsigned num_elem = o.get_vect_nelem();
-        if (num_elem >= 1) out[0] = o.reg1_num();
-        if (num_elem >= 2) out[1] = o.reg2_num();
-        if (num_elem >= 3) out[2] = o.reg3_num();
-        if (num_elem >= 4) out[3] = o.reg4_num();
-        if (num_elem >= 5) out[4] = o.reg5_num();
-        if (num_elem >= 6) out[5] = o.reg6_num();
-        if (num_elem >= 7) out[6] = o.reg7_num();
-        if (num_elem >= 8) out[7] = o.reg8_num();
-        for (int i = 0; i < num_elem; i++) arch_reg.dst[i] = o.arch_reg_num(i);
+        if (num_elem >= 1)
+          out[0] = o.reg1_num();
+        if (num_elem >= 2)
+          out[1] = o.reg2_num();
+        if (num_elem >= 3)
+          out[2] = o.reg3_num();
+        if (num_elem >= 4)
+          out[3] = o.reg4_num();
+        if (num_elem >= 5)
+          out[4] = o.reg5_num();
+        if (num_elem >= 6)
+          out[5] = o.reg6_num();
+        if (num_elem >= 7)
+          out[6] = o.reg7_num();
+        if (num_elem >= 8)
+          out[7] = o.reg8_num();
+        for (int i = 0; i < num_elem; i++)
+          arch_reg.dst[i] = o.arch_reg_num(i);
       }
     } else {
       if (o.is_reg() && !o.is_non_arch_reg()) {
         int reg_num = o.reg_num();
         arch_reg.src[m] = o.arch_reg_num();
         switch (m) {
-          case 0:
-            in[0] = reg_num;
-            break;
-          case 1:
-            in[1] = reg_num;
-            break;
-          case 2:
-            in[2] = reg_num;
-            break;
-          default:
-            break;
+        case 0:
+          in[0] = reg_num;
+          break;
+        case 1:
+          in[1] = reg_num;
+          break;
+        case 2:
+          in[2] = reg_num;
+          break;
+        default:
+          break;
         }
         m++;
       } else if (o.is_vector()) {
@@ -1128,14 +1139,22 @@ void ptx_instruction::pre_decode() {
         // now
         is_vectorout = 1;
         unsigned num_elem = o.get_vect_nelem();
-        if (num_elem >= 1) in[m + 0] = o.reg1_num();
-        if (num_elem >= 2) in[m + 1] = o.reg2_num();
-        if (num_elem >= 3) in[m + 2] = o.reg3_num();
-        if (num_elem >= 4) in[m + 3] = o.reg4_num();
-        if (num_elem >= 5) in[m + 4] = o.reg5_num();
-        if (num_elem >= 6) in[m + 5] = o.reg6_num();
-        if (num_elem >= 7) in[m + 6] = o.reg7_num();
-        if (num_elem >= 8) in[m + 7] = o.reg8_num();
+        if (num_elem >= 1)
+          in[m + 0] = o.reg1_num();
+        if (num_elem >= 2)
+          in[m + 1] = o.reg2_num();
+        if (num_elem >= 3)
+          in[m + 2] = o.reg3_num();
+        if (num_elem >= 4)
+          in[m + 3] = o.reg4_num();
+        if (num_elem >= 5)
+          in[m + 4] = o.reg5_num();
+        if (num_elem >= 6)
+          in[m + 5] = o.reg6_num();
+        if (num_elem >= 7)
+          in[m + 6] = o.reg7_num();
+        if (num_elem >= 8)
+          in[m + 7] = o.reg8_num();
         for (int i = 0; i < num_elem; i++)
           arch_reg.src[m + i] = o.arch_reg_num(i);
         m += num_elem;
@@ -1146,10 +1165,12 @@ void ptx_instruction::pre_decode() {
   // Setting number of input and output operands which is required for
   // scoreboard check
   for (int i = 0; i < MAX_OUTPUT_VALUES; i++)
-    if (out[i] > 0) outcount++;
+    if (out[i] > 0)
+      outcount++;
 
   for (int i = 0; i < MAX_INPUT_VALUES; i++)
-    if (in[i] > 0) incount++;
+    if (in[i] > 0)
+      incount++;
 
   // Get predicate
   if (has_pred()) {
@@ -1162,7 +1183,7 @@ void ptx_instruction::pre_decode() {
   //  and maximum of two address registers for one memory operand.
   if (has_memory_read() || has_memory_write()) {
     ptx_instruction::const_iterator op = op_iter_begin();
-    for (; op != op_iter_end(); op++, n++) {  // process operands
+    for (; op != op_iter_end(); op++, n++) { // process operands
       const operand_info &o = *op;
 
       if (o.is_memory_operand()) {
@@ -1198,7 +1219,7 @@ void ptx_instruction::pre_decode() {
         else if (o.get_symbol()
                      ->type()
                      ->get_key()
-                     .is_reg()) {  // Memory operand contains a register
+                     .is_reg()) { // Memory operand contains a register
           ar1 = o.reg_num();
           arch_reg.src[4] = o.arch_reg_num();
         }
@@ -1236,7 +1257,7 @@ void function_info::add_param_data(unsigned argn,
   const void *data = args->m_start;
 
   bool scratchpad_memory_param =
-      false;  // Is this parameter in CUDA shared memory or OpenCL local memory
+      false; // Is this parameter in CUDA shared memory or OpenCL local memory
 
   std::map<unsigned, param_info>::iterator i =
       m_ptx_kernel_param_info.find(argn);
@@ -1296,9 +1317,8 @@ void function_info::add_param_data(unsigned argn,
       }
 
       if (!is_ptr_shared and !p->is_shared()) {
-        printf(
-            "GPGPU-Sim PTX: ERROR ** clSetKernelArg passed NULL but arg not "
-            "shared memory\n");
+        printf("GPGPU-Sim PTX: ERROR ** clSetKernelArg passed NULL but arg not "
+               "shared memory\n");
         abort();
       }
       unsigned num_bits = 8 * args->m_nbytes;
@@ -1321,7 +1341,8 @@ void function_info::add_param_data(unsigned argn,
 }
 
 unsigned function_info::get_args_aligned_size() {
-  if (m_args_aligned_size >= 0) return m_args_aligned_size;
+  if (m_args_aligned_size >= 0)
+    return m_args_aligned_size;
 
   unsigned param_address = 0;
   unsigned int total_size = 0;
@@ -1332,14 +1353,14 @@ unsigned function_info::get_args_aligned_size() {
     std::string name = p.get_name();
     symbol *param = m_symtab->lookup(name.c_str());
 
-    size_t arg_size = p.get_size() / 8;  // size of param in bytes
-    total_size = (total_size + arg_size - 1) / arg_size * arg_size;  // aligned
+    size_t arg_size = p.get_size() / 8; // size of param in bytes
+    total_size = (total_size + arg_size - 1) / arg_size * arg_size; // aligned
     p.add_offset(total_size);
     param->set_address(param_address + total_size);
     total_size += arg_size;
   }
 
-  m_args_aligned_size = (total_size + 3) / 4 * 4;  // final size aligned to word
+  m_args_aligned_size = (total_size + 3) / 4 * 4; // final size aligned to word
 
   return m_args_aligned_size;
 }
@@ -1351,8 +1372,8 @@ void function_info::finalize(memory_space *param_mem) {
        i != m_ptx_kernel_param_info.end(); i++) {
     param_info &p = i->second;
     if (p.is_ptr_shared())
-      continue;  // Pointer to local memory: Should we pass the allocated shared
-                 // memory address to the param memory space?
+      continue; // Pointer to local memory: Should we pass the allocated shared
+                // memory address to the param memory space?
     std::string name = p.get_name();
     int type = p.get_type();
     param_t param_value = p.get_value();
@@ -1361,7 +1382,7 @@ void function_info::finalize(memory_space *param_mem) {
     unsigned xtype = param->type()->get_key().scalar_type();
     assert(xtype == (unsigned)type);
     size_t size;
-    size = param_value.size;  // size of param in bytes
+    size = param_value.size; // size of param in bytes
     // assert(param_value.offset == param_address);
     if (size != p.get_size() / 8) {
       printf(
@@ -1377,14 +1398,14 @@ void function_info::finalize(memory_space *param_mem) {
     int align_amount = paramtype->get_key().get_alignment_spec();
     align_amount = (align_amount == -1) ? size : align_amount;
     param_address = (param_address + align_amount - 1) / align_amount *
-                    align_amount;  // aligned
+                    align_amount; // aligned
 
     const size_t word_size = 4;
     // param_address = (param_address + size - 1) / size * size; //aligned with
     // size
     for (size_t idx = 0; idx < size; idx += word_size) {
       const char *pdata = reinterpret_cast<const char *>(param_value.pdata) +
-                          idx;  // cast to char * for ptr arithmetic
+                          idx; // cast to char * for ptr arithmetic
       param_mem->write(param_address + idx, word_size, pdata, NULL, NULL);
     }
     unsigned offset = p.get_offset();
@@ -1407,8 +1428,8 @@ void function_info::param_to_shared(memory_space *shared_mem,
        i != m_ptx_kernel_param_info.end(); i++) {
     param_info &p = i->second;
     if (p.is_ptr_shared())
-      continue;  // Pointer to local memory: Should we pass the allocated shared
-                 // memory address to the param memory space?
+      continue; // Pointer to local memory: Should we pass the allocated shared
+                // memory address to the param memory space?
     std::string name = p.get_name();
     int type = p.get_type();
     param_t value = p.get_value();
@@ -1444,7 +1465,7 @@ void function_info::ptx_jit_config(
     std::map<unsigned long long, size_t> mallocPtr_Size,
     memory_space *param_mem, gpgpu_t *gpu, dim3 gridDim, dim3 blockDim) {
   static unsigned long long counter = 0;
-  std::vector<std::pair<size_t, unsigned char *> > param_data;
+  std::vector<std::pair<size_t, unsigned char *>> param_data;
   std::vector<unsigned> offsets;
   std::vector<bool> paramIsPointer;
 
@@ -1555,7 +1576,7 @@ void function_info::ptx_jit_config(
   fprintf(fout, "%u,%u,%u %u,%u,%u\n", gridDim.x, gridDim.y, gridDim.z,
           blockDim.x, blockDim.y, blockDim.z);
   size_t index = 0;
-  for (std::vector<std::pair<size_t, unsigned char *> >::const_iterator i =
+  for (std::vector<std::pair<size_t, unsigned char *>>::const_iterator i =
            param_data.begin();
        i != param_data.end(); i++) {
     if (paramIsPointer[index]) {
@@ -1644,7 +1665,8 @@ bool cuda_sim::ptx_debug_exec_dump_cond(int thd_uid, addr_t pc) {
 
 void cuda_sim::init_inst_classification_stat() {
   static std::set<unsigned> init;
-  if (init.find(g_ptx_kernel_count) != init.end()) return;
+  if (init.find(g_ptx_kernel_count) != init.end())
+    return;
   init.insert(g_ptx_kernel_count);
 
 #define MAX_CLASS_KER 1024
@@ -1654,8 +1676,8 @@ void cuda_sim::init_inst_classification_stat() {
   snprintf(kernelname, MAX_CLASS_KER, "Kernel %d Classification\n",
            g_ptx_kernel_count);
   assert(g_ptx_kernel_count <
-         MAX_CLASS_KER);  // a static limit on number of kernels increase it if
-                          // it fails!
+         MAX_CLASS_KER); // a static limit on number of kernels increase it if
+                         // it fails!
   g_inst_classification_stat[g_ptx_kernel_count] =
       StatCreate(kernelname, 1, 20);
   if (!g_inst_op_classification_stat)
@@ -1669,7 +1691,7 @@ void cuda_sim::init_inst_classification_stat() {
 
 static unsigned get_tex_datasize(const ptx_instruction *pI,
                                  ptx_thread_info *thread) {
-  const operand_info &src1 = pI->src1();  // the name of the texture
+  const operand_info &src1 = pI->src1(); // the name of the texture
   std::string texname = src1.name();
 
   /*
@@ -1698,7 +1720,7 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
   int op_classification = 0;
   addr_t pc = next_instr();
   assert(pc ==
-         inst.pc);  // make sure timing model and functional model are in sync
+         inst.pc); // make sure timing model and functional model are in sync
   const ptx_instruction *pI = m_func_info->get_instruction(pc);
 
   set_npc(pc + pI->inst_size());
@@ -1708,9 +1730,8 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
     m_last_set_operand_value.u64 = 0;
 
     if (is_done()) {
-      printf(
-          "attempted to execute instruction on a thread that is already "
-          "done.\n");
+      printf("attempted to execute instruction on a thread that is already "
+             "done.\n");
       assert(0);
     }
 
@@ -1729,7 +1750,7 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       ptx_reg_t pred_value = get_operand_value(pred, pred, PRED_TYPE, this, 0);
       if (pI->get_pred_mod() == -1) {
         skip = (pred_value.pred & 0x0001) ^
-               pI->get_pred_neg();  // ptxplus inverts the zero flag
+               pI->get_pred_neg(); // ptxplus inverts the zero flag
       } else {
         skip = !pred_lookup(pI->get_pred_mod(), pred_value.pred & 0x000F);
       }
@@ -1743,7 +1764,7 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       ptx_instruction *pJ = NULL;
       if (pI->get_opcode() == VOTE_OP || pI->get_opcode() == ACTIVEMASK_OP) {
         pJ = new ptx_instruction(*pI);
-        *((warp_inst_t *)pJ) = inst;  // copy active mask information
+        *((warp_inst_t *)pJ) = inst; // copy active mask information
         pI = pJ;
       }
 
@@ -1763,30 +1784,30 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       if (!tensorcore_op(inst_opcode) ||
           ((tensorcore_op(inst_opcode)) && (lane_id == 0))) {
         switch (inst_opcode) {
-#define OP_DEF(OP, FUNC, STR, DST, CLASSIFICATION) \
-  case OP:                                         \
-    FUNC(pI, this);                                \
-    op_classification = CLASSIFICATION;            \
+#define OP_DEF(OP, FUNC, STR, DST, CLASSIFICATION)                             \
+  case OP:                                                                     \
+    FUNC(pI, this);                                                            \
+    op_classification = CLASSIFICATION;                                        \
     break;
-#define OP_W_DEF(OP, FUNC, STR, DST, CLASSIFICATION) \
-  case OP:                                           \
-    FUNC(pI, get_core(), inst);                      \
-    op_classification = CLASSIFICATION;              \
+#define OP_W_DEF(OP, FUNC, STR, DST, CLASSIFICATION)                           \
+  case OP:                                                                     \
+    FUNC(pI, get_core(), inst);                                                \
+    op_classification = CLASSIFICATION;                                        \
     break;
 #include "opcodes.def"
 #undef OP_DEF
 #undef OP_W_DEF
-          default:
-            printf("Execution error: Invalid opcode (0x%x)\n",
-                   pI->get_opcode());
-            break;
+        default:
+          printf("Execution error: Invalid opcode (0x%x)\n", pI->get_opcode());
+          break;
         }
       }
       delete pJ;
       pI = pI_saved;
 
       // Run exit instruction if exit option included
-      if (pI->is_exit()) exit_impl(pI, this);
+      if (pI->is_exit())
+        exit_impl(pI, this);
     }
 
     const gpgpu_functional_sim_config &config = m_gpu->get_config();
@@ -1807,13 +1828,12 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
                                                                 pc)) {
       dim3 ctaid = get_ctaid();
       dim3 tid = get_tid();
-      printf(
-          "%u [thd=%u][i=%u] : ctaid=(%u,%u,%u) tid=(%u,%u,%u) icount=%u "
-          "[pc=%u] (%s:%u - %s)  [0x%llx]\n",
-          m_gpu->gpgpu_ctx->func_sim->g_ptx_sim_num_insn, get_uid(), pI->uid(),
-          ctaid.x, ctaid.y, ctaid.z, tid.x, tid.y, tid.z, get_icount(), pc,
-          pI->source_file(), pI->source_line(), pI->get_source(),
-          m_last_set_operand_value.u64);
+      printf("%u [thd=%u][i=%u] : ctaid=(%u,%u,%u) tid=(%u,%u,%u) icount=%u "
+             "[pc=%u] (%s:%u - %s)  [0x%llx]\n",
+             m_gpu->gpgpu_ctx->func_sim->g_ptx_sim_num_insn, get_uid(),
+             pI->uid(), ctaid.x, ctaid.y, ctaid.z, tid.x, tid.y, tid.z,
+             get_icount(), pc, pI->source_file(), pI->source_line(),
+             pI->get_source(), m_last_set_operand_value.u64);
       fflush(stdout);
     }
 
@@ -1851,7 +1871,7 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       assert(inst.space == last_space());
       insn_data_size = get_tex_datasize(
           pI,
-          this);  // texture obtain its data granularity from the texture info
+          this); // texture obtain its data granularity from the texture info
     }
 
     // Output register information to file and stdout
@@ -1883,31 +1903,31 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       m_gpu->gpgpu_ctx->func_sim->init_inst_classification_stat();
       unsigned space_type = 0;
       switch (pI->get_space().get_type()) {
-        case global_space:
-          space_type = 10;
-          break;
-        case local_space:
-          space_type = 11;
-          break;
-        case tex_space:
-          space_type = 12;
-          break;
-        case surf_space:
-          space_type = 13;
-          break;
-        case param_space_kernel:
-        case param_space_local:
-          space_type = 14;
-          break;
-        case shared_space:
-          space_type = 15;
-          break;
-        case const_space:
-          space_type = 16;
-          break;
-        default:
-          space_type = 0;
-          break;
+      case global_space:
+        space_type = 10;
+        break;
+      case local_space:
+        space_type = 11;
+        break;
+      case tex_space:
+        space_type = 12;
+        break;
+      case surf_space:
+        space_type = 13;
+        break;
+      case param_space_kernel:
+      case param_space_local:
+        space_type = 14;
+        break;
+      case shared_space:
+        space_type = 15;
+        break;
+      case const_space:
+        space_type = 16;
+        break;
+      default:
+        space_type = 0;
+        break;
       }
       StatAddSample(m_gpu->gpgpu_ctx->func_sim->g_inst_classification_stat
                         [m_gpu->gpgpu_ctx->func_sim->g_ptx_kernel_count],
@@ -1936,7 +1956,7 @@ void ptx_thread_info::ptx_exec_inst(warp_inst_t &inst, unsigned lane_id) {
       if (!((inst_opcode == MMA_LD_OP || inst_opcode == MMA_ST_OP))) {
         inst.space = insn_space;
         inst.set_addr(lane_id, insn_memaddr);
-        inst.data_size = insn_data_size;  // simpleAtomicIntrinsics
+        inst.data_size = insn_data_size; // simpleAtomicIntrinsics
         assert(inst.memory_op == insn_memory_op);
       }
     }
@@ -1953,8 +1973,8 @@ void cuda_sim::set_param_gpgpu_num_shaders(int num_shaders) {
   gpgpu_param_num_shaders = num_shaders;
 }
 
-const struct gpgpu_ptx_sim_info *ptx_sim_kernel_info(
-    const function_info *kernel) {
+const struct gpgpu_ptx_sim_info *
+ptx_sim_kernel_info(const function_info *kernel) {
   return kernel->get_kernel_info();
 }
 
@@ -1974,7 +1994,7 @@ unsigned ptx_sim_init_thread(kernel_info_t &kernel,
   static std::map<unsigned, memory_space *> sstarr_memory_lookup;
   static std::map<unsigned, ptx_cta_info *> ptx_cta_lookup;
   static std::map<unsigned, ptx_warp_info *> ptx_warp_lookup;
-  static std::map<unsigned, std::map<unsigned, memory_space *> >
+  static std::map<unsigned, std::map<unsigned, memory_space *>>
       local_memory_lookup;
 
   if (*thread_info != NULL) {
@@ -1983,10 +2003,9 @@ unsigned ptx_sim_init_thread(kernel_info_t &kernel,
     if (g_debug_execution == -1) {
       dim3 ctaid = thd->get_ctaid();
       dim3 t = thd->get_tid();
-      printf(
-          "GPGPU-Sim PTX simulator:  thread exiting ctaid=(%u,%u,%u) "
-          "tid=(%u,%u,%u) uid=%u\n",
-          ctaid.x, ctaid.y, ctaid.z, t.x, t.y, t.z, thd->get_uid());
+      printf("GPGPU-Sim PTX simulator:  thread exiting ctaid=(%u,%u,%u) "
+             "tid=(%u,%u,%u) uid=%u\n",
+             ctaid.x, ctaid.y, ctaid.z, t.x, t.y, t.z, thd->get_uid());
       fflush(stdout);
     }
     thd->m_cta_info->register_deleted_thread(thd);
@@ -2005,7 +2024,7 @@ unsigned ptx_sim_init_thread(kernel_info_t &kernel,
   }
 
   if (kernel.no_more_ctas_to_run()) {
-    return 0;  // finished!
+    return 0; // finished!
   }
 
   if (threads_left < kernel.threads_per_cta()) {
@@ -2023,7 +2042,7 @@ unsigned ptx_sim_init_thread(kernel_info_t &kernel,
   memory_space *sstarr_mem = NULL;
 
   unsigned cta_size = kernel.threads_per_cta();
-  unsigned max_cta_per_sm = num_threads / cta_size;  // e.g., 256 / 48 = 5
+  unsigned max_cta_per_sm = num_threads / cta_size; // e.g., 256 / 48 = 5
   assert(max_cta_per_sm > 0);
 
   // unsigned sm_idx = (tid/cta_size)*gpgpu_param_num_shaders + sid;
@@ -2102,11 +2121,10 @@ unsigned ptx_sim_init_thread(kernel_info_t &kernel,
     cta_info->add_thread(thd);
     thd->m_local_mem = local_mem;
     if (g_debug_execution == -1) {
-      printf(
-          "GPGPU-Sim PTX simulator:  allocating thread ctaid=(%u,%u,%u) "
-          "tid=(%u,%u,%u) @ 0x%Lx\n",
-          ctaid3d.x, ctaid3d.y, ctaid3d.z, tid3d.x, tid3d.y, tid3d.z,
-          (unsigned long long)thd);
+      printf("GPGPU-Sim PTX simulator:  allocating thread ctaid=(%u,%u,%u) "
+             "tid=(%u,%u,%u) @ 0x%Lx\n",
+             ctaid3d.x, ctaid3d.y, ctaid3d.z, tid3d.x, tid3d.y, tid3d.z,
+             (unsigned long long)thd);
       fflush(stdout);
     }
     active_threads.push_back(thd);
@@ -2200,10 +2218,9 @@ void cuda_sim::gpgpu_ptx_sim_memcpy_symbol(const char *hostVar, const void *src,
       gpu->gpgpu_ctx->func_sim->g_global_name_lookup.find(hostVar);
   if (g != gpu->gpgpu_ctx->func_sim->g_global_name_lookup.end()) {
     if (found_sym) {
-      printf(
-          "Execution error: PTX symbol \"%s\" w/ hostVar=0x%Lx is declared "
-          "both const and global?\n",
-          sym_name.c_str(), (unsigned long long)hostVar);
+      printf("Execution error: PTX symbol \"%s\" w/ hostVar=0x%Lx is declared "
+             "both const and global?\n",
+             sym_name.c_str(), (unsigned long long)hostVar);
       abort();
     }
     found_sym = true;
@@ -2226,10 +2243,9 @@ void cuda_sim::gpgpu_ptx_sim_memcpy_symbol(const char *hostVar, const void *src,
            (unsigned long long)hostVar);
     abort();
   } else
-    printf(
-        "GPGPU-Sim PTX: gpgpu_ptx_sim_memcpy_symbol: Found PTX symbol w/ "
-        "hostVar=0x%Lx\n",
-        (unsigned long long)hostVar);
+    printf("GPGPU-Sim PTX: gpgpu_ptx_sim_memcpy_symbol: Found PTX symbol w/ "
+           "hostVar=0x%Lx\n",
+           (unsigned long long)hostVar);
   const char *mem_name = NULL;
   memory_space *mem = NULL;
 
@@ -2242,16 +2258,16 @@ void cuda_sim::gpgpu_ptx_sim_memcpy_symbol(const char *hostVar, const void *src,
   assert(sym);
   unsigned dst = sym->get_address() + offset;
   switch (mem_region.get_type()) {
-    case const_space:
-      mem = gpu->get_global_memory();
-      mem_name = "const";
-      break;
-    case global_space:
-      mem = gpu->get_global_memory();
-      mem_name = "global";
-      break;
-    default:
-      abort();
+  case const_space:
+    mem = gpu->get_global_memory();
+    mem_name = "const";
+    break;
+  case global_space:
+    mem = gpu->get_global_memory();
+    mem_name = "global";
+    break;
+  default:
+    abort();
   }
   printf(
       "GPGPU-Sim PTX: gpgpu_ptx_sim_memcpy_symbol: copying %s memory %zu bytes "
@@ -2274,14 +2290,13 @@ void cuda_sim::read_sim_environment_variables() {
   g_interactive_debugger_enabled = false;
 
   char *mode = getenv("PTX_SIM_MODE_FUNC");
-  if (mode) sscanf(mode, "%u", &g_ptx_sim_mode);
-  printf(
-      "GPGPU-Sim PTX: simulation mode %d (can change with PTX_SIM_MODE_FUNC "
-      "environment variable:\n",
-      g_ptx_sim_mode);
-  printf(
-      "               1=functional simulation only, 0=detailed performance "
-      "simulator)\n");
+  if (mode)
+    sscanf(mode, "%u", &g_ptx_sim_mode);
+  printf("GPGPU-Sim PTX: simulation mode %d (can change with PTX_SIM_MODE_FUNC "
+         "environment variable:\n",
+         g_ptx_sim_mode);
+  printf("               1=functional simulation only, 0=detailed performance "
+         "simulator)\n");
   char *dbg_inter = getenv("GPGPUSIM_DEBUG");
   if (dbg_inter && strlen(dbg_inter)) {
     printf("GPGPU-Sim PTX: enabling interactive debugger\n");
@@ -2315,9 +2330,8 @@ void cuda_sim::read_sim_environment_variables() {
   g_override_embedded_ptx = false;
   char *usefile = getenv("PTX_SIM_USE_PTX_FILE");
   if (usefile && strlen(usefile)) {
-    printf(
-        "GPGPU-Sim PTX: overriding embedded ptx with ptx file "
-        "(PTX_SIM_USE_PTX_FILE is set)\n");
+    printf("GPGPU-Sim PTX: overriding embedded ptx with ptx file "
+           "(PTX_SIM_USE_PTX_FILE is set)\n");
     fflush(stdout);
     g_override_embedded_ptx = true;
   }
@@ -2366,10 +2380,14 @@ unsigned max_cta(const struct gpgpu_ptx_sim_info *kernel_info,
   result = gs_min2(result, result_cta);
 
   printf("GPGPU-Sim uArch: CTA/core = %u, limited by:", result);
-  if (result == result_thread) printf(" threads");
-  if (result == result_shmem) printf(" shmem");
-  if (result == result_regs) printf(" regs");
-  if (result == result_cta) printf(" cta_limit");
+  if (result == result_thread)
+    printf(" threads");
+  if (result == result_shmem)
+    printf(" shmem");
+  if (result == result_regs)
+    printf(" regs");
+  if (result == result_cta)
+    printf(" cta_limit");
   printf("\n");
 
   return result;
@@ -2432,7 +2450,7 @@ void cuda_sim::gpgpu_cuda_ptx_sim_main_func(kernel_info_t &kernel,
     if (cp_op == 0 ||
         (cp_op == 1 && cta_launched < cp_cta_resume &&
          kernel.get_uid() == cp_kernel) ||
-        kernel.get_uid() < cp_kernel)  // just fro testing
+        kernel.get_uid() < cp_kernel) // just fro testing
     {
       functionalCoreSim cta(
           &kernel, gpgpu_ctx->the_gpgpusim->g_the_gpu,
@@ -2509,7 +2527,8 @@ void functionalCoreSim::initializeCTA(unsigned ctaid_cp) {
     m_warpAtBarrier[i] = false;
     m_liveThreadCount[i] = 0;
   }
-  for (int i = 0; i < m_warp_count * m_warp_size; i++) m_thread[i] = NULL;
+  for (int i = 0; i < m_warp_count * m_warp_size; i++)
+    m_thread[i] = NULL;
 
   // get threads for a cta
   for (unsigned i = 0; i < m_kernel->threads_per_cta(); i++) {
@@ -2525,7 +2544,8 @@ void functionalCoreSim::initializeCTA(unsigned ctaid_cp) {
     ctaLiveThreads++;
   }
 
-  for (int k = 0; k < m_warp_count; k++) createWarp(k);
+  for (int k = 0; k < m_warp_count; k++)
+    createWarp(k);
 }
 
 void functionalCoreSim::createWarp(unsigned warpId) {
@@ -2580,9 +2600,11 @@ void functionalCoreSim::execute(int inst_count, unsigned ctaid_cp) {
       someOneLive = false;
       break;
     }
-    if (!someOneLive) break;
+    if (!someOneLive)
+      break;
     if (allAtBarrier) {
-      for (unsigned i = 0; i < m_warp_count; i++) m_warpAtBarrier[i] = false;
+      for (unsigned i = 0; i < m_warp_count; i++)
+        m_warpAtBarrier[i] = false;
     }
   }
 
@@ -2633,13 +2655,16 @@ void functionalCoreSim::executeWarp(unsigned i, bool &allAtBarrier,
   if (!m_warpAtBarrier[i] && m_liveThreadCount[i] != 0) {
     warp_inst_t inst = getExecuteWarp(i);
     execute_warp_inst_t(inst, i);
-    if (inst.isatomic()) inst.do_atomic(true);
+    if (inst.isatomic())
+      inst.do_atomic(true);
     if (inst.op == BARRIER_OP || inst.op == MEMORY_BARRIER_OP)
       m_warpAtBarrier[i] = true;
     updateSIMTStack(i, &inst);
   }
-  if (m_liveThreadCount[i] > 0) someOneLive = true;
-  if (!m_warpAtBarrier[i] && m_liveThreadCount[i] > 0) allAtBarrier = false;
+  if (m_liveThreadCount[i] > 0)
+    someOneLive = true;
+  if (!m_warpAtBarrier[i] && m_liveThreadCount[i] > 0)
+    allAtBarrier = false;
 }
 
 unsigned gpgpu_context::translate_pc_to_ptxlineno(unsigned pc) {

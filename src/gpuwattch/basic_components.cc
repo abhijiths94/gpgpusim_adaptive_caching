@@ -46,11 +46,11 @@ double longer_channel_device_reduction(enum Device_ty device_ty,
   longer_channel_device_percentage_uncore = 0.82;
   if (core_ty == OOO) {
     longer_channel_device_percentage_core =
-        0.56;  // 0.54 Xeon Tulsa //0.58 Nehelam
+        0.56; // 0.54 Xeon Tulsa //0.58 Nehelam
     // longer_channel_device_percentage_uncore = 0.76;//0.85 Nehelam
 
   } else {
-    longer_channel_device_percentage_core = 0.8;  // 0.8;//Niagara
+    longer_channel_device_percentage_core = 0.8; // 0.8;//Niagara
     // longer_channel_device_percentage_uncore = 0.9;//Niagara
   }
 
@@ -77,7 +77,7 @@ double longer_channel_device_reduction(enum Device_ty device_ty,
   return long_channel_device_reduction;
 }
 
-statsComponents operator+(const statsComponents& x, const statsComponents& y) {
+statsComponents operator+(const statsComponents &x, const statsComponents &y) {
   statsComponents z;
 
   z.access = x.access + y.access;
@@ -87,7 +87,7 @@ statsComponents operator+(const statsComponents& x, const statsComponents& y) {
   return z;
 }
 
-statsComponents operator*(const statsComponents& x, double const* const y) {
+statsComponents operator*(const statsComponents &x, double const *const y) {
   statsComponents z;
 
   z.access = x.access * y[0];
@@ -97,7 +97,7 @@ statsComponents operator*(const statsComponents& x, double const* const y) {
   return z;
 }
 
-statsDef operator+(const statsDef& x, const statsDef& y) {
+statsDef operator+(const statsDef &x, const statsDef &y) {
   statsDef z;
 
   z.readAc = x.readAc + y.readAc;
@@ -106,7 +106,7 @@ statsDef operator+(const statsDef& x, const statsDef& y) {
   return z;
 }
 
-statsDef operator*(const statsDef& x, double const* const y) {
+statsDef operator*(const statsDef &x, double const *const y) {
   statsDef z;
 
   z.readAc = x.readAc * y;

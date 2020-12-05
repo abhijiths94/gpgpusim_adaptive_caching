@@ -39,7 +39,7 @@
 
 xbar_router::xbar_router(unsigned router_id, enum Interconnect_type m_type,
                          unsigned n_shader, unsigned n_mem,
-                         const struct inct_config& m_localinct_config) {
+                         const struct inct_config &m_localinct_config) {
   m_id = router_id;
   router_type = m_type;
   _n_mem = n_mem;
@@ -78,15 +78,15 @@ xbar_router::xbar_router(unsigned router_id, enum Interconnect_type m_type,
 xbar_router::~xbar_router() {}
 
 void xbar_router::Push(unsigned input_deviceID, unsigned output_deviceID,
-                       void* data, unsigned int size) {
+                       void *data, unsigned int size) {
   assert(input_deviceID < total_nodes);
   in_buffers[input_deviceID].push(Packet(data, output_deviceID));
   packets_num++;
 }
 
-void* xbar_router::Pop(unsigned ouput_deviceID) {
+void *xbar_router::Pop(unsigned ouput_deviceID) {
   assert(ouput_deviceID < total_nodes);
-  void* data = NULL;
+  void *data = NULL;
 
   if (!out_buffers[ouput_deviceID].empty()) {
     data = out_buffers[ouput_deviceID].front().data;
@@ -102,7 +102,8 @@ bool xbar_router::Has_Buffer_In(unsigned input_deviceID, unsigned size,
 
   bool has_buffer =
       (in_buffers[input_deviceID].size() + size <= in_buffer_limit);
-  if (update_counter && !has_buffer) in_buffer_full++;
+  if (update_counter && !has_buffer)
+    in_buffer_full++;
 
   return has_buffer;
 }
@@ -144,7 +145,8 @@ void xbar_router::RR_Advance() {
       } else {
         out_buffer_full++;
 
-        if (issued[_packet.output_deviceID]) conflict_sub++;
+        if (issued[_packet.output_deviceID])
+          conflict_sub++;
       }
     }
   }
@@ -271,9 +273,11 @@ void xbar_router::iSLIP_Advance() {
 
 bool xbar_router::Busy() const {
   for (unsigned i = 0; i < total_nodes; ++i) {
-    if (!in_buffers[i].empty()) return true;
+    if (!in_buffers[i].empty())
+      return true;
 
-    if (!out_buffers[i].empty()) return true;
+    if (!out_buffers[i].empty())
+      return true;
   }
   return false;
 }
@@ -284,15 +288,15 @@ bool xbar_router::Busy() const {
 // assume all the packets are one flit
 #define LOCAL_INCT_FLIT_SIZE 40
 
-LocalInterconnect* LocalInterconnect::New(
-    const struct inct_config& m_localinct_config) {
-  LocalInterconnect* icnt_interface = new LocalInterconnect(m_localinct_config);
+LocalInterconnect *
+LocalInterconnect::New(const struct inct_config &m_localinct_config) {
+  LocalInterconnect *icnt_interface = new LocalInterconnect(m_localinct_config);
 
   return icnt_interface;
 }
 
 LocalInterconnect::LocalInterconnect(
-    const struct inct_config& m_localinct_config)
+    const struct inct_config &m_localinct_config)
     : m_inct_config(m_localinct_config) {
   n_shader = 0;
   n_mem = 0;
@@ -323,7 +327,7 @@ void LocalInterconnect::Init() {
 }
 
 void LocalInterconnect::Push(unsigned input_deviceID, unsigned output_deviceID,
-                             void* data, unsigned int size) {
+                             void *data, unsigned int size) {
   unsigned subnet;
   if (n_subnets == 1) {
     subnet = 0;
@@ -343,10 +347,11 @@ void LocalInterconnect::Push(unsigned input_deviceID, unsigned output_deviceID,
   net[subnet]->Push(input_deviceID, output_deviceID, data, size);
 }
 
-void* LocalInterconnect::Pop(unsigned ouput_deviceID) {
+void *LocalInterconnect::Pop(unsigned ouput_deviceID) {
   // 0-_n_shader-1 indicates reply(network 1), otherwise request(network 0)
   int subnet = 0;
-  if (ouput_deviceID < n_shader) subnet = 1;
+  if (ouput_deviceID < n_shader)
+    subnet = 1;
 
   return net[subnet]->Pop(ouput_deviceID);
 }
@@ -359,7 +364,8 @@ void LocalInterconnect::Advance() {
 
 bool LocalInterconnect::Busy() const {
   for (unsigned i = 0; i < n_subnets; ++i) {
-    if (net[i]->Busy()) return true;
+    if (net[i]->Busy())
+      return true;
   }
   return false;
 }
@@ -367,7 +373,7 @@ bool LocalInterconnect::Busy() const {
 bool LocalInterconnect::HasBuffer(unsigned deviceID, unsigned int size) const {
   bool has_buffer = false;
 
-  if ((n_subnets > 1) && deviceID >= n_shader)  // deviceID is memory node
+  if ((n_subnets > 1) && deviceID >= n_shader) // deviceID is memory node
     has_buffer = net[REPLY_NET]->Has_Buffer_In(deviceID, 1, true);
   else
     has_buffer = net[REQ_NET]->Has_Buffer_In(deviceID, 1, true);
@@ -406,9 +412,9 @@ void LocalInterconnect::DisplayStats() const {
          (float)(net[REPLY_NET]->packets_num) / (net[REPLY_NET]->cycles));
   printf("Reply_Network_conflicts_per_cycle =  %12.4f\n",
          (float)(net[REPLY_NET]->conflicts) / (net[REPLY_NET]->cycles));
-  printf(
-      "Reply_Network_conflicts_per_cycle_util = %12.4f\n",
-      (float)(net[REPLY_NET]->conflicts_util) / (net[REPLY_NET]->cycles_util));
+  printf("Reply_Network_conflicts_per_cycle_util = %12.4f\n",
+         (float)(net[REPLY_NET]->conflicts_util) /
+             (net[REPLY_NET]->cycles_util));
   printf("Reply_Bank_Level_Parallism = %12.4f\n",
          (float)(net[REPLY_NET]->reqs_util) / (net[REPLY_NET]->cycles_util));
   printf("Reply_Network_in_buffer_full_per_cycle = %12.4f\n",
@@ -427,6 +433,6 @@ void LocalInterconnect::DisplayOverallStats() const {}
 
 unsigned LocalInterconnect::GetFlitSize() const { return LOCAL_INCT_FLIT_SIZE; }
 
-void LocalInterconnect::DisplayState(FILE* fp) const {
+void LocalInterconnect::DisplayState(FILE *fp) const {
   fprintf(fp, "GPGPU-Sim uArch: ICNT:Display State: Under implementation\n");
 }

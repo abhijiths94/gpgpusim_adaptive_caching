@@ -37,13 +37,13 @@
  ********************************************************************/
 
 #include "XML_Parse.h"
+#include "xmlParser.h"
 #include <stdio.h>
 #include <string>
-#include "xmlParser.h"
 
 using namespace std;
 
-const char* perf_count_label[] = {
+const char *perf_count_label[] = {
     "TOT_INST,",    "FP_INT,",  "IC_H,",     "IC_M,",        "DC_RH,",
     "DC_RM,",       "DC_WH,",   "DC_WM,",    "TC_H,",        "TC_M,",
     "CC_H,",        "CC_M,",    "SHRD_ACC,", "REG_RD,",      "REG_WR,",
@@ -51,7 +51,7 @@ const char* perf_count_label[] = {
     "MEM_WR,",      "MEM_PRE,", "L2_RH,",    "L2_RM,",       "L2_WH,",
     "L2_WM,",       "NOC_A,",   "PIPE_A,",   "IDLE_CORE_N,", "CONST_DYNAMICN"};
 
-void ParseXML::parse(char* filepath) {
+void ParseXML::parse(char *filepath) {
   unsigned int i, j, k, m, n;
   unsigned int NumofCom_4;
   unsigned int itmp;
@@ -63,10 +63,10 @@ void ParseXML::parse(char* filepath) {
   chtmp1[0] = '\0';
   // this open and parse the XML file:
   XMLNode xMainNode = XMLNode::openFileHelper(
-      filepath, "component");  // the 'component' in the first layer
+      filepath, "component"); // the 'component' in the first layer
 
   XMLNode xNode2 = xMainNode.getChildNode(
-      "component");  // the 'component' in the second layer
+      "component"); // the 'component' in the second layer
   // get all params in the second layer
   itmp = xNode2.nChildNode("param");
   for (i = 0; i < itmp; i++) {
@@ -555,8 +555,8 @@ void ParseXML::parse(char* filepath) {
 
   // get the number of components within the second layer
   unsigned int NumofCom_3 = xNode2.nChildNode("component");
-  XMLNode xNode3, xNode4;  // define the third-layer(system.core0) and
-                           // fourth-layer(system.core0.predictor) xnodes
+  XMLNode xNode3, xNode4; // define the third-layer(system.core0) and
+                          // fourth-layer(system.core0.predictor) xnodes
 
   unsigned int OrderofComponents_3layer = 0;
   if (NumofCom_3 > OrderofComponents_3layer) {
@@ -569,13 +569,12 @@ void ParseXML::parse(char* filepath) {
     for (i = 0; i <= OrderofComponents_3layer; i++) {
       xNode3 = xNode2.getChildNode("component", i);
       if (xNode3.isEmpty() == 1) {
-        printf(
-            "The value of homogeneous_cores or number_of_cores is not "
-            "correct!");
+        printf("The value of homogeneous_cores or number_of_cores is not "
+               "correct!");
         exit(0);
       } else {
         if (strstr(xNode3.getAttribute("name"), "core") != NULL) {
-          {  // For cpu0-cpui
+          { // For cpu0-cpui
             // Get all params with system.core?
             itmp = xNode3.nChildNode("param");
             for (k = 0; k < itmp; k++) {
@@ -1358,14 +1357,14 @@ void ParseXML::parse(char* filepath) {
           }
 
           NumofCom_4 =
-              xNode3.nChildNode("component");  // get the number of components
-                                               // within the third layer
+              xNode3.nChildNode("component"); // get the number of components
+                                              // within the third layer
           for (j = 0; j < NumofCom_4; j++) {
             xNode4 = xNode3.getChildNode("component", j);
-            if (strcmp(xNode4.getAttribute("name"), "PBT") == 0) {  // find PBT
+            if (strcmp(xNode4.getAttribute("name"), "PBT") == 0) { // find PBT
               itmp = xNode4.nChildNode("param");
-              for (k = 0; k < itmp; k++) {  // get all items of param in
-                                            // system.core0.predictor--PBT
+              for (k = 0; k < itmp; k++) { // get all items of param in
+                                           // system.core0.predictor--PBT
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "prediction_width") == 0) {
                   sys.core[i].predictor.prediction_width = atoi(
@@ -1443,8 +1442,8 @@ void ParseXML::parse(char* filepath) {
                 }
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in
-                                            // system.core0.predictor--PBT
+              for (k = 0; k < itmp; k++) { // get all items of stat in
+                                           // system.core0.predictor--PBT
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "predictor_accesses") == 0)
                   sys.core[i].predictor.predictor_accesses = atof(
@@ -1452,17 +1451,17 @@ void ParseXML::parse(char* filepath) {
               }
             }
             if (strcmp(xNode4.getAttribute("name"), "itlb") ==
-                0) {  // find system.core0.itlb
+                0) { // find system.core0.itlb
               itmp = xNode4.nChildNode("param");
               for (k = 0; k < itmp;
-                   k++) {  // get all items of param in system.core0.itlb--itlb
+                   k++) { // get all items of param in system.core0.itlb--itlb
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "number_entries") == 0)
                   sys.core[i].itlb.number_entries = atoi(
                       xNode4.getChildNode("param", k).getAttribute("value"));
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in itlb
+              for (k = 0; k < itmp; k++) { // get all items of stat in itlb
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_hits") == 0) {
                   sys.core[i].itlb.total_hits = atof(
@@ -1490,10 +1489,10 @@ void ParseXML::parse(char* filepath) {
               }
             }
             if (strcmp(xNode4.getAttribute("name"), "icache") ==
-                0) {  // find system.core0.icache
+                0) { // find system.core0.icache
               itmp = xNode4.nChildNode("param");
-              for (k = 0; k < itmp; k++) {  // get all items of param in
-                                            // system.core0.icache--icache
+              for (k = 0; k < itmp; k++) { // get all items of param in
+                                           // system.core0.icache--icache
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "icache_config") == 0) {
                   strtmp.assign(
@@ -1623,17 +1622,17 @@ void ParseXML::parse(char* filepath) {
               }
             }
             if (strcmp(xNode4.getAttribute("name"), "dtlb") ==
-                0) {  // find system.core0.dtlb
+                0) { // find system.core0.dtlb
               itmp = xNode4.nChildNode("param");
               for (k = 0; k < itmp;
-                   k++) {  // get all items of param in system.core0.dtlb--dtlb
+                   k++) { // get all items of param in system.core0.dtlb--dtlb
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "number_entries") == 0)
                   sys.core[i].dtlb.number_entries = atoi(
                       xNode4.getChildNode("param", k).getAttribute("value"));
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in dtlb
+              for (k = 0; k < itmp; k++) { // get all items of stat in dtlb
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].dtlb.total_accesses = atof(
@@ -1699,10 +1698,10 @@ void ParseXML::parse(char* filepath) {
 
             // Added by Jingwen
             if (strcmp(xNode4.getAttribute("name"), "ccache") ==
-                0) {  // find system.core0.ccache
+                0) { // find system.core0.ccache
               itmp = xNode4.nChildNode("param");
-              for (k = 0; k < itmp; k++) {  // get all items of param in
-                                            // system.core0.ccache--ccache
+              for (k = 0; k < itmp; k++) { // get all items of param in
+                                           // system.core0.ccache--ccache
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "ccache_config") == 0) {
                   strtmp.assign(
@@ -1744,7 +1743,7 @@ void ParseXML::parse(char* filepath) {
                 }
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in ccache
+              for (k = 0; k < itmp; k++) { // get all items of stat in ccache
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].ccache.total_accesses = atof(
@@ -1870,10 +1869,10 @@ void ParseXML::parse(char* filepath) {
 
             // tcache
             if (strcmp(xNode4.getAttribute("name"), "tcache") ==
-                0) {  // find system.core0.tcache
+                0) { // find system.core0.tcache
               itmp = xNode4.nChildNode("param");
-              for (k = 0; k < itmp; k++) {  // get all items of param in
-                                            // system.core0.tcache--tcache
+              for (k = 0; k < itmp; k++) { // get all items of param in
+                                           // system.core0.tcache--tcache
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "tcache_config") == 0) {
                   strtmp.assign(
@@ -1915,7 +1914,7 @@ void ParseXML::parse(char* filepath) {
                 }
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in tcache
+              for (k = 0; k < itmp; k++) { // get all items of stat in tcache
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].tcache.total_accesses = atof(
@@ -2040,11 +2039,11 @@ void ParseXML::parse(char* filepath) {
             }
 
             if (strcmp(xNode4.getAttribute("name"), "sharedmemory") ==
-                0) {  // find system.core0.sharedmemory
+                0) { // find system.core0.sharedmemory
               itmp = xNode4.nChildNode("param");
               for (k = 0; k < itmp;
-                   k++) {  // get all items of param in
-                           // system.core0.sharedmemory--sharedmemory
+                   k++) { // get all items of param in
+                          // system.core0.sharedmemory--sharedmemory
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "sharedmemory_config") == 0) {
                   strtmp.assign(
@@ -2087,7 +2086,7 @@ void ParseXML::parse(char* filepath) {
               }
               itmp = xNode4.nChildNode("stat");
               for (k = 0; k < itmp;
-                   k++) {  // get all items of stat in sharedmemory
+                   k++) { // get all items of stat in sharedmemory
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].sharedmemory.total_accesses = atof(
@@ -2212,10 +2211,10 @@ void ParseXML::parse(char* filepath) {
             }
 
             if (strcmp(xNode4.getAttribute("name"), "dcache") ==
-                0) {  // find system.core0.dcache
+                0) { // find system.core0.dcache
               itmp = xNode4.nChildNode("param");
-              for (k = 0; k < itmp; k++) {  // get all items of param in
-                                            // system.core0.dcache--dcache
+              for (k = 0; k < itmp; k++) { // get all items of param in
+                                           // system.core0.dcache--dcache
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "dcache_config") == 0) {
                   strtmp.assign(
@@ -2257,7 +2256,7 @@ void ParseXML::parse(char* filepath) {
                 }
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in dcache
+              for (k = 0; k < itmp; k++) { // get all items of stat in dcache
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].dcache.total_accesses = atof(
@@ -2382,10 +2381,10 @@ void ParseXML::parse(char* filepath) {
             }
 
             if (strcmp(xNode4.getAttribute("name"), "BTB") ==
-                0) {  // find system.core0.BTB
+                0) { // find system.core0.BTB
               itmp = xNode4.nChildNode("param");
               for (k = 0; k < itmp;
-                   k++) {  // get all items of param in system.core0.BTB--BTB
+                   k++) { // get all items of param in system.core0.BTB--BTB
                 if (strcmp(xNode4.getChildNode("param", k).getAttribute("name"),
                            "BTB_config") == 0) {
                   strtmp.assign(
@@ -2407,7 +2406,7 @@ void ParseXML::parse(char* filepath) {
                 }
               }
               itmp = xNode4.nChildNode("stat");
-              for (k = 0; k < itmp; k++) {  // get all items of stat in BTB
+              for (k = 0; k < itmp; k++) { // get all items of stat in BTB
                 if (strcmp(xNode4.getChildNode("stat", k).getAttribute("name"),
                            "total_accesses") == 0) {
                   sys.core[i].BTB.total_accesses = atof(
@@ -2472,9 +2471,8 @@ void ParseXML::parse(char* filepath) {
             }
           }
         } else {
-          printf(
-              "The value of homogeneous_cores or number_of_cores is not "
-              "correct!");
+          printf("The value of homogeneous_cores or number_of_cores is not "
+                 "correct!");
           exit(0);
         }
       }
@@ -2503,7 +2501,7 @@ void ParseXML::parse(char* filepath) {
         if (strstr(xNode3.getAttribute("id"), "L1Directory") != NULL) {
           itmp = xNode3.nChildNode("param");
           for (k = 0; k < itmp;
-               k++) {  // get all items of param in system.L1Directory
+               k++) { // get all items of param in system.L1Directory
             if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                        "Dir_config") == 0) {
               strtmp.assign(
@@ -2592,7 +2590,7 @@ void ParseXML::parse(char* filepath) {
           }
           itmp = xNode3.nChildNode("stat");
           for (k = 0; k < itmp;
-               k++) {  // get all items of stat in system.L2directorydirectory
+               k++) { // get all items of stat in system.L2directorydirectory
             if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                        "total_accesses") == 0) {
               sys.L1Directory[i].total_accesses =
@@ -2638,9 +2636,8 @@ void ParseXML::parse(char* filepath) {
           }
           w = w + 1;
         } else {
-          printf(
-              "The value of homogeneous_L1Directories or "
-              "number_of_L1Directories is not correct!");
+          printf("The value of homogeneous_L1Directories or "
+                 "number_of_L1Directories is not correct!");
           exit(0);
         }
       }
@@ -2668,7 +2665,7 @@ void ParseXML::parse(char* filepath) {
         if (strstr(xNode3.getAttribute("id"), "L2Directory") != NULL) {
           itmp = xNode3.nChildNode("param");
           for (k = 0; k < itmp;
-               k++) {  // get all items of param in system.L2Directory
+               k++) { // get all items of param in system.L2Directory
             if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                        "Dir_config") == 0) {
               strtmp.assign(
@@ -2757,7 +2754,7 @@ void ParseXML::parse(char* filepath) {
           }
           itmp = xNode3.nChildNode("stat");
           for (k = 0; k < itmp;
-               k++) {  // get all items of stat in system.L2directorydirectory
+               k++) { // get all items of stat in system.L2directorydirectory
             if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                        "total_accesses") == 0) {
               sys.L2Directory[i].total_accesses =
@@ -2803,9 +2800,8 @@ void ParseXML::parse(char* filepath) {
           }
           w = w + 1;
         } else {
-          printf(
-              "The value of homogeneous_L2Directories or "
-              "number_of_L2Directories is not correct!");
+          printf("The value of homogeneous_L2Directories or "
+                 "number_of_L2Directories is not correct!");
           exit(0);
         }
       }
@@ -2828,7 +2824,7 @@ void ParseXML::parse(char* filepath) {
         exit(0);
       } else {
         if (strstr(xNode3.getAttribute("name"), "L2") != NULL) {
-          {  // For L20-L2i
+          { // For L20-L2i
             // Get all params with system.L2?
             itmp = xNode3.nChildNode("param");
             for (k = 0; k < itmp; k++) {
@@ -3116,7 +3112,7 @@ void ParseXML::parse(char* filepath) {
         exit(0);
       } else {
         if (strstr(xNode3.getAttribute("name"), "L3") != NULL) {
-          {  // For L30-L3i
+          { // For L30-L3i
             // Get all params with system.L3?
             itmp = xNode3.nChildNode("param");
             for (k = 0; k < itmp; k++) {
@@ -3405,7 +3401,7 @@ void ParseXML::parse(char* filepath) {
         exit(0);
       } else {
         if (strstr(xNode3.getAttribute("name"), "noc") != NULL) {
-          {  // For NoC0-NoCi
+          { // For NoC0-NoCi
             // Get all params with system.NoC?
             itmp = xNode3.nChildNode("param");
             for (k = 0; k < itmp; k++) {
@@ -3551,15 +3547,15 @@ void ParseXML::parse(char* filepath) {
               }
             }
             NumofCom_4 =
-                xNode3.nChildNode("component");  // get the number of components
-                                                 // within the third layer
+                xNode3.nChildNode("component"); // get the number of components
+                                                // within the third layer
             for (j = 0; j < NumofCom_4; j++) {
               xNode4 = xNode3.getChildNode("component", j);
               if (strcmp(xNode4.getAttribute("name"), "xbar0") ==
-                  0) {  // find PBT
+                  0) { // find PBT
                 itmp = xNode4.nChildNode("param");
-                for (k = 0; k < itmp; k++) {  // get all items of param in
-                                              // system.XoC0.xbar0--xbar0
+                for (k = 0; k < itmp; k++) { // get all items of param in
+                                             // system.XoC0.xbar0--xbar0
                   if (strcmp(
                           xNode4.getChildNode("param", k).getAttribute("name"),
                           "number_of_inputs_of_crossbars") == 0) {
@@ -3611,8 +3607,8 @@ void ParseXML::parse(char* filepath) {
                   }
                 }
                 itmp = xNode4.nChildNode("stat");
-                for (k = 0; k < itmp; k++) {  // get all items of stat in
-                                              // system.core0.predictor--PBT
+                for (k = 0; k < itmp; k++) { // get all items of stat in
+                                             // system.core0.predictor--PBT
                   if (strcmp(
                           xNode4.getChildNode("stat", k).getAttribute("name"),
                           "predictor_accesses") == 0)
@@ -3652,7 +3648,7 @@ void ParseXML::parse(char* filepath) {
     }
     if (strstr(xNode3.getAttribute("id"), "system.mem") != NULL) {
       itmp = xNode3.nChildNode("param");
-      for (k = 0; k < itmp; k++) {  // get all items of param in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of param in system.mem
         if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                    "mem_tech_node") == 0) {
           sys.mem.mem_tech_node =
@@ -3721,7 +3717,7 @@ void ParseXML::parse(char* filepath) {
         }
       }
       itmp = xNode3.nChildNode("stat");
-      for (k = 0; k < itmp; k++) {  // get all items of stat in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of stat in system.mem
         if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                    "memory_accesses") == 0) {
           sys.mem.memory_accesses =
@@ -3768,7 +3764,7 @@ void ParseXML::parse(char* filepath) {
     }
     if (strstr(xNode3.getAttribute("id"), "system.mc") != NULL) {
       itmp = xNode3.nChildNode("param");
-      for (k = 0; k < itmp; k++) {  // get all items of param in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of param in system.mem
         if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                    "mc_clock") == 0) {
           sys.mc.mc_clock =
@@ -3911,7 +3907,7 @@ void ParseXML::parse(char* filepath) {
       }
       itmp = xNode3.nChildNode("stat");
       for (k = 0; k < itmp;
-           k++) {  // get all items of stat in system.mendirectory
+           k++) { // get all items of stat in system.mendirectory
         if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                    "memory_accesses") == 0) {
           sys.mc.memory_accesses =
@@ -3958,7 +3954,7 @@ void ParseXML::parse(char* filepath) {
     }
     if (strstr(xNode3.getAttribute("id"), "system.niu") != NULL) {
       itmp = xNode3.nChildNode("param");
-      for (k = 0; k < itmp; k++) {  // get all items of param in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of param in system.mem
         if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                    "clockrate") == 0) {
           sys.niu.clockrate =
@@ -3980,7 +3976,7 @@ void ParseXML::parse(char* filepath) {
       }
       itmp = xNode3.nChildNode("stat");
       for (k = 0; k < itmp;
-           k++) {  // get all items of stat in system.mendirectory
+           k++) { // get all items of stat in system.mendirectory
         if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                    "duty_cycle") == 0) {
           sys.niu.duty_cycle =
@@ -4016,7 +4012,7 @@ void ParseXML::parse(char* filepath) {
     }
     if (strstr(xNode3.getAttribute("id"), "system.pcie") != NULL) {
       itmp = xNode3.nChildNode("param");
-      for (k = 0; k < itmp; k++) {  // get all items of param in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of param in system.mem
         if (strcmp(xNode3.getChildNode("param", k).getAttribute("name"),
                    "clockrate") == 0) {
           sys.pcie.clockrate =
@@ -4050,7 +4046,7 @@ void ParseXML::parse(char* filepath) {
       }
       itmp = xNode3.nChildNode("stat");
       for (k = 0; k < itmp;
-           k++) {  // get all items of stat in system.mendirectory
+           k++) { // get all items of stat in system.mendirectory
         if (strcmp(xNode3.getChildNode("stat", k).getAttribute("name"),
                    "duty_cycle") == 0) {
           sys.pcie.duty_cycle =
@@ -4085,7 +4081,7 @@ void ParseXML::parse(char* filepath) {
     }
     if (strstr(xNode3.getAttribute("id"), "system.flashc") != NULL) {
       itmp = xNode3.nChildNode("param");
-      for (k = 0; k < itmp; k++) {  // get all items of param in system.mem
+      for (k = 0; k < itmp; k++) { // get all items of param in system.mem
         //				if
         //(strcmp(xNode3.getChildNode("param",k).getAttribute("name"),"flashc_clock")==0)
         //{sys.flashc.mc_clock=atoi(xNode3.getChildNode("param",k).getAttribute("value"));continue;}
@@ -4140,7 +4136,7 @@ void ParseXML::parse(char* filepath) {
       }
       itmp = xNode3.nChildNode("stat");
       for (k = 0; k < itmp;
-           k++) {  // get all items of stat in system.mendirectory
+           k++) { // get all items of stat in system.mendirectory
         //				if
         //(strcmp(xNode3.getChildNode("stat",k).getAttribute("name"),"memory_accesses")==0)
         //{sys.flashc.memory_accesses=atof(xNode3.getChildNode("stat",k).getAttribute("value"));continue;}
@@ -4172,11 +4168,11 @@ void ParseXML::parse(char* filepath) {
     }
   }
 }
-void ParseXML::initialize()  // Initialize all
+void ParseXML::initialize() // Initialize all
 {
   // All number_of_* at the level of 'system' 03/21/2009
   sys.number_of_cores = 1;
-  sys.architecture = 1;  // 1 - fermi
+  sys.architecture = 1; // 1 - fermi
   sys.number_of_L1Directories = 1;
   sys.number_of_L2Directories = 1;
   sys.number_of_L2s = 1;
@@ -4229,8 +4225,10 @@ void ParseXML::initialize()  // Initialize all
     sys.core[i].issue_width = 1;
     sys.core[i].peak_issue_width = 1;
     sys.core[i].commit_width = 1;
-    for (j = 0; j < 20; j++) sys.core[i].pipelines_per_core[j] = 1;
-    for (j = 0; j < 20; j++) sys.core[i].pipeline_depth[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].pipelines_per_core[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].pipeline_depth[j] = 1;
     strcpy(sys.core[i].FPU, "default");
     strcpy(sys.core[i].divider_multiplier, "default");
     sys.core[i].ALU_per_core = 1;
@@ -4314,7 +4312,8 @@ void ParseXML::initialize()  // Initialize all
     sys.core[i].predictor.predictor_size = 1;
     sys.core[i].predictor.predictor_entries = 1;
     sys.core[i].predictor.local_predictor_entries = 1;
-    for (j = 0; j < 20; j++) sys.core[i].predictor.local_predictor_size[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].predictor.local_predictor_size[j] = 1;
     sys.core[i].predictor.global_predictor_entries = 1;
     sys.core[i].predictor.global_predictor_bits = 1;
     sys.core[i].predictor.chooser_predictor_entries = 1;
@@ -4326,7 +4325,8 @@ void ParseXML::initialize()  // Initialize all
     sys.core[i].itlb.total_accesses = 1;
     sys.core[i].itlb.total_misses = 1;
     // system.core?.icache
-    for (j = 0; j < 20; j++) sys.core[i].icache.icache_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].icache.icache_config[j] = 1;
     // strcpy(sys.core[i].icache.buffer_sizes,"default");
     sys.core[i].icache.total_accesses = 1;
     sys.core[i].icache.read_accesses = 1;
@@ -4353,7 +4353,8 @@ void ParseXML::initialize()  // Initialize all
     sys.core[i].dtlb.total_hits = 1;
     sys.core[i].dtlb.total_misses = 1;
     // system.core?.dcache
-    for (j = 0; j < 20; j++) sys.core[i].dcache.dcache_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].dcache.dcache_config[j] = 1;
     // strcpy(sys.core[i].dcache.buffer_sizes,"default");
     sys.core[i].dcache.total_accesses = 1;
     sys.core[i].dcache.read_accesses = 1;
@@ -4375,7 +4376,8 @@ void ParseXML::initialize()  // Initialize all
     sys.core[i].dcache.wbb_writes = 1;
     sys.core[i].dcache.wbb_reads = 1;
     // system.core?.BTB
-    for (j = 0; j < 20; j++) sys.core[i].BTB.BTB_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.core[i].BTB.BTB_config[j] = 1;
     sys.core[i].BTB.total_accesses = 1;
     sys.core[i].BTB.read_accesses = 1;
     sys.core[i].BTB.write_accesses = 1;
@@ -4390,8 +4392,10 @@ void ParseXML::initialize()  // Initialize all
 
   // system_L1directory
   for (i = 0; i <= 63; i++) {
-    for (j = 0; j < 20; j++) sys.L1Directory[i].Dir_config[j] = 1;
-    for (j = 0; j < 20; j++) sys.L1Directory[i].buffer_sizes[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L1Directory[i].Dir_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L1Directory[i].buffer_sizes[j] = 1;
     sys.L1Directory[i].clockrate = 1;
     sys.L1Directory[i].ports[20] = 1;
     sys.L1Directory[i].device_type = 1;
@@ -4403,8 +4407,10 @@ void ParseXML::initialize()  // Initialize all
   }
   // system_L2directory
   for (i = 0; i <= 63; i++) {
-    for (j = 0; j < 20; j++) sys.L2Directory[i].Dir_config[j] = 1;
-    for (j = 0; j < 20; j++) sys.L2Directory[i].buffer_sizes[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L2Directory[i].Dir_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L2Directory[i].buffer_sizes[j] = 1;
     sys.L2Directory[i].clockrate = 1;
     sys.L2Directory[i].ports[20] = 1;
     sys.L2Directory[i].device_type = 1;
@@ -4416,12 +4422,15 @@ void ParseXML::initialize()  // Initialize all
   }
   for (i = 0; i <= 63; i++) {
     // system_L2
-    for (j = 0; j < 20; j++) sys.L2[i].L2_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L2[i].L2_config[j] = 1;
     sys.L2[i].clockrate = 1;
-    for (j = 0; j < 20; j++) sys.L2[i].ports[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L2[i].ports[j] = 1;
     sys.L2[i].device_type = 1;
     strcpy(sys.L2[i].threeD_stack, "default");
-    for (j = 0; j < 20; j++) sys.L2[i].buffer_sizes[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L2[i].buffer_sizes[j] = 1;
     sys.L2[i].total_accesses = 1;
     sys.L2[i].read_accesses = 1;
     sys.L2[i].write_accesses = 1;
@@ -4453,12 +4462,15 @@ void ParseXML::initialize()  // Initialize all
   }
   for (i = 0; i <= 63; i++) {
     // system_L3
-    for (j = 0; j < 20; j++) sys.L3[i].L3_config[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L3[i].L3_config[j] = 1;
     sys.L3[i].clockrate = 1;
-    for (j = 0; j < 20; j++) sys.L3[i].ports[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L3[i].ports[j] = 1;
     sys.L3[i].device_type = 1;
     strcpy(sys.L3[i].threeD_stack, "default");
-    for (j = 0; j < 20; j++) sys.L3[i].buffer_sizes[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.L3[i].buffer_sizes[j] = 1;
     sys.L3[i].total_accesses = 1;
     sys.L3[i].read_accesses = 1;
     sys.L3[i].write_accesses = 1;
@@ -4505,7 +4517,8 @@ void ParseXML::initialize()  // Initialize all
     sys.NoC[i].total_accesses = 1;
     sys.NoC[i].duty_cycle = 1;
     sys.NoC[i].route_over_perc = 0.5;
-    for (j = 0; j < 20; j++) sys.NoC[i].ports_of_input_buffer[j] = 1;
+    for (j = 0; j < 20; j++)
+      sys.NoC[i].ports_of_input_buffer[j] = 1;
     sys.NoC[i].number_of_crossbars = 1;
     strcpy(sys.NoC[i].crossbar_type, "default");
     strcpy(sys.NoC[i].crosspoint_type, "default");

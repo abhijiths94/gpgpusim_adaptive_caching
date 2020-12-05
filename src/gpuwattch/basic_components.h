@@ -32,9 +32,9 @@
 #ifndef BASIC_COMPONENTS_H_
 #define BASIC_COMPONENTS_H_
 
-#include <vector>
 #include "XML_Parse.h"
 #include "cacti/parameter.h"
+#include <vector>
 
 const double cdb_overhead = 1.1;
 
@@ -49,16 +49,16 @@ enum Scheduler_type { PhysicalRegFile, ReservationStation };
 enum cache_level { L2, L3, L1Directory, L2Directory };
 
 enum MemoryCtrl_type {
-  MC,     // memory controller
-  FLASHC  // flash controller
+  MC,    // memory controller
+  FLASHC // flash controller
 };
 
 enum Dram_type { GDDR5, GDDR3 };
 
 enum Dir_type {
-  ST,   // shadowed tag
-  DC,   // directory cache
-  SBT,  // static bank tag
+  ST,  // shadowed tag
+  DC,  // directory cache
+  SBT, // static bank tag
   NonDir
 
 };
@@ -68,7 +68,7 @@ enum Cache_policy { Write_through, Write_back };
 enum Device_ty { Core_device, Uncore_device, LLC_device };
 
 class statsComponents {
- public:
+public:
   double access;
   double hit;
   double miss;
@@ -94,7 +94,7 @@ class statsComponents {
 };
 
 class statsDef {
- public:
+public:
   statsComponents readAc;
   statsComponents writeAc;
   statsComponents searchAc;
@@ -114,7 +114,7 @@ double longer_channel_device_reduction(enum Device_ty device_ty = Core_device,
                                        enum Core_type core_ty = Inorder);
 
 class CoreDynParam {
- public:
+public:
   CoreDynParam(){};
   CoreDynParam(ParseXML *XML_interface, int ithCore_);
   //    :XML(XML_interface),
@@ -160,7 +160,7 @@ class CoreDynParam {
 };
 
 class CacheDynParam {
- public:
+public:
   CacheDynParam(){};
   CacheDynParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -175,7 +175,7 @@ class CacheDynParam {
 };
 
 class DRAMParam {
- public:
+public:
   DRAMParam(){};
   DRAMParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -191,8 +191,8 @@ class DRAMParam {
   double req_coeff;
   double const_coeff;
 
-  int detailed_dram_model;  // 1 - to use newly added DRAM model (GDDR5 only), 0
-                            // - use empirical model
+  int detailed_dram_model; // 1 - to use newly added DRAM model (GDDR5 only), 0
+                           // - use empirical model
   // the following are the current specified by DATA SHEET
   // unit: mA
   int idd0;
@@ -225,22 +225,22 @@ class DRAMParam {
 
   // the following are the DRAM clocks
   // unit: MHz
-  int datasheet_operating_clock;  // this is specified by DATA SHEET. This is
-                                  // NOT the actual DRAM clock
+  int datasheet_operating_clock; // this is specified by DATA SHEET. This is
+                                 // NOT the actual DRAM clock
   int actual_operating_clock;
 
   // the following are each DRAM bank's IO info
-  int bank_width;                   // in bits
-  int dqs_signal_width;             // in bits
-  int extra_dq_write_signal_width;  // in bits
-  int per_dq_read_power;            // in mW
-  int per_dq_write_power;           // in mW
+  int bank_width;                  // in bits
+  int dqs_signal_width;            // in bits
+  int extra_dq_write_signal_width; // in bits
+  int per_dq_read_power;           // in mW
+  int per_dq_write_power;          // in mW
 
   ~DRAMParam(){};
 };
 
 class MCParam {
- public:
+public:
   MCParam(){};
   MCParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -261,7 +261,7 @@ class MCParam {
 };
 
 class NoCParam {
- public:
+public:
   NoCParam(){};
   NoCParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -278,7 +278,7 @@ class NoCParam {
 };
 
 class ProcParam {
- public:
+public:
   ProcParam(){};
   ProcParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -289,7 +289,7 @@ class ProcParam {
 };
 
 class NIUParam {
- public:
+public:
   NIUParam(){};
   NIUParam(ParseXML *XML_interface, int ithCache_);
   string name;
@@ -301,7 +301,7 @@ class NIUParam {
 };
 
 class PCIeParam {
- public:
+public:
   PCIeParam(){};
   PCIeParam(ParseXML *XML_interface, int ithCache_);
   string name;

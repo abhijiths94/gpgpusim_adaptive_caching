@@ -47,7 +47,7 @@
 class gpgpu_context;
 
 class type_info_key {
- public:
+public:
   type_info_key() {
     m_is_non_arch_reg = false;
     m_init = false;
@@ -103,7 +103,7 @@ class type_info_key {
   static unsigned type_decode(int type, size_t &size, int &t);
   memory_space_t get_memory_space() const { return m_space_spec; }
 
- private:
+private:
   bool m_init;
   memory_space_t m_space_spec;
   int m_scalar_type_spec;
@@ -122,24 +122,31 @@ class symbol_table;
 struct type_info_key_compare {
   bool operator()(const type_info_key &a, const type_info_key &b) const {
     assert(a.m_init && b.m_init);
-    if (a.m_space_spec < b.m_space_spec) return true;
-    if (a.m_scalar_type_spec < b.m_scalar_type_spec) return true;
-    if (a.m_vector_spec < b.m_vector_spec) return true;
-    if (a.m_alignment_spec < b.m_alignment_spec) return true;
-    if (a.m_extern_spec < b.m_extern_spec) return true;
-    if (a.m_array_dim < b.m_array_dim) return true;
-    if (a.m_is_function < b.m_is_function) return true;
+    if (a.m_space_spec < b.m_space_spec)
+      return true;
+    if (a.m_scalar_type_spec < b.m_scalar_type_spec)
+      return true;
+    if (a.m_vector_spec < b.m_vector_spec)
+      return true;
+    if (a.m_alignment_spec < b.m_alignment_spec)
+      return true;
+    if (a.m_extern_spec < b.m_extern_spec)
+      return true;
+    if (a.m_array_dim < b.m_array_dim)
+      return true;
+    if (a.m_is_function < b.m_is_function)
+      return true;
 
     return false;
   }
 };
 
 class type_info {
- public:
+public:
   type_info(symbol_table *scope, type_info_key t) { m_type_info = t; }
   const type_info_key &get_key() const { return m_type_info; }
 
- private:
+private:
   symbol_table *m_scope;
   type_info_key m_type_info;
 };
@@ -167,7 +174,7 @@ enum operand_type {
 class operand_info;
 
 class symbol {
- public:
+public:
   symbol(const char *name, const type_info *type, const char *location,
          unsigned size, gpgpu_context *ctx) {
     gpgpu_ctx = ctx;
@@ -192,14 +199,22 @@ class symbol {
     m_arch_reg_num = (unsigned)-1;
     m_address = (unsigned)-1;
     m_initializer.clear();
-    if (type) m_is_shared = type->get_key().is_shared();
-    if (type) m_is_const = type->get_key().is_const();
-    if (type) m_is_global = type->get_key().is_global();
-    if (type) m_is_local = type->get_key().is_local();
-    if (type) m_is_param_local = type->get_key().is_param_local();
-    if (type) m_is_param_kernel = type->get_key().is_param_kernel();
-    if (type) m_is_tex = type->get_key().is_tex();
-    if (type) m_is_func_addr = type->get_key().is_func_addr();
+    if (type)
+      m_is_shared = type->get_key().is_shared();
+    if (type)
+      m_is_const = type->get_key().is_const();
+    if (type)
+      m_is_global = type->get_key().is_global();
+    if (type)
+      m_is_local = type->get_key().is_local();
+    if (type)
+      m_is_param_local = type->get_key().is_param_local();
+    if (type)
+      m_is_param_kernel = type->get_key().is_param_kernel();
+    if (type)
+      m_is_tex = type->get_key().is_tex();
+    if (type)
+      m_is_func_addr = type->get_key().is_func_addr();
   }
   unsigned get_size_in_bytes() const { return m_size; }
   const std::string &name() const { return m_name; }
@@ -207,7 +222,7 @@ class symbol {
   const type_info *type() const { return m_type; }
   addr_t get_address() const {
     assert(m_is_label ||
-           !m_type->get_key().is_reg());  // todo : other assertions
+           !m_type->get_key().is_reg()); // todo : other assertions
     assert(m_address_valid);
     return m_address;
   }
@@ -269,17 +284,17 @@ class symbol {
   void print_info(FILE *fp) const;
   unsigned uid() const { return m_uid; }
 
- private:
+private:
   gpgpu_context *gpgpu_ctx;
   unsigned get_uid();
   unsigned m_uid;
   const type_info *m_type;
-  unsigned m_size;  // in bytes
+  unsigned m_size; // in bytes
   std::string m_name;
   std::string m_decl_location;
 
   unsigned m_address;
-  function_info *m_function;  // used for function symbols
+  function_info *m_function; // used for function symbols
 
   bool m_address_valid;
   bool m_is_label;
@@ -300,7 +315,7 @@ class symbol {
 };
 
 class symbol_table {
- public:
+public:
   symbol_table();
   symbol_table(const char *scope_name, unsigned entry_point,
                symbol_table *parent, gpgpu_context *ctx);
@@ -353,7 +368,7 @@ class symbol_table {
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
 
- private:
+private:
   unsigned m_reg_allocator;
   unsigned m_shared_next;
   unsigned m_sstarr_next;
@@ -366,7 +381,7 @@ class symbol_table {
   ptx_version m_ptx_version;
   std::string m_scope_name;
   std::map<std::string, symbol *>
-      m_symbols;  // map from name of register to pointers to the registers
+      m_symbols; // map from name of register to pointers to the registers
   std::map<type_info_key, type_info *, type_info_key_compare> m_types;
   std::list<symbol *> m_globals;
   std::list<symbol *> m_consts;
@@ -379,7 +394,7 @@ class symbol_table {
 };
 
 class operand_info {
- public:
+public:
   operand_info(gpgpu_context *ctx) {
     init(ctx);
     m_is_non_arch_reg = false;
@@ -666,14 +681,22 @@ class operand_info {
 
   unsigned get_vect_nelem() const {
     assert(is_vector());
-    if (!m_value.m_vector_symbolic[0]) return 0;
-    if (!m_value.m_vector_symbolic[1]) return 1;
-    if (!m_value.m_vector_symbolic[2]) return 2;
-    if (!m_value.m_vector_symbolic[3]) return 3;
-    if (!m_value.m_vector_symbolic[4]) return 4;
-    if (!m_value.m_vector_symbolic[5]) return 5;
-    if (!m_value.m_vector_symbolic[6]) return 6;
-    if (!m_value.m_vector_symbolic[7]) return 7;
+    if (!m_value.m_vector_symbolic[0])
+      return 0;
+    if (!m_value.m_vector_symbolic[1])
+      return 1;
+    if (!m_value.m_vector_symbolic[2])
+      return 2;
+    if (!m_value.m_vector_symbolic[3])
+      return 3;
+    if (!m_value.m_vector_symbolic[4])
+      return 4;
+    if (!m_value.m_vector_symbolic[5])
+      return 5;
+    if (!m_value.m_vector_symbolic[6])
+      return 6;
+    if (!m_value.m_vector_symbolic[7])
+      return 7;
     return 8;
   }
 
@@ -714,17 +737,20 @@ class operand_info {
     return m_value.m_symbolic->type()->get_key().is_reg();
   }
   bool is_param_local() const {
-    if (m_type != symbolic_t) return false;
+    if (m_type != symbolic_t)
+      return false;
     return m_value.m_symbolic->type()->get_key().is_param_local();
   }
 
   bool is_param_kernel() const {
-    if (m_type != symbolic_t) return false;
+    if (m_type != symbolic_t)
+      return false;
     return m_value.m_symbolic->type()->get_key().is_param_kernel();
   }
 
   bool is_vector() const {
-    if (m_vector) return true;
+    if (m_vector)
+      return true;
     return false;
   }
   int reg_num() const { return m_value.m_symbolic->reg_num(); }
@@ -806,21 +832,21 @@ class operand_info {
   ptx_reg_t get_literal_value() const {
     ptx_reg_t result;
     switch (m_type) {
-      case int_t:
-        result.s64 = m_value.m_int;
-        break;
-      case float_op_t:
-        result.f32 = m_value.m_float;
-        break;
-      case double_op_t:
-        result.f64 = m_value.m_double;
-        break;
-      case unsigned_t:
-        result.u32 = m_value.m_unsigned;
-        break;
-      default:
-        assert(0);
-        break;
+    case int_t:
+      result.s64 = m_value.m_int;
+      break;
+    case float_op_t:
+      result.f32 = m_value.m_float;
+      break;
+    case double_op_t:
+      result.f64 = m_value.m_double;
+      break;
+    case unsigned_t:
+      result.u32 = m_value.m_unsigned;
+      break;
+    default:
+      assert(0);
+      break;
     }
     return result;
   }
@@ -854,7 +880,7 @@ class operand_info {
   addr_t get_const_mem_offset() const { return m_const_mem_offset; }
   bool is_non_arch_reg() const { return m_is_non_arch_reg; }
 
- private:
+private:
   gpgpu_context *gpgpu_ctx;
   unsigned m_uid;
   bool m_valid;
@@ -904,7 +930,7 @@ struct basic_block_t {
   ptx_instruction *ptx_begin;
   ptx_instruction *ptx_end;
   std::set<int>
-      predecessor_ids;  // indices of other basic blocks in m_basic_blocks array
+      predecessor_ids; // indices of other basic blocks in m_basic_blocks array
   std::set<int> successor_ids;
   std::set<int> postdominator_ids;
   std::set<int> dominator_ids;
@@ -935,7 +961,7 @@ struct gpgpu_recon_t {
 };
 
 class ptx_instruction : public warp_inst_t {
- public:
+public:
   ptx_instruction(int opcode, const symbol *pred, int neg_pred, int pred_mod,
                   symbol *label, const std::list<operand_info> &operands,
                   const operand_info &return_var, const std::list<int> &options,
@@ -966,8 +992,8 @@ class ptx_instruction : public warp_inst_t {
   int get_pred_mod() const { return m_pred_mod; }
   const char *get_source() const { return m_source.c_str(); }
 
-  const std::list<int> get_scalar_type() const {return m_scalar_type;}
-  const std::list<int> get_options() const {return m_options;}
+  const std::list<int> get_scalar_type() const { return m_scalar_type; }
+  const std::list<int> get_options() const { return m_options; }
 
   typedef std::vector<operand_info>::const_iterator const_iterator;
 
@@ -1042,7 +1068,7 @@ class ptx_instruction : public warp_inst_t {
 
   int get_wmma_type() const { return m_wmma_type; }
   int get_wmma_layout(int index) const {
-    return m_wmma_layout[index];  // 0->Matrix D,1->Matrix C
+    return m_wmma_layout[index]; // 0->Matrix D,1->Matrix C
   }
   int get_type() const {
     assert(!m_scalar_type.empty());
@@ -1054,8 +1080,8 @@ class ptx_instruction : public warp_inst_t {
     return m_scalar_type.back();
   }
 
-  void assign_bb(
-      basic_block_t *basic_block)  // assign instruction to a basic block
+  void
+  assign_bb(basic_block_t *basic_block) // assign instruction to a basic block
   {
     m_basic_block = basic_block;
   }
@@ -1101,26 +1127,27 @@ class ptx_instruction : public warp_inst_t {
     // Check PTXPlus operand type below
     // Source operands are memory operands
     ptx_instruction::const_iterator op = op_iter_begin();
-    for (int n = 0; op != op_iter_end(); op++, n++) {  // process operands
-      if (n > 0 && op->is_memory_operand2())           // source operands only
+    for (int n = 0; op != op_iter_end(); op++, n++) { // process operands
+      if (n > 0 && op->is_memory_operand2())          // source operands only
         return true;
     }
     return false;
   }
   bool has_memory_write() const {
-    if (m_opcode == ST_OP || m_opcode == MMA_ST_OP) return true;
+    if (m_opcode == ST_OP || m_opcode == MMA_ST_OP)
+      return true;
     // Check PTXPlus operand type below
     // Destination operand is a memory operand
     ptx_instruction::const_iterator op = op_iter_begin();
     for (int n = 0; (op != op_iter_end() && n < 1);
-         op++, n++) {                          // process operands
-      if (n == 0 && op->is_memory_operand2())  // source operands only
+         op++, n++) {                         // process operands
+      if (n == 0 && op->is_memory_operand2()) // source operands only
         return true;
     }
     return false;
   }
 
- private:
+private:
   void set_opcode_and_latency();
   void set_bar_type();
   void set_fp_or_int_archop();
@@ -1149,8 +1176,8 @@ class ptx_instruction : public warp_inst_t {
   bool m_exit;
   bool m_abs;
   bool m_neg;
-  bool m_uni;  // if branch instruction, this evaluates to true for uniform
-               // branches (ie jumps)
+  bool m_uni; // if branch instruction, this evaluates to true for uniform
+              // branches (ie jumps)
   bool m_to_option;
   unsigned m_cache_option;
   int m_wmma_type;
@@ -1170,8 +1197,8 @@ class ptx_instruction : public warp_inst_t {
   int m_atomic_spec;
   enum vote_mode_t m_vote_mode;
   int m_membar_level;
-  int m_instr_mem_index;  // index into m_instr_mem array
-  unsigned m_inst_size;   // bytes
+  int m_instr_mem_index; // index into m_instr_mem array
+  unsigned m_inst_size;  // bytes
 
   virtual void pre_decode();
   friend class function_info;
@@ -1180,7 +1207,7 @@ class ptx_instruction : public warp_inst_t {
 };
 
 class param_info {
- public:
+public:
   param_info() {
     m_valid = false;
     m_value_set = false;
@@ -1199,8 +1226,8 @@ class param_info {
   }
   void add_data(param_t v) {
     assert((!m_value_set) ||
-           (m_value.size == v.size));  // if this fails concurrent kernel
-                                       // launches might execute incorrectly
+           (m_value.size == v.size)); // if this fails concurrent kernel
+                                      // launches might execute incorrectly
     m_value_set = true;
     m_value = v;
   }
@@ -1230,7 +1257,7 @@ class param_info {
     return (m_is_ptr and m_ptr_space == shared_space);
   }
 
- private:
+private:
   bool m_valid;
   std::string m_name;
   int m_type;
@@ -1243,7 +1270,7 @@ class param_info {
 };
 
 class function_info {
- public:
+public:
   function_info(int entry_point, gpgpu_context *ctx);
   const ptx_version &get_ptx_version() const {
     return m_symtab->get_ptx_version();
@@ -1258,8 +1285,8 @@ class function_info {
   void add_inst(const std::list<ptx_instruction *> &instructions) {
     m_instructions = instructions;
   }
-  std::list<ptx_instruction *>::iterator find_next_real_instruction(
-      std::list<ptx_instruction *>::iterator i);
+  std::list<ptx_instruction *>::iterator
+  find_next_real_instruction(std::list<ptx_instruction *>::iterator i);
   void create_basic_blocks();
 
   void print_basic_blocks();
@@ -1268,11 +1295,11 @@ class function_info {
   void print_basic_block_dot();
 
   operand_info *find_break_target(
-      ptx_instruction *p_break_insn);  // find the target of a break instruction
-  void connect_basic_blocks();  // iterate across m_basic_blocks of function,
-                                // connecting basic blocks together
+      ptx_instruction *p_break_insn); // find the target of a break instruction
+  void connect_basic_blocks(); // iterate across m_basic_blocks of function,
+                               // connecting basic blocks together
   bool
-  connect_break_targets();  // connecting break instructions with proper targets
+  connect_break_targets(); // connecting break instructions with proper targets
 
   // iterate across m_basic_blocks of function,
   // finding dominator blocks, using algorithm of
@@ -1293,7 +1320,7 @@ class function_info {
   // Muchnick's Adv. Compiler Design & Implemmntation Fig 7.15
   void find_ipostdominators();
   void print_ipostdominators();
-  void do_pdom();  // function to call pdom analysis
+  void do_pdom(); // function to call pdom analysis
 
   unsigned get_num_reconvergence_pairs();
 
@@ -1327,7 +1354,8 @@ class function_info {
   const symbol *get_return_var() const { return m_return_var_sym; }
   const ptx_instruction *get_instruction(unsigned PC) const {
     unsigned index = PC - m_start_PC;
-    if (index < m_instr_mem_size) return m_instr_mem[index];
+    if (index < m_instr_mem_size)
+      return m_instr_mem[index];
     return NULL;
   }
   addr_t get_start_PC() const { return m_start_PC; }
@@ -1356,8 +1384,8 @@ class function_info {
   unsigned local_mem_framesize() const { return m_local_mem_framesize; }
   void set_framesize(unsigned sz) { m_local_mem_framesize = sz; }
   bool is_entry_point() const { return m_entry_point; }
-  bool is_pdom_set() const { return pdom_done; }  // return pdom flag
-  void set_pdom() { pdom_done = true; }           // set pdom flag
+  bool is_pdom_set() const { return pdom_done; } // return pdom flag
+  void set_pdom() { pdom_done = true; }          // set pdom flag
 
   void add_config_param(size_t size, unsigned alignment) {
     unsigned offset = 0;
@@ -1380,31 +1408,31 @@ class function_info {
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
 
- protected:
+protected:
   // Registers/shmem/etc. used (from ptxas -v), loaded from ___.ptxinfo along
   // with ___.ptx
   struct gpgpu_ptx_sim_info m_kernel_info;
 
- private:
+private:
   unsigned maxnt_id;
   unsigned m_uid;
   unsigned m_local_mem_framesize;
   bool m_entry_point;
   bool m_extern;
   bool m_assembled;
-  bool pdom_done;  // flag to check whether pdom is completed or not
+  bool pdom_done; // flag to check whether pdom is completed or not
   std::string m_name;
   ptx_instruction **m_instr_mem;
   unsigned m_start_PC;
   unsigned m_instr_mem_size;
   std::map<std::string, param_t> m_kernel_params;
   std::map<unsigned, param_info> m_ptx_kernel_param_info;
-  std::vector<std::pair<size_t, unsigned> > m_param_configs;
+  std::vector<std::pair<size_t, unsigned>> m_param_configs;
   const symbol *m_return_var_sym;
   std::vector<const symbol *> m_args;
   std::list<ptx_instruction *> m_instructions;
   std::vector<basic_block_t *> m_basic_blocks;
-  std::list<std::pair<unsigned, unsigned> > m_back_edges;
+  std::list<std::pair<unsigned, unsigned>> m_back_edges;
   std::map<std::string, unsigned> labels;
   unsigned num_reconvergence_pairs;
 
@@ -1417,11 +1445,11 @@ class function_info {
   // parameter size for device kernels
   int m_args_aligned_size;
 
-  addr_t m_n;  // offset in m_instr_mem (used in do_pdom)
+  addr_t m_n; // offset in m_instr_mem (used in do_pdom)
 };
 
 class arg_buffer_t {
- public:
+public:
   arg_buffer_t(gpgpu_context *ctx) : m_src_op(ctx) {
     m_is_reg = false;
     m_is_param = false;
@@ -1446,7 +1474,8 @@ class arg_buffer_t {
   }
   void operator=(const arg_buffer_t &another) { make_copy(another); }
   ~arg_buffer_t() {
-    if (m_is_param) free(m_param_value);
+    if (m_is_param)
+      free(m_param_value);
   }
   arg_buffer_t(const symbol *dst_sym, const operand_info &src_op,
                ptx_reg_t source_value)
@@ -1477,23 +1506,22 @@ class arg_buffer_t {
       assert(src_op.is_param_local());
       assert(dst_sym->get_size_in_bytes() == array_size);
       switch (array_size) {
-        case 1:
-          m_reg_value.u8 = *(unsigned char *)source_param_value_array;
-          break;
-        case 2:
-          m_reg_value.u16 = *(unsigned short *)source_param_value_array;
-          break;
-        case 4:
-          m_reg_value.u32 = *(unsigned int *)source_param_value_array;
-          break;
-        case 8:
-          m_reg_value.u64 = *(unsigned long long *)source_param_value_array;
-          break;
-        default:
-          printf(
-              "GPGPU-Sim PTX: ERROR ** source param size does not match known "
-              "register sizes\n");
-          break;
+      case 1:
+        m_reg_value.u8 = *(unsigned char *)source_param_value_array;
+        break;
+      case 2:
+        m_reg_value.u16 = *(unsigned short *)source_param_value_array;
+        break;
+      case 4:
+        m_reg_value.u32 = *(unsigned int *)source_param_value_array;
+        break;
+      case 8:
+        m_reg_value.u64 = *(unsigned long long *)source_param_value_array;
+        break;
+      default:
+        printf("GPGPU-Sim PTX: ERROR ** source param size does not match known "
+               "register sizes\n");
+        break;
       }
     } else {
       // param
@@ -1522,7 +1550,7 @@ class arg_buffer_t {
 
   const symbol *get_dst() const { return m_dst; }
 
- private:
+private:
   // destination of copy
   const symbol *m_dst;
 
@@ -1554,11 +1582,11 @@ void copy_buffer_list_into_frame(ptx_thread_info *thread,
 void copy_buffer_to_frame(ptx_thread_info *thread, const arg_buffer_t &a);
 
 struct textureInfo {
-  unsigned int texel_size;  // size in bytes, e.g. (channelDesc.x+y+z+w)/8
+  unsigned int texel_size; // size in bytes, e.g. (channelDesc.x+y+z+w)/8
   unsigned int Tx,
-      Ty;  // tiling factor dimensions of layout of texels per 64B cache block
-  unsigned int Tx_numbits, Ty_numbits;  // log2(T)
-  unsigned int texel_size_numbits;      // log2(texel_size)
+      Ty; // tiling factor dimensions of layout of texels per 64B cache block
+  unsigned int Tx_numbits, Ty_numbits; // log2(T)
+  unsigned int texel_size_numbits;     // log2(texel_size)
 };
 
 extern std::map<std::string, symbol_table *> g_sym_name_to_symbol_table;

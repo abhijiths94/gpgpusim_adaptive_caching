@@ -44,11 +44,11 @@
 //#include "io.h"
 #include "array.h"
 //#include "Undifferentiated_Core_Area.h"
-#include <vector>
 #include "basic_components.h"
+#include <vector>
 
 class MCBackend : public Component {
- public:
+public:
   InputParameter l_ip;
   uca_org_t local_result;
   enum MemoryCtrl_type mc_type;
@@ -66,7 +66,7 @@ class MCBackend : public Component {
 };
 
 class MCPHY : public Component {
- public:
+public:
   InputParameter l_ip;
   uca_org_t local_result;
   enum MemoryCtrl_type mc_type;
@@ -84,7 +84,7 @@ class MCPHY : public Component {
 };
 
 class MCFrontEnd : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   enum MemoryCtrl_type mc_type;
@@ -107,7 +107,7 @@ class MCFrontEnd : public Component {
 };
 
 class DRAM : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   enum Dram_type dram_type;
@@ -122,7 +122,7 @@ class DRAM : public Component {
 };
 
 class MemoryController : public Component {
- public:
+public:
   ParseXML *XML;
   InputParameter interface_ip;
   enum MemoryCtrl_type mc_type;

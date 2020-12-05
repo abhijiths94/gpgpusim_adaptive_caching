@@ -34,16 +34,6 @@
 #include "ptx_sim.h"
 typedef void *yyscan_t;
 class ptx_recognizer;
-#include <assert.h>
-#include <fenv.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <cmath>
-#include <map>
-#include <sstream>
-#include <string>
 #include "../abstract_hardware_model.h"
 #include "../gpgpu-sim/gpu-sim.h"
 #include "../gpgpu-sim/shader.h"
@@ -51,12 +41,22 @@ class ptx_recognizer;
 #include "cuda_device_printf.h"
 #include "ptx.tab.h"
 #include "ptx_loader.h"
+#include <assert.h>
+#include <cmath>
+#include <fenv.h>
+#include <map>
+#include <math.h>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <string>
 
 // Jin: include device runtime for CDP
 #include "cuda_device_runtime.h"
 
-#include <stdarg.h>
 #include "../../libcuda/gpgpu_context.h"
+#include <stdarg.h>
 
 using half_float::half;
 
@@ -84,62 +84,62 @@ unsigned thread_group_offset(int thread, unsigned wmma_type,
   unsigned in_tg_index = thread % 4;
 
   switch (wmma_type) {
-    case LOAD_A:
+  case LOAD_A:
+    if (wmma_layout == ROW)
+      offset = load_a_row[thread_group] + 16 * in_tg_index;
+    else
+      offset = load_a_col[thread_group] + 16 * in_tg_index;
+    break;
+
+  case LOAD_B:
+    if (wmma_layout == ROW)
+      offset = load_b_row[thread_group] + 16 * in_tg_index;
+    else
+      offset = load_b_col[thread_group] + 16 * in_tg_index;
+    break;
+
+  case LOAD_C:
+  case STORE_D:
+    if (type == F16_TYPE) {
       if (wmma_layout == ROW)
-        offset = load_a_row[thread_group] + 16 * in_tg_index;
+        offset = load_c_half_row[thread_group] + 16 * in_tg_index;
       else
-        offset = load_a_col[thread_group] + 16 * in_tg_index;
-      break;
-
-    case LOAD_B:
+        offset = load_c_half_col[thread_group] + in_tg_index;
+    } else {
       if (wmma_layout == ROW)
-        offset = load_b_row[thread_group] + 16 * in_tg_index;
+        offset = load_c_float_row[thread_group];
       else
-        offset = load_b_col[thread_group] + 16 * in_tg_index;
-      break;
+        offset = load_c_float_col[thread_group];
 
-    case LOAD_C:
-    case STORE_D:
-      if (type == F16_TYPE) {
+      switch (in_tg_index) {
+      case 0:
+        break;
+      case 1:
         if (wmma_layout == ROW)
-          offset = load_c_half_row[thread_group] + 16 * in_tg_index;
+          offset += 16;
         else
-          offset = load_c_half_col[thread_group] + in_tg_index;
-      } else {
+          offset += 1;
+        break;
+      case 2:
         if (wmma_layout == ROW)
-          offset = load_c_float_row[thread_group];
+          offset += 2;
         else
-          offset = load_c_float_col[thread_group];
-
-        switch (in_tg_index) {
-          case 0:
-            break;
-          case 1:
-            if (wmma_layout == ROW)
-              offset += 16;
-            else
-              offset += 1;
-            break;
-          case 2:
-            if (wmma_layout == ROW)
-              offset += 2;
-            else
-              offset += 32;
-            break;
-          case 3:
-            if (wmma_layout == ROW)
-              offset += 18;
-            else
-              offset += 33;
-            break;
-          default:
-            abort();
-        }
+          offset += 32;
+        break;
+      case 3:
+        if (wmma_layout == ROW)
+          offset += 18;
+        else
+          offset += 33;
+        break;
+      default:
+        abort();
       }
-      break;
+    }
+    break;
 
-    default:
-      abort();
+  default:
+    abort();
   }
   offset = (offset / 16) * stride + offset % 16;
   return offset;
@@ -166,18 +166,21 @@ void inst_not_implemented(const ptx_instruction *pI);
 ptx_reg_t srcOperandModifiers(ptx_reg_t opData, operand_info opInfo,
                               operand_info dstInfo, unsigned type,
                               ptx_thread_info *thread);
-                              
-void video_mem_instruction(const ptx_instruction *pI, ptx_thread_info *thread, int op_code);
+
+void video_mem_instruction(const ptx_instruction *pI, ptx_thread_info *thread,
+                           int op_code);
 
 void sign_extend(ptx_reg_t &data, unsigned src_size, const operand_info &dst);
 
 void ptx_thread_info::set_reg(const symbol *reg, const ptx_reg_t &value) {
   assert(reg != NULL);
-  if (reg->name() == "_") return;
+  if (reg->name() == "_")
+    return;
   assert(!m_regs.empty());
   assert(reg->uid() > 0);
   m_regs.back()[reg] = value;
-  if (m_enable_debug_trace) m_debug_trace_regs_modified.back()[reg] = value;
+  if (m_enable_debug_trace)
+    m_debug_trace_regs_modified.back()[reg] = value;
   m_last_set_operand_value = value;
 }
 
@@ -235,16 +238,15 @@ ptx_reg_t ptx_thread_info::get_reg(const symbol *reg) {
     unsigned call_uid = m_callstack.back().m_call_uid;
     ptx_reg_t uninit_reg;
     uninit_reg.u32 = 0x0;
-    set_reg(reg, uninit_reg);  // give it a value since we are going to warn the
-                               // user anyway
+    set_reg(reg, uninit_reg); // give it a value since we are going to warn the
+                              // user anyway
     std::string file_loc = get_location();
     if (!unfound_register_warned) {
-      printf(
-          "GPGPU-Sim PTX: WARNING (%s) ** reading undefined register \'%s\' "
-          "(cuid:%u). Setting to 0X00000000. This is okay if you are "
-          "simulating the native ISA"
-          "\n",
-          file_loc.c_str(), name.c_str(), call_uid);
+      printf("GPGPU-Sim PTX: WARNING (%s) ** reading undefined register \'%s\' "
+             "(cuid:%u). Setting to 0X00000000. This is okay if you are "
+             "simulating the native ISA"
+             "\n",
+             file_loc.c_str(), name.c_str(), call_uid);
       unfound_register_warned = true;
     }
     regs_iter = m_regs.back().find(reg);
@@ -297,10 +299,9 @@ ptx_reg_t ptx_thread_info::get_operand_value(const operand_info &op,
           result.u64 = op.get_symbol()->get_address() + op.get_addr_offset();
         } else {
           const char *name = op.name().c_str();
-          printf(
-              "GPGPU-Sim PTX: ERROR ** get_operand_value : unknown memory "
-              "operand type for %s\n",
-              name);
+          printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown memory "
+                 "operand type for %s\n",
+                 name);
           abort();
         }
 
@@ -330,10 +331,9 @@ ptx_reg_t ptx_thread_info::get_operand_value(const operand_info &op,
         if (info2.is_param_kernel()) {
           result.u64 = sym2->get_address() + op.get_addr_offset();
         } else {
-          printf(
-              "GPGPU-Sim PTX: ERROR ** get_operand_value : unknown operand "
-              "type for %s\n",
-              name);
+          printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown operand "
+                 "type for %s\n",
+                 name);
           assert(0);
         }
       }
@@ -439,39 +439,39 @@ ptx_reg_t ptx_thread_info::get_operand_value(const operand_info &op,
 
   if ((op.get_operand_neg() == true) && (derefFlag)) {
     switch (opType) {
-      // Default to f32 for now, need to add support for others
-      case S8_TYPE:
-      case U8_TYPE:
-      case B8_TYPE:
-        finalResult.s8 = -finalResult.s8;
-        break;
-      case S16_TYPE:
-      case U16_TYPE:
-      case B16_TYPE:
-        finalResult.s16 = -finalResult.s16;
-        break;
-      case S32_TYPE:
-      case U32_TYPE:
-      case B32_TYPE:
-        finalResult.s32 = -finalResult.s32;
-        break;
-      case S64_TYPE:
-      case U64_TYPE:
-      case B64_TYPE:
-        finalResult.s64 = -finalResult.s64;
-        break;
-      case F16_TYPE:
-        finalResult.f16 = -finalResult.f16;
-        break;
-      case F32_TYPE:
-        finalResult.f32 = -finalResult.f32;
-        break;
-      case F64_TYPE:
-      case FF64_TYPE:
-        finalResult.f64 = -finalResult.f64;
-        break;
-      default:
-        assert(0);
+    // Default to f32 for now, need to add support for others
+    case S8_TYPE:
+    case U8_TYPE:
+    case B8_TYPE:
+      finalResult.s8 = -finalResult.s8;
+      break;
+    case S16_TYPE:
+    case U16_TYPE:
+    case B16_TYPE:
+      finalResult.s16 = -finalResult.s16;
+      break;
+    case S32_TYPE:
+    case U32_TYPE:
+    case B32_TYPE:
+      finalResult.s32 = -finalResult.s32;
+      break;
+    case S64_TYPE:
+    case U64_TYPE:
+    case B64_TYPE:
+      finalResult.s64 = -finalResult.s64;
+      break;
+    case F16_TYPE:
+      finalResult.f16 = -finalResult.f16;
+      break;
+    case F32_TYPE:
+      finalResult.f32 = -finalResult.f32;
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      finalResult.f64 = -finalResult.f64;
+      break;
+    default:
+      assert(0);
     }
   }
 
@@ -484,36 +484,35 @@ unsigned get_operand_nbits(const operand_info &op) {
     const type_info *typ = sym->type();
     type_info_key t = typ->get_key();
     switch (t.scalar_type()) {
-      case PRED_TYPE:
-        return 1;
-      case B8_TYPE:
-      case S8_TYPE:
-      case U8_TYPE:
-        return 8;
-      case S16_TYPE:
-      case U16_TYPE:
-      case F16_TYPE:
-      case B16_TYPE:
-        return 16;
-      case S32_TYPE:
-      case U32_TYPE:
-      case F32_TYPE:
-      case B32_TYPE:
-        return 32;
-      case S64_TYPE:
-      case U64_TYPE:
-      case F64_TYPE:
-      case B64_TYPE:
-        return 64;
-      default:
-        printf("ERROR: unknown register type\n");
-        fflush(stdout);
-        abort();
+    case PRED_TYPE:
+      return 1;
+    case B8_TYPE:
+    case S8_TYPE:
+    case U8_TYPE:
+      return 8;
+    case S16_TYPE:
+    case U16_TYPE:
+    case F16_TYPE:
+    case B16_TYPE:
+      return 16;
+    case S32_TYPE:
+    case U32_TYPE:
+    case F32_TYPE:
+    case B32_TYPE:
+      return 32;
+    case S64_TYPE:
+    case U64_TYPE:
+    case F64_TYPE:
+    case B64_TYPE:
+      return 64;
+    default:
+      printf("ERROR: unknown register type\n");
+      fflush(stdout);
+      abort();
     }
   } else {
-    printf(
-        "ERROR: Need to implement get_operand_nbits() for currently "
-        "unsupported operand_info type\n");
+    printf("ERROR: Need to implement get_operand_nbits() for currently "
+           "unsupported operand_info type\n");
     fflush(stdout);
     abort();
   }
@@ -539,9 +538,11 @@ void ptx_thread_info::get_vector_operand_values(const operand_info &op,
 }
 
 void sign_extend(ptx_reg_t &data, unsigned src_size, const operand_info &dst) {
-  if (!dst.is_reg()) return;
+  if (!dst.is_reg())
+    return;
   unsigned dst_size = get_operand_nbits(dst);
-  if (src_size >= dst_size) return;
+  if (src_size >= dst_size)
+    return;
   // src_size < dst_size
   unsigned long long mask = 1;
   mask <<= (src_size - 1);
@@ -626,57 +627,70 @@ void ptx_thread_info::set_operand_value(const operand_info &dst,
       predValue.u64 = 0;
 
       switch (type) {
-        case S8_TYPE:
-          if ((setValue.s8 & 0x7F) == 0) predValue.u64 |= 1;
-          break;
-        case S16_TYPE:
-          if ((setValue.s16 & 0x7FFF) == 0) predValue.u64 |= 1;
-          break;
-        case S32_TYPE:
-          if ((setValue.s32 & 0x7FFFFFFF) == 0) predValue.u64 |= 1;
-          break;
-        case S64_TYPE:
-          if ((setValue.s64 & 0x7FFFFFFFFFFFFFFF) == 0) predValue.u64 |= 1;
-          break;
-        case U8_TYPE:
-        case B8_TYPE:
-          if (setValue.u8 == 0) predValue.u64 |= 1;
-          break;
-        case U16_TYPE:
-        case B16_TYPE:
-          if (setValue.u16 == 0) predValue.u64 |= 1;
-          break;
-        case U32_TYPE:
-        case B32_TYPE:
-          if (setValue.u32 == 0) predValue.u64 |= 1;
-          break;
-        case U64_TYPE:
-        case B64_TYPE:
-          if (setValue.u64 == 0) predValue.u64 |= 1;
-          break;
-        case F16_TYPE:
-          if (setValue.f16 == 0) predValue.u64 |= 1;
-          break;
-        case F32_TYPE:
-          if (setValue.f32 == 0) predValue.u64 |= 1;
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          if (setValue.f64 == 0) predValue.u64 |= 1;
-          break;
-        default:
-          assert(0);
-          break;
+      case S8_TYPE:
+        if ((setValue.s8 & 0x7F) == 0)
+          predValue.u64 |= 1;
+        break;
+      case S16_TYPE:
+        if ((setValue.s16 & 0x7FFF) == 0)
+          predValue.u64 |= 1;
+        break;
+      case S32_TYPE:
+        if ((setValue.s32 & 0x7FFFFFFF) == 0)
+          predValue.u64 |= 1;
+        break;
+      case S64_TYPE:
+        if ((setValue.s64 & 0x7FFFFFFFFFFFFFFF) == 0)
+          predValue.u64 |= 1;
+        break;
+      case U8_TYPE:
+      case B8_TYPE:
+        if (setValue.u8 == 0)
+          predValue.u64 |= 1;
+        break;
+      case U16_TYPE:
+      case B16_TYPE:
+        if (setValue.u16 == 0)
+          predValue.u64 |= 1;
+        break;
+      case U32_TYPE:
+      case B32_TYPE:
+        if (setValue.u32 == 0)
+          predValue.u64 |= 1;
+        break;
+      case U64_TYPE:
+      case B64_TYPE:
+        if (setValue.u64 == 0)
+          predValue.u64 |= 1;
+        break;
+      case F16_TYPE:
+        if (setValue.f16 == 0)
+          predValue.u64 |= 1;
+        break;
+      case F32_TYPE:
+        if (setValue.f32 == 0)
+          predValue.u64 |= 1;
+        break;
+      case F64_TYPE:
+      case FF64_TYPE:
+        if (setValue.f64 == 0)
+          predValue.u64 |= 1;
+        break;
+      default:
+        assert(0);
+        break;
       }
 
       if ((type == S8_TYPE) || (type == S16_TYPE) || (type == S32_TYPE) ||
           (type == S64_TYPE) || (type == U8_TYPE) || (type == U16_TYPE) ||
           (type == U32_TYPE) || (type == U64_TYPE) || (type == B8_TYPE) ||
           (type == B16_TYPE) || (type == B32_TYPE) || (type == B64_TYPE)) {
-        if ((setValue.u32 & (1 << (size - 1))) != 0) predValue.u64 |= 1 << 1;
+        if ((setValue.u32 & (1 << (size - 1))) != 0)
+          predValue.u64 |= 1 << 1;
       }
       if (type == F32_TYPE) {
-        if (setValue.f32 < 0) predValue.u64 |= 1 << 1;
+        if (setValue.f32 < 0)
+          predValue.u64 |= 1 << 1;
       }
 
       if (dst.get_operand_lohi() == 1) {
@@ -847,35 +861,35 @@ void abs_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case S16_TYPE:
-      d.s16 = my_abs(a.s16);
-      break;
-    case S32_TYPE:
-      d.s32 = my_abs(a.s32);
-      break;
-    case S64_TYPE:
-      d.s64 = my_abs(a.s64);
-      break;
-    case U16_TYPE:
-      d.s16 = my_abs(a.u16);
-      break;
-    case U32_TYPE:
-      d.s32 = my_abs(a.u32);
-      break;
-    case U64_TYPE:
-      d.s64 = my_abs(a.u64);
-      break;
-    case F32_TYPE:
-      d.f32 = my_abs(a.f32);
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      d.f64 = my_abs(a.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case S16_TYPE:
+    d.s16 = my_abs(a.s16);
+    break;
+  case S32_TYPE:
+    d.s32 = my_abs(a.s32);
+    break;
+  case S64_TYPE:
+    d.s64 = my_abs(a.s64);
+    break;
+  case U16_TYPE:
+    d.s16 = my_abs(a.u16);
+    break;
+  case U32_TYPE:
+    d.s32 = my_abs(a.u32);
+    break;
+  case U64_TYPE:
+    d.s64 = my_abs(a.u64);
+    break;
+  case F32_TYPE:
+    d.f32 = my_abs(a.f32);
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    d.f64 = my_abs(a.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -888,9 +902,9 @@ void addp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   int carry = 0;
 
   const operand_info &dst =
-      pI->dst();  // get operand info of sources and destination
+      pI->dst(); // get operand info of sources and destination
   const operand_info &src1 =
-      pI->src1();  // use them to determine that they are of type 'register'
+      pI->src1(); // use them to determine that they are of type 'register'
   const operand_info &src2 = pI->src2();
   const operand_info &src3 = pI->src3();
 
@@ -902,80 +916,78 @@ void addp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned rounding_mode = pI->rounding_mode();
   int orig_rm = fegetround();
   switch (rounding_mode) {
-    case RN_OPTION:
-      break;
-    case RZ_OPTION:
-      fesetround(FE_TOWARDZERO);
-      break;
-    default:
-      assert(0);
-      break;
+  case RN_OPTION:
+    break;
+  case RZ_OPTION:
+    fesetround(FE_TOWARDZERO);
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   // performs addition. Sets carry and overflow if needed.
   // src3_data.pred&0x4 is the carry flag
   switch (i_type) {
-    case S8_TYPE:
-      data.s64 = (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF) +
-                 (src3_data.pred & 0x4);
-      if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
-        overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000000100) >> 8;
-      break;
-    case S16_TYPE:
-      data.s64 = (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF) +
-                 (src3_data.pred & 0x4);
-      if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
-        overflow =
-            ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000010000) >> 16;
-      break;
-    case S32_TYPE:
-      data.s64 = (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF) +
-                 (src3_data.pred & 0x4);
-      if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) == 0) {
-        overflow = ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0
-                       ? 0
-                       : 1;
-      }
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 + src2_data.s64 + (src3_data.pred & 0x4);
-      break;
-    case U8_TYPE:
-      data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF) +
-                 (src3_data.pred & 0x4);
-      carry = (data.u64 & 0x100) >> 8;
-      break;
-    case U16_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF) +
-                 (src3_data.pred & 0x4);
-      carry = (data.u64 & 0x10000) >> 16;
-      break;
-    case U32_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF) +
-                 (src3_data.pred & 0x4);
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case U64_TYPE:
-      data.s64 = src1_data.s64 + src2_data.s64 + (src3_data.pred & 0x4);
-      break;
-    case F16_TYPE:
-      data.f16 = src1_data.f16 + src2_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = src1_data.f32 + src2_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = src1_data.f64 + src2_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+    data.s64 = (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF) +
+               (src3_data.pred & 0x4);
+    if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
+      overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x000000100) >> 8;
+    break;
+  case S16_TYPE:
+    data.s64 = (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF) +
+               (src3_data.pred & 0x4);
+    if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
+      overflow = ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x000010000) >> 16;
+    break;
+  case S32_TYPE:
+    data.s64 = (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF) +
+               (src3_data.pred & 0x4);
+    if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) == 0) {
+      overflow =
+          ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x100000000) >> 32;
+    break;
+  case S64_TYPE:
+    data.s64 = src1_data.s64 + src2_data.s64 + (src3_data.pred & 0x4);
+    break;
+  case U8_TYPE:
+    data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF) +
+               (src3_data.pred & 0x4);
+    carry = (data.u64 & 0x100) >> 8;
+    break;
+  case U16_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF) +
+               (src3_data.pred & 0x4);
+    carry = (data.u64 & 0x10000) >> 16;
+    break;
+  case U32_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF) +
+               (src3_data.pred & 0x4);
+    carry = (data.u64 & 0x100000000) >> 32;
+    break;
+  case U64_TYPE:
+    data.s64 = src1_data.s64 + src2_data.s64 + (src3_data.pred & 0x4);
+    break;
+  case F16_TYPE:
+    data.f16 = src1_data.f16 + src2_data.f16;
+    break; // assert(0); break;
+  case F32_TYPE:
+    data.f32 = src1_data.f32 + src2_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = src1_data.f64 + src2_data.f64;
+    break;
+  default:
+    assert(0);
+    break;
   }
   fesetround(orig_rm);
 
@@ -988,9 +1000,9 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   int carry = 0;
 
   const operand_info &dst =
-      pI->dst();  // get operand info of sources and destination
+      pI->dst(); // get operand info of sources and destination
   const operand_info &src1 =
-      pI->src1();  // use them to determine that they are of type 'register'
+      pI->src1(); // use them to determine that they are of type 'register'
   const operand_info &src2 = pI->src2();
 
   unsigned i_type = pI->get_type();
@@ -1000,73 +1012,71 @@ void add_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned rounding_mode = pI->rounding_mode();
   int orig_rm = fegetround();
   switch (rounding_mode) {
-    case RN_OPTION:
-      break;
-    case RZ_OPTION:
-      fesetround(FE_TOWARDZERO);
-      break;
-    default:
-      assert(0);
-      break;
+  case RN_OPTION:
+    break;
+  case RZ_OPTION:
+    fesetround(FE_TOWARDZERO);
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   // performs addition. Sets carry and overflow if needed.
   switch (i_type) {
-    case S8_TYPE:
-      data.s64 = (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF);
-      if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
-        overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000000100) >> 8;
-      break;
-    case S16_TYPE:
-      data.s64 = (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF);
-      if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
-        overflow =
-            ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
-      }
-      carry = (data.u64 & 0x000010000) >> 16;
-      break;
-    case S32_TYPE:
-      data.s64 = (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF);
-      if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) == 0) {
-        overflow = ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0
-                       ? 0
-                       : 1;
-      }
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 + src2_data.s64;
-      break;
-    case U8_TYPE:
-      data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
-      carry = (data.u64 & 0x100) >> 8;
-      break;
-    case U16_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
-      carry = (data.u64 & 0x10000) >> 16;
-      break;
-    case U32_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case U64_TYPE:
-      data.u64 = src1_data.u64 + src2_data.u64;
-      break;
-    case F16_TYPE:
-      data.f16 = src1_data.f16 + src2_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = src1_data.f32 + src2_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = src1_data.f64 + src2_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+    data.s64 = (src1_data.s64 & 0x0000000FF) + (src2_data.s64 & 0x0000000FF);
+    if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) == 0) {
+      overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x000000100) >> 8;
+    break;
+  case S16_TYPE:
+    data.s64 = (src1_data.s64 & 0x00000FFFF) + (src2_data.s64 & 0x00000FFFF);
+    if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) == 0) {
+      overflow = ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x000010000) >> 16;
+    break;
+  case S32_TYPE:
+    data.s64 = (src1_data.s64 & 0x0FFFFFFFF) + (src2_data.s64 & 0x0FFFFFFFF);
+    if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) == 0) {
+      overflow =
+          ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0 ? 0 : 1;
+    }
+    carry = (data.u64 & 0x100000000) >> 32;
+    break;
+  case S64_TYPE:
+    data.s64 = src1_data.s64 + src2_data.s64;
+    break;
+  case U8_TYPE:
+    data.u64 = (src1_data.u64 & 0xFF) + (src2_data.u64 & 0xFF);
+    carry = (data.u64 & 0x100) >> 8;
+    break;
+  case U16_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFF) + (src2_data.u64 & 0xFFFF);
+    carry = (data.u64 & 0x10000) >> 16;
+    break;
+  case U32_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFFFFFF) + (src2_data.u64 & 0xFFFFFFFF);
+    carry = (data.u64 & 0x100000000) >> 32;
+    break;
+  case U64_TYPE:
+    data.u64 = src1_data.u64 + src2_data.u64;
+    break;
+  case F16_TYPE:
+    data.f16 = src1_data.f16 + src2_data.f16;
+    break; // assert(0); break;
+  case F32_TYPE:
+    data.f32 = src1_data.f32 + src2_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = src1_data.f64 + src2_data.f64;
+    break;
+  default:
+    assert(0);
+    break;
   }
   fesetround(orig_rm);
 
@@ -1109,19 +1119,19 @@ void andn_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src2_data = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case B16_TYPE:
-      src2_data.u16 = ~src2_data.u16;
-      break;
-    case B32_TYPE:
-      src2_data.u32 = ~src2_data.u32;
-      break;
-    case B64_TYPE:
-      src2_data.u64 = ~src2_data.u64;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case B16_TYPE:
+    src2_data.u16 = ~src2_data.u16;
+    break;
+  case B32_TYPE:
+    src2_data.u32 = ~src2_data.u32;
+    break;
+  case B64_TYPE:
+    src2_data.u64 = ~src2_data.u64;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   data.u64 = src1_data.u64 & src2_data.u64;
@@ -1150,25 +1160,25 @@ void atom_callback(const inst_t *inst, ptx_thread_info *thread) {
   type_info_key::type_decode(to_type, size, t);
 
   // Set up operand variables
-  ptx_reg_t data;       // d
-  ptx_reg_t src1_data;  // a
-  ptx_reg_t src2_data;  // b
-  ptx_reg_t op_result;  // temp variable to hold operation result
+  ptx_reg_t data;      // d
+  ptx_reg_t src1_data; // a
+  ptx_reg_t src2_data; // b
+  ptx_reg_t op_result; // temp variable to hold operation result
 
   bool data_ready = false;
 
   // Get operand info of sources and destination
-  const operand_info &dst = pI->dst();    // d
-  const operand_info &src1 = pI->src1();  // a
-  const operand_info &src2 = pI->src2();  // b
+  const operand_info &dst = pI->dst();   // d
+  const operand_info &src1 = pI->src1(); // a
+  const operand_info &src2 = pI->src2(); // b
 
   // Get operand values
-  src1_data = thread->get_operand_value(src1, src1, to_type, thread, 1);  // a
+  src1_data = thread->get_operand_value(src1, src1, to_type, thread, 1); // a
   if (dst.get_symbol()->type()) {
-    src2_data = thread->get_operand_value(src2, dst, to_type, thread, 1);  // b
+    src2_data = thread->get_operand_value(src2, dst, to_type, thread, 1); // b
   } else {
     // This is the case whent he first argument (dest) is '_'
-    src2_data = thread->get_operand_value(src2, src1, to_type, thread, 1);  // b
+    src2_data = thread->get_operand_value(src2, src1, to_type, thread, 1); // b
   }
 
   // Check state space
@@ -1202,252 +1212,242 @@ void atom_callback(const inst_t *inst, ptx_thread_info *thread) {
   mem->read(effective_address, size / 8, &data.s64);
   if (dst.get_symbol()->type()) {
     thread->set_operand_value(dst, data, to_type, thread,
-                              pI);  // Write value into register 'd'
+                              pI); // Write value into register 'd'
   }
 
   // Get the atomic operation to be performed
   unsigned m_atomic_spec = pI->get_atomic();
 
   switch (m_atomic_spec) {
-    // AND
-    case ATOMIC_AND: {
-      switch (to_type) {
-        case B32_TYPE:
-        case U32_TYPE:
-          op_result.u32 = data.u32 & src2_data.u32;
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = data.s32 & src2_data.s32;
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch (%x) with instruction\natom.AND "
-              "only accepts b32\n",
-              to_type);
-          assert(0);
-          break;
-      }
-
+  // AND
+  case ATOMIC_AND: {
+    switch (to_type) {
+    case B32_TYPE:
+    case U32_TYPE:
+      op_result.u32 = data.u32 & src2_data.u32;
+      data_ready = true;
       break;
-    }
-      // OR
-    case ATOMIC_OR: {
-      switch (to_type) {
-        case B32_TYPE:
-        case U32_TYPE:
-          op_result.u32 = data.u32 | src2_data.u32;
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = data.s32 | src2_data.s32;
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch (%x) with instruction\natom.OR "
-              "only accepts b32\n",
-              to_type);
-          assert(0);
-          break;
-      }
-
+    case S32_TYPE:
+      op_result.s32 = data.s32 & src2_data.s32;
+      data_ready = true;
       break;
-    }
-      // XOR
-    case ATOMIC_XOR: {
-      switch (to_type) {
-        case B32_TYPE:
-        case U32_TYPE:
-          op_result.u32 = data.u32 ^ src2_data.u32;
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = data.s32 ^ src2_data.s32;
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch (%x) with instruction\natom.XOR "
-              "only accepts b32\n",
-              to_type);
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // CAS
-    case ATOMIC_CAS: {
-      ptx_reg_t src3_data;
-      const operand_info &src3 = pI->src3();
-      src3_data = thread->get_operand_value(src3, dst, to_type, thread, 1);
-
-      switch (to_type) {
-        case B32_TYPE:
-        case U32_TYPE:
-          op_result.u32 = MY_CAS_I(data.u32, src2_data.u32, src3_data.u32);
-          data_ready = true;
-          break;
-        case B64_TYPE:
-        case U64_TYPE:
-          op_result.u64 = MY_CAS_I(data.u64, src2_data.u64, src3_data.u64);
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = MY_CAS_I(data.s32, src2_data.s32, src3_data.s32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch (%x) with instruction\natom.CAS "
-              "only accepts b32 and b64\n",
-              to_type);
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // EXCH
-    case ATOMIC_EXCH: {
-      switch (to_type) {
-        case B32_TYPE:
-        case U32_TYPE:
-          op_result.u32 = MY_EXCH(data.u32, src2_data.u32);
-          data_ready = true;
-          break;
-        case B64_TYPE:
-        case U64_TYPE:
-          op_result.u64 = MY_EXCH(data.u64, src2_data.u64);
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = MY_EXCH(data.s32, src2_data.s32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch (%x) with instruction\natom.EXCH "
-              "only accepts b32\n",
-              to_type);
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // ADD
-    case ATOMIC_ADD: {
-      switch (to_type) {
-        case U32_TYPE:
-          op_result.u32 = data.u32 + src2_data.u32;
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = data.s32 + src2_data.s32;
-          data_ready = true;
-          break;
-        case U64_TYPE:
-          op_result.u64 = data.u64 + src2_data.u64;
-          data_ready = true;
-          break;
-        case F32_TYPE:
-          op_result.f32 = data.f32 + src2_data.f32;
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch with instruction\natom.ADD only "
-              "accepts u32, s32, u64, and f32\n");
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // INC
-    case ATOMIC_INC: {
-      switch (to_type) {
-        case U32_TYPE:
-          op_result.u32 = MY_INC_I(data.u32, src2_data.u32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch with instruction\natom.INC only "
-              "accepts u32 and s32\n");
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // DEC
-    case ATOMIC_DEC: {
-      switch (to_type) {
-        case U32_TYPE:
-          op_result.u32 = MY_DEC_I(data.u32, src2_data.u32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch with instruction\natom.DEC only "
-              "accepts u32 and s32\n");
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // MIN
-    case ATOMIC_MIN: {
-      switch (to_type) {
-        case U32_TYPE:
-          op_result.u32 = MY_MIN_I(data.u32, src2_data.u32);
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = MY_MIN_I(data.s32, src2_data.s32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch with instruction\natom.MIN only "
-              "accepts u32 and s32\n");
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // MAX
-    case ATOMIC_MAX: {
-      switch (to_type) {
-        case U32_TYPE:
-          op_result.u32 = MY_MAX_I(data.u32, src2_data.u32);
-          data_ready = true;
-          break;
-        case S32_TYPE:
-          op_result.s32 = MY_MAX_I(data.s32, src2_data.s32);
-          data_ready = true;
-          break;
-        default:
-          printf(
-              "Execution error: type mismatch with instruction\natom.MAX only "
-              "accepts u32 and s32\n");
-          assert(0);
-          break;
-      }
-
-      break;
-    }
-      // DEFAULT
-    default: {
+    default:
+      printf("Execution error: type mismatch (%x) with instruction\natom.AND "
+             "only accepts b32\n",
+             to_type);
       assert(0);
       break;
     }
+
+    break;
+  }
+    // OR
+  case ATOMIC_OR: {
+    switch (to_type) {
+    case B32_TYPE:
+    case U32_TYPE:
+      op_result.u32 = data.u32 | src2_data.u32;
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = data.s32 | src2_data.s32;
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch (%x) with instruction\natom.OR "
+             "only accepts b32\n",
+             to_type);
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // XOR
+  case ATOMIC_XOR: {
+    switch (to_type) {
+    case B32_TYPE:
+    case U32_TYPE:
+      op_result.u32 = data.u32 ^ src2_data.u32;
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = data.s32 ^ src2_data.s32;
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch (%x) with instruction\natom.XOR "
+             "only accepts b32\n",
+             to_type);
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // CAS
+  case ATOMIC_CAS: {
+    ptx_reg_t src3_data;
+    const operand_info &src3 = pI->src3();
+    src3_data = thread->get_operand_value(src3, dst, to_type, thread, 1);
+
+    switch (to_type) {
+    case B32_TYPE:
+    case U32_TYPE:
+      op_result.u32 = MY_CAS_I(data.u32, src2_data.u32, src3_data.u32);
+      data_ready = true;
+      break;
+    case B64_TYPE:
+    case U64_TYPE:
+      op_result.u64 = MY_CAS_I(data.u64, src2_data.u64, src3_data.u64);
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = MY_CAS_I(data.s32, src2_data.s32, src3_data.s32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch (%x) with instruction\natom.CAS "
+             "only accepts b32 and b64\n",
+             to_type);
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // EXCH
+  case ATOMIC_EXCH: {
+    switch (to_type) {
+    case B32_TYPE:
+    case U32_TYPE:
+      op_result.u32 = MY_EXCH(data.u32, src2_data.u32);
+      data_ready = true;
+      break;
+    case B64_TYPE:
+    case U64_TYPE:
+      op_result.u64 = MY_EXCH(data.u64, src2_data.u64);
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = MY_EXCH(data.s32, src2_data.s32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch (%x) with instruction\natom.EXCH "
+             "only accepts b32\n",
+             to_type);
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // ADD
+  case ATOMIC_ADD: {
+    switch (to_type) {
+    case U32_TYPE:
+      op_result.u32 = data.u32 + src2_data.u32;
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = data.s32 + src2_data.s32;
+      data_ready = true;
+      break;
+    case U64_TYPE:
+      op_result.u64 = data.u64 + src2_data.u64;
+      data_ready = true;
+      break;
+    case F32_TYPE:
+      op_result.f32 = data.f32 + src2_data.f32;
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\natom.ADD only "
+             "accepts u32, s32, u64, and f32\n");
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // INC
+  case ATOMIC_INC: {
+    switch (to_type) {
+    case U32_TYPE:
+      op_result.u32 = MY_INC_I(data.u32, src2_data.u32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\natom.INC only "
+             "accepts u32 and s32\n");
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // DEC
+  case ATOMIC_DEC: {
+    switch (to_type) {
+    case U32_TYPE:
+      op_result.u32 = MY_DEC_I(data.u32, src2_data.u32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\natom.DEC only "
+             "accepts u32 and s32\n");
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // MIN
+  case ATOMIC_MIN: {
+    switch (to_type) {
+    case U32_TYPE:
+      op_result.u32 = MY_MIN_I(data.u32, src2_data.u32);
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = MY_MIN_I(data.s32, src2_data.s32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\natom.MIN only "
+             "accepts u32 and s32\n");
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // MAX
+  case ATOMIC_MAX: {
+    switch (to_type) {
+    case U32_TYPE:
+      op_result.u32 = MY_MAX_I(data.u32, src2_data.u32);
+      data_ready = true;
+      break;
+    case S32_TYPE:
+      op_result.s32 = MY_MAX_I(data.s32, src2_data.s32);
+      data_ready = true;
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\natom.MAX only "
+             "accepts u32 and s32\n");
+      assert(0);
+      break;
+    }
+
+    break;
+  }
+    // DEFAULT
+  default: {
+    assert(0);
+    break;
+  }
   }
 
   // Write operation result into  memory
@@ -1513,25 +1513,8 @@ void bar_impl(const ptx_instruction *pIin, ptx_thread_info *thread) {
   unsigned ctaid = thread->get_cta_uid();
 
   switch (bar_op) {
-    case SYNC_OPTION: {
-      if (pI->get_num_operands() > 1) {
-        const operand_info &op0 = pI->dst();
-        const operand_info &op1 = pI->src1();
-        ptx_reg_t op0_data;
-        ptx_reg_t op1_data;
-        op0_data = thread->get_operand_value(op0, op0, U32_TYPE, thread, 1);
-        op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
-        pI->set_bar_id(op0_data.u32);
-        pI->set_bar_count(op1_data.u32);
-      } else {
-        const operand_info &op0 = pI->dst();
-        ptx_reg_t op0_data;
-        op0_data = thread->get_operand_value(op0, op0, U32_TYPE, thread, 1);
-        pI->set_bar_id(op0_data.u32);
-      }
-      break;
-    }
-    case ARRIVE_OPTION: {
+  case SYNC_OPTION: {
+    if (pI->get_num_operands() > 1) {
       const operand_info &op0 = pI->dst();
       const operand_info &op1 = pI->src1();
       ptx_reg_t op0_data;
@@ -1540,67 +1523,84 @@ void bar_impl(const ptx_instruction *pIin, ptx_thread_info *thread) {
       op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
       pI->set_bar_id(op0_data.u32);
       pI->set_bar_count(op1_data.u32);
-      break;
+    } else {
+      const operand_info &op0 = pI->dst();
+      ptx_reg_t op0_data;
+      op0_data = thread->get_operand_value(op0, op0, U32_TYPE, thread, 1);
+      pI->set_bar_id(op0_data.u32);
     }
-    case RED_OPTION: {
-      if (pI->get_num_operands() > 3) {
-        const operand_info &op1 = pI->src1();
-        const operand_info &op2 = pI->src2();
-        const operand_info &op3 = pI->src3();
-        ptx_reg_t op1_data;
-        ptx_reg_t op2_data;
-        ptx_reg_t op3_data;
-        op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
-        op2_data = thread->get_operand_value(op2, op2, U32_TYPE, thread, 1);
-        op3_data = thread->get_operand_value(op3, op3, PRED_TYPE, thread, 1);
-        op3_data.u32 = !(op3_data.pred & 0x0001);
-        pI->set_bar_id(op1_data.u32);
-        pI->set_bar_count(op2_data.u32);
-        switch (red_op) {
-          case ATOMIC_POPC:
-            thread->popc_reduction(ctaid, op1_data.u32, op3_data.u32);
-            break;
-          case ATOMIC_AND:
-            thread->and_reduction(ctaid, op1_data.u32, op3_data.u32);
-            break;
-          case ATOMIC_OR:
-            thread->or_reduction(ctaid, op1_data.u32, op3_data.u32);
-            break;
-          default:
-            abort();
-            break;
-        }
-      } else {
-        const operand_info &op1 = pI->src1();
-        const operand_info &op2 = pI->src2();
-        ptx_reg_t op1_data;
-        ptx_reg_t op2_data;
-        op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
-        op2_data = thread->get_operand_value(op2, op2, PRED_TYPE, thread, 1);
-        op2_data.u32 = !(op2_data.pred & 0x0001);
-        pI->set_bar_id(op1_data.u32);
-        pI->set_bar_count(thread->get_ntid().x * thread->get_ntid().y *
-                          thread->get_ntid().z);
-        switch (red_op) {
-          case ATOMIC_POPC:
-            thread->popc_reduction(ctaid, op1_data.u32, op2_data.u32);
-            break;
-          case ATOMIC_AND:
-            thread->and_reduction(ctaid, op1_data.u32, op2_data.u32);
-            break;
-          case ATOMIC_OR:
-            thread->or_reduction(ctaid, op1_data.u32, op2_data.u32);
-            break;
-          default:
-            abort();
-            break;
-        }
+    break;
+  }
+  case ARRIVE_OPTION: {
+    const operand_info &op0 = pI->dst();
+    const operand_info &op1 = pI->src1();
+    ptx_reg_t op0_data;
+    ptx_reg_t op1_data;
+    op0_data = thread->get_operand_value(op0, op0, U32_TYPE, thread, 1);
+    op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
+    pI->set_bar_id(op0_data.u32);
+    pI->set_bar_count(op1_data.u32);
+    break;
+  }
+  case RED_OPTION: {
+    if (pI->get_num_operands() > 3) {
+      const operand_info &op1 = pI->src1();
+      const operand_info &op2 = pI->src2();
+      const operand_info &op3 = pI->src3();
+      ptx_reg_t op1_data;
+      ptx_reg_t op2_data;
+      ptx_reg_t op3_data;
+      op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
+      op2_data = thread->get_operand_value(op2, op2, U32_TYPE, thread, 1);
+      op3_data = thread->get_operand_value(op3, op3, PRED_TYPE, thread, 1);
+      op3_data.u32 = !(op3_data.pred & 0x0001);
+      pI->set_bar_id(op1_data.u32);
+      pI->set_bar_count(op2_data.u32);
+      switch (red_op) {
+      case ATOMIC_POPC:
+        thread->popc_reduction(ctaid, op1_data.u32, op3_data.u32);
+        break;
+      case ATOMIC_AND:
+        thread->and_reduction(ctaid, op1_data.u32, op3_data.u32);
+        break;
+      case ATOMIC_OR:
+        thread->or_reduction(ctaid, op1_data.u32, op3_data.u32);
+        break;
+      default:
+        abort();
+        break;
       }
-      break;
+    } else {
+      const operand_info &op1 = pI->src1();
+      const operand_info &op2 = pI->src2();
+      ptx_reg_t op1_data;
+      ptx_reg_t op2_data;
+      op1_data = thread->get_operand_value(op1, op1, U32_TYPE, thread, 1);
+      op2_data = thread->get_operand_value(op2, op2, PRED_TYPE, thread, 1);
+      op2_data.u32 = !(op2_data.pred & 0x0001);
+      pI->set_bar_id(op1_data.u32);
+      pI->set_bar_count(thread->get_ntid().x * thread->get_ntid().y *
+                        thread->get_ntid().z);
+      switch (red_op) {
+      case ATOMIC_POPC:
+        thread->popc_reduction(ctaid, op1_data.u32, op2_data.u32);
+        break;
+      case ATOMIC_AND:
+        thread->and_reduction(ctaid, op1_data.u32, op2_data.u32);
+        break;
+      case ATOMIC_OR:
+        thread->or_reduction(ctaid, op1_data.u32, op2_data.u32);
+        break;
+      default:
+        abort();
+        break;
+      }
     }
-    default:
-      abort();
-      break;
+    break;
+  }
+  default:
+    abort();
+    break;
   }
 
   thread->m_last_dram_callback.function = bar_callback;
@@ -1621,52 +1621,52 @@ void bfe_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned pos = b.u32 & 0xFF;
   unsigned len = c.u32 & 0xFF;
   switch (i_type) {
-    case U32_TYPE: {
-      unsigned mask;
-      data.u32 = src.u32 >> pos;
+  case U32_TYPE: {
+    unsigned mask;
+    data.u32 = src.u32 >> pos;
+    mask = 0xFFFFFFFF >> (32 - len);
+    data.u32 &= mask;
+    break;
+  }
+  case U64_TYPE: {
+    unsigned long mask;
+    data.u64 = src.u64 >> pos;
+    mask = 0xFFFFFFFFFFFFFFFF >> (64 - len);
+    data.u64 &= mask;
+    break;
+  }
+  case S32_TYPE: {
+    unsigned mask;
+    unsigned min = MY_MIN_I(pos + len - 1, msb);
+    unsigned sbit = len == 0 ? 0 : (src.s32 >> min) & 0x1;
+    data.s32 = src.s32 >> pos;
+    if (sbit > 0) {
+      mask = 0xFFFFFFFF << len;
+      data.s32 |= mask;
+    } else {
       mask = 0xFFFFFFFF >> (32 - len);
-      data.u32 &= mask;
-      break;
+      data.s32 &= mask;
     }
-    case U64_TYPE: {
-      unsigned long mask;
-      data.u64 = src.u64 >> pos;
+    break;
+  }
+  case S64_TYPE: {
+    unsigned long mask;
+    unsigned min = MY_MIN_I(pos + len - 1, msb);
+    unsigned sbit = len == 0 ? 0 : (src.s64 >> min) & 0x1;
+    data.s64 = src.s64 >> pos;
+    if (sbit > 0) {
+      mask = 0xFFFFFFFFFFFFFFFF << len;
+      data.s64 |= mask;
+    } else {
       mask = 0xFFFFFFFFFFFFFFFF >> (64 - len);
-      data.u64 &= mask;
-      break;
+      data.s64 &= mask;
     }
-    case S32_TYPE: {
-      unsigned mask;
-      unsigned min = MY_MIN_I(pos + len - 1, msb);
-      unsigned sbit = len == 0 ? 0 : (src.s32 >> min) & 0x1;
-      data.s32 = src.s32 >> pos;
-      if (sbit > 0) {
-        mask = 0xFFFFFFFF << len;
-        data.s32 |= mask;
-      } else {
-        mask = 0xFFFFFFFF >> (32 - len);
-        data.s32 &= mask;
-      }
-      break;
-    }
-    case S64_TYPE: {
-      unsigned long mask;
-      unsigned min = MY_MIN_I(pos + len - 1, msb);
-      unsigned sbit = len == 0 ? 0 : (src.s64 >> min) & 0x1;
-      data.s64 = src.s64 >> pos;
-      if (sbit > 0) {
-        mask = 0xFFFFFFFFFFFFFFFF << len;
-        data.s64 |= mask;
-      } else {
-        mask = 0xFFFFFFFFFFFFFFFF >> (64 - len);
-        data.s64 &= mask;
-      }
-      break;
-    }
-    default:
-      printf("Operand type not supported for BFE instruction.\n");
-      abort();
-      return;
+    break;
+  }
+  default:
+    printf("Operand type not supported for BFE instruction.\n");
+    abort();
+    return;
   }
   thread->set_operand_value(dst, data, i_type, thread, pI);
 }
@@ -1677,9 +1677,9 @@ void bfi_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   ptx_reg_t src3_data, src4_data, data;
 
   const operand_info &dst =
-      pI->dst();  // get operand info of sources and destination
+      pI->dst(); // get operand info of sources and destination
   const operand_info &src1 =
-      pI->src1();  // use them to determine that they are of type 'register'
+      pI->src1(); // use them to determine that they are of type 'register'
   const operand_info &src2 = pI->src2();
   const operand_info &src3 = pI->src3();
   const operand_info &src4 = pI->src4();
@@ -1691,16 +1691,16 @@ void bfi_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src4_data = thread->get_operand_value(src4, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case B32_TYPE:
-      max = 32;
-      break;
-    case B64_TYPE:
-      max = 64;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case B32_TYPE:
+    max = 32;
+    break;
+  case B64_TYPE:
+    max = 64;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
   data = src2_data;
   unsigned pos = src3_data.u32 & 0xFF;
@@ -1711,40 +1711,50 @@ void bfi_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   }
   thread->set_operand_value(dst, data, i_type, thread, pI);
 }
-void bfind_impl(const ptx_instruction *pI, ptx_thread_info *thread)
-{
-  const operand_info &dst  = pI->dst();
+void bfind_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
+  const operand_info &dst = pI->dst();
   const operand_info &src1 = pI->src1();
   const unsigned i_type = pI->get_type();
 
-  const ptx_reg_t src1_data = thread->get_operand_value(src1, dst, i_type, thread, 1);
-  const int msb = ( i_type == U32_TYPE || i_type == S32_TYPE) ? 31 : 63;
+  const ptx_reg_t src1_data =
+      thread->get_operand_value(src1, dst, i_type, thread, 1);
+  const int msb = (i_type == U32_TYPE || i_type == S32_TYPE) ? 31 : 63;
 
   unsigned long a = 0;
-  switch (i_type)
-  {
-    case S32_TYPE: a = src1_data.s32; break;
-    case U32_TYPE: a = src1_data.u32; break;
-    case S64_TYPE: a = src1_data.s64; break;
-    case U64_TYPE: a = src1_data.u64; break;
-    default: assert(false); abort();
+  switch (i_type) {
+  case S32_TYPE:
+    a = src1_data.s32;
+    break;
+  case U32_TYPE:
+    a = src1_data.u32;
+    break;
+  case S64_TYPE:
+    a = src1_data.s64;
+    break;
+  case U64_TYPE:
+    a = src1_data.u64;
+    break;
+  default:
+    assert(false);
+    abort();
   }
 
   // negate negative signed inputs
-  if ( ( i_type == S32_TYPE || i_type == S64_TYPE ) && ( a & ( 1 << msb ) ) ) {
-      a = ~a;
+  if ((i_type == S32_TYPE || i_type == S64_TYPE) && (a & (1 << msb))) {
+    a = ~a;
   }
   uint32_t d_data = 0xffffffff;
   for (uint32_t i = msb; i >= 0; i--) {
-      if (a & (1<<i))  { d_data = i; break; }
+    if (a & (1 << i)) {
+      d_data = i;
+      break;
+    }
   }
 
   // if (.shiftamt && d != 0xffffffff)  { d = msb - d; }
 
   // store d
   thread->set_operand_value(dst, d_data, U32_TYPE, thread, pI);
-
-
 }
 
 void bra_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
@@ -1779,7 +1789,7 @@ void breakaddr_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   thread->push_breakaddr(target);
   assert(
       pI->has_pred() ==
-      false);  // pdom analysis cannot handle if this instruction is predicated
+      false); // pdom analysis cannot handle if this instruction is predicated
 }
 
 void brev_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
@@ -1791,20 +1801,22 @@ void brev_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 
   unsigned msb;
   switch (i_type) {
-    case B32_TYPE:
-      msb = 31;
-      for (unsigned i = 0; i <= msb; i++) {
-        if ((src1_data.u32 & (1 << i))) data.u32 |= 1 << (msb - i);
-      }
-      break;
-    case B64_TYPE:
-      msb = 63;
-      for (unsigned i = 0; i <= msb; i++) {
-        if ((src1_data.u64 & (1 << i))) data.u64 |= 1 << (msb - i);
-      }
-      break;
-    default:
-      assert(0);
+  case B32_TYPE:
+    msb = 31;
+    for (unsigned i = 0; i <= msb; i++) {
+      if ((src1_data.u32 & (1 << i)))
+        data.u32 |= 1 << (msb - i);
+    }
+    break;
+  case B64_TYPE:
+    msb = 63;
+    for (unsigned i = 0; i <= msb; i++) {
+      if ((src1_data.u64 & (1 << i)))
+        data.u64 |= 1 << (msb - i);
+    }
+    break;
+  default:
+    assert(0);
   }
   thread->set_operand_value(dst, data, i_type, thread, pI);
 }
@@ -1817,7 +1829,8 @@ unsigned trunc(unsigned num, unsigned precision) {
   unsigned data = num;
   for (unsigned j = 0; j < sizeof(unsigned) * 8; j++) {
     int bit = data & mask;
-    if (bit == 1) latest_one = j;
+    if (bit == 1)
+      latest_one = j;
     data >>= 1;
   }
   if (latest_one >= precision) {
@@ -1943,7 +1956,8 @@ void mma_impl(const ptx_instruction *pI, core_t *core, warp_inst_t inst) {
           if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
             printf("%.2f ", temp);
         }
-        if (core->get_gpu()->gpgpu_ctx->debug_tensorcore) printf("\n");
+        if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
+          printf("\n");
       } else {
         if (core->get_gpu()->gpgpu_ctx->debug_tensorcore) {
           for (k = 0; k < 8; k++) {
@@ -1953,42 +1967,43 @@ void mma_impl(const ptx_instruction *pI, core_t *core, warp_inst_t inst) {
         }
       }
       switch (operand_num) {
-        case 1:  // operand 1
-          for (k = 0; k < 8; k++) {
-            mapping(thrd, LOAD_A, a_layout, F16_TYPE, k, 16, row, col, offset);
-            if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
-              printf("A:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
-                     offset);
-            matrix_a[row][col] = nw_v[offset];
+      case 1: // operand 1
+        for (k = 0; k < 8; k++) {
+          mapping(thrd, LOAD_A, a_layout, F16_TYPE, k, 16, row, col, offset);
+          if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
+            printf("A:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
+                   offset);
+          matrix_a[row][col] = nw_v[offset];
+        }
+        break;
+      case 2: // operand 2
+        for (k = 0; k < 8; k++) {
+          mapping(thrd, LOAD_B, b_layout, F16_TYPE, k, 16, row, col, offset);
+          if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
+            printf("B:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
+                   offset);
+          matrix_b[row][col] = nw_v[offset];
+        }
+        break;
+      case 3: // operand 3
+        for (k = 0; k < 8; k++) {
+          mapping(thrd, LOAD_C, ROW, type2, k, 16, row, col, offset);
+          if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
+            printf("C:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
+                   offset);
+          if (type2 != F16_TYPE) {
+            matrix_c[row][col] = v[offset];
+          } else {
+            matrix_c[row][col] = nw_v[offset];
           }
-          break;
-        case 2:  // operand 2
-          for (k = 0; k < 8; k++) {
-            mapping(thrd, LOAD_B, b_layout, F16_TYPE, k, 16, row, col, offset);
-            if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
-              printf("B:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
-                     offset);
-            matrix_b[row][col] = nw_v[offset];
-          }
-          break;
-        case 3:  // operand 3
-          for (k = 0; k < 8; k++) {
-            mapping(thrd, LOAD_C, ROW, type2, k, 16, row, col, offset);
-            if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
-              printf("C:thread=%d,row=%d,col=%d,offset=%d\n", thrd, row, col,
-                     offset);
-            if (type2 != F16_TYPE) {
-              matrix_c[row][col] = v[offset];
-            } else {
-              matrix_c[row][col] = nw_v[offset];
-            }
-          }
-          break;
-        default:
-          printf("Invalid Operand Index\n");
+        }
+        break;
+      default:
+        printf("Invalid Operand Index\n");
       }
     }
-    if (core->get_gpu()->gpgpu_ctx->debug_tensorcore) printf("\n");
+    if (core->get_gpu()->gpgpu_ctx->debug_tensorcore)
+      printf("\n");
   }
   if (core->get_gpu()->gpgpu_ctx->debug_tensorcore) {
     printf("MATRIX_A\n");
@@ -2140,7 +2155,8 @@ void call_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
      * impression that it is a function call. As printf() doesnt have a body
      * like functions do, doing pdom analysis for printf() causes a crash.
      */
-    if (target_func->get_function_size() > 0) target_func->do_pdom();
+    if (target_func->get_function_size() > 0)
+      target_func->do_pdom();
     target_func->set_pdom();
   }
 
@@ -2157,10 +2173,9 @@ void call_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned n_operands = pI->get_num_operands();
 
   if (n_operands != (n_return + 1 + n_args)) {
-    printf(
-        "GPGPU-Sim PTX: Execution error - mismatch in number of arguements "
-        "between\n"
-        "               call instruction and function declaration\n");
+    printf("GPGPU-Sim PTX: Execution error - mismatch in number of arguements "
+           "between\n"
+           "               call instruction and function declaration\n");
     abort();
   }
 
@@ -2252,18 +2267,18 @@ void clz_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   d.u64 = 0;
 
   switch (i_type) {
-    case B32_TYPE:
-      max = 32;
-      mask = 0x80000000;
-      break;
-    case B64_TYPE:
-      max = 64;
-      mask = 0x8000000000000000;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case B32_TYPE:
+    max = 32;
+    mask = 0x80000000;
+    break;
+  case B64_TYPE:
+    max = 64;
+    mask = 0x8000000000000000;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   while ((d.u32 < max) && ((a.u64 & mask) == 0)) {
@@ -2283,22 +2298,22 @@ void cnot_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case PRED_TYPE:
-      d.pred = ((a.pred & 0x0001) == 0) ? 1 : 0;
-      break;
-    case B16_TYPE:
-      d.u16 = (a.u16 == 0) ? 1 : 0;
-      break;
-    case B32_TYPE:
-      d.u32 = (a.u32 == 0) ? 1 : 0;
-      break;
-    case B64_TYPE:
-      d.u64 = (a.u64 == 0) ? 1 : 0;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case PRED_TYPE:
+    d.pred = ((a.pred & 0x0001) == 0) ? 1 : 0;
+    break;
+  case B16_TYPE:
+    d.u16 = (a.u16 == 0) ? 1 : 0;
+    break;
+  case B32_TYPE:
+    d.u32 = (a.u32 == 0) ? 1 : 0;
+    break;
+  case B64_TYPE:
+    d.u64 = (a.u64 == 0) ? 1 : 0;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -2313,13 +2328,13 @@ void cos_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      d.f32 = cos(a.f32);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    d.f32 = cos(a.f32);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -2328,19 +2343,19 @@ void cos_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 ptx_reg_t chop(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
                int rounding_mode, int saturation_mode) {
   switch (to_width) {
-    case 8:
-      x.mask_and(0, 0xFF);
-      break;
-    case 16:
-      x.mask_and(0, 0xFFFF);
-      break;
-    case 32:
-      x.mask_and(0, 0xFFFFFFFF);
-      break;
-    case 64:
-      break;
-    default:
-      assert(0);
+  case 8:
+    x.mask_and(0, 0xFF);
+    break;
+  case 16:
+    x.mask_and(0, 0xFFFF);
+    break;
+  case 32:
+    x.mask_and(0, 0xFFFFFFFF);
+    break;
+  case 64:
+    break;
+  default:
+    assert(0);
   }
   return x;
 }
@@ -2349,19 +2364,22 @@ ptx_reg_t sext(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
                int rounding_mode, int saturation_mode) {
   x = chop(x, 0, from_width, 0, rounding_mode, saturation_mode);
   switch (from_width) {
-    case 8:
-      if (x.get_bit(7)) x.mask_or(0xFFFFFFFF, 0xFFFFFF00);
-      break;
-    case 16:
-      if (x.get_bit(15)) x.mask_or(0xFFFFFFFF, 0xFFFF0000);
-      break;
-    case 32:
-      if (x.get_bit(31)) x.mask_or(0xFFFFFFFF, 0x00000000);
-      break;
-    case 64:
-      break;
-    default:
-      assert(0);
+  case 8:
+    if (x.get_bit(7))
+      x.mask_or(0xFFFFFFFF, 0xFFFFFF00);
+    break;
+  case 16:
+    if (x.get_bit(15))
+      x.mask_or(0xFFFFFFFF, 0xFFFF0000);
+    break;
+  case 32:
+    if (x.get_bit(31))
+      x.mask_or(0xFFFFFFFF, 0x00000000);
+    break;
+  case 64:
+    break;
+  default:
+    assert(0);
   }
   return x;
 }
@@ -2372,19 +2390,22 @@ ptx_reg_t sexd(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
                int rounding_mode, int saturation_mode) {
   x = chop(x, 0, from_width, 0, rounding_mode, saturation_mode);
   switch (to_width) {
-    case 8:
-      if (x.get_bit(7)) x.mask_or(0xFFFFFFFF, 0xFFFFFF00);
-      break;
-    case 16:
-      if (x.get_bit(15)) x.mask_or(0xFFFFFFFF, 0xFFFF0000);
-      break;
-    case 32:
-      if (x.get_bit(31)) x.mask_or(0xFFFFFFFF, 0x00000000);
-      break;
-    case 64:
-      break;
-    default:
-      assert(0);
+  case 8:
+    if (x.get_bit(7))
+      x.mask_or(0xFFFFFFFF, 0xFFFFFF00);
+    break;
+  case 16:
+    if (x.get_bit(15))
+      x.mask_or(0xFFFFFFFF, 0xFFFF0000);
+    break;
+  case 32:
+    if (x.get_bit(31))
+      x.mask_or(0xFFFFFFFF, 0x00000000);
+    break;
+  case 64:
+    break;
+  default:
+    assert(0);
   }
   return x;
 }
@@ -2403,7 +2424,8 @@ int saturatei(int a, int max, int min) {
 }
 
 unsigned int saturatei(unsigned int a, unsigned int max) {
-  if (a > max) a = max;
+  if (a > max)
+    a = max;
   return a;
 }
 
@@ -2415,85 +2437,87 @@ ptx_reg_t f2x(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
 
   enum cudaRoundMode mode = cudaRoundZero;
   switch (rounding_mode) {
-    case RZI_OPTION:
-      mode = cudaRoundZero;
-      break;
-    case RNI_OPTION:
-      mode = cudaRoundNearest;
-      break;
-    case RMI_OPTION:
-      mode = cudaRoundMinInf;
-      break;
-    case RPI_OPTION:
-      mode = cudaRoundPosInf;
-      break;
-    default:
-      break;
+  case RZI_OPTION:
+    mode = cudaRoundZero;
+    break;
+  case RNI_OPTION:
+    mode = cudaRoundNearest;
+    break;
+  case RMI_OPTION:
+    mode = cudaRoundMinInf;
+    break;
+  case RPI_OPTION:
+    mode = cudaRoundPosInf;
+    break;
+  default:
+    break;
   }
 
   ptx_reg_t y;
-  if (to_sign == 1) {  // convert to 64-bit number first?
+  if (to_sign == 1) { // convert to 64-bit number first?
     int tmp = cuda_math::float2int(x.f32, mode);
-    if ((x.u32 & 0x7f800000) == 0) tmp = 0;  // round denorm. FP to 0
+    if ((x.u32 & 0x7f800000) == 0)
+      tmp = 0; // round denorm. FP to 0
     if (saturation_mode && to_width < 32) {
       tmp = saturatei(tmp, (1 << to_width) - 1, -(1 << to_width));
     }
     switch (to_width) {
-      case 8:
-        y.s8 = (char)tmp;
-        break;
-      case 16:
-        y.s16 = (short)tmp;
-        break;
-      case 32:
-        y.s32 = (int)tmp;
-        break;
-      case 64:
-        y.s64 = (long long)tmp;
-        break;
-      default:
-        assert(0);
-        break;
+    case 8:
+      y.s8 = (char)tmp;
+      break;
+    case 16:
+      y.s16 = (short)tmp;
+      break;
+    case 32:
+      y.s32 = (int)tmp;
+      break;
+    case 64:
+      y.s64 = (long long)tmp;
+      break;
+    default:
+      assert(0);
+      break;
     }
   } else if (to_sign == 0) {
     unsigned int tmp = cuda_math::float2uint(x.f32, mode);
-    if ((x.u32 & 0x7f800000) == 0) tmp = 0;  // round denorm. FP to 0
+    if ((x.u32 & 0x7f800000) == 0)
+      tmp = 0; // round denorm. FP to 0
     if (saturation_mode && to_width < 32) {
       tmp = saturatei(tmp, (1 << to_width) - 1);
     }
     switch (to_width) {
-      case 8:
-        y.u8 = (unsigned char)tmp;
-        break;
-      case 16:
-        y.u16 = (unsigned short)tmp;
-        break;
-      case 32:
-        y.u32 = (unsigned int)tmp;
-        break;
-      case 64:
-        y.u64 = (unsigned long long)tmp;
-        break;
-      default:
-        assert(0);
-        break;
+    case 8:
+      y.u8 = (unsigned char)tmp;
+      break;
+    case 16:
+      y.u16 = (unsigned short)tmp;
+      break;
+    case 32:
+      y.u32 = (unsigned int)tmp;
+      break;
+    case 64:
+      y.u64 = (unsigned long long)tmp;
+      break;
+    default:
+      assert(0);
+      break;
     }
   } else {
     switch (to_width) {
-      case 16:
-        y.f16 = half_float::half_cast<half,
-                                      std::numeric_limits<float>::round_style>(
-            x.f32);  // mytemp;
-        break;
-      case 32:
-        y.f32 = float(x.f16);
-        break;  // handled by f2f
-      case 64:
-        y.f64 = x.f32;
-        break;
-      default:
-        assert(0);
-        break;
+    case 16:
+      y.f16 = half_float::half_cast<half,
+                                    std::numeric_limits<float>::round_style>(
+          x.f32); // mytemp;
+      break;
+    case 32:
+      y.f32 = float(x.f16);
+      break; // handled by f2f
+    case 64:
+      y.f64 = x.f32;
+      break;
+    default:
+      assert(0);
+      break;
     }
   }
   return y;
@@ -2513,76 +2537,76 @@ ptx_reg_t d2x(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
 
   double tmp;
   switch (rounding_mode) {
-    case RZI_OPTION:
-      tmp = trunc(x.f64);
-      break;
-    case RNI_OPTION:
-      tmp = nearbyint(x.f64);
-      break;
-    case RMI_OPTION:
-      tmp = floor(x.f64);
-      break;
-    case RPI_OPTION:
-      tmp = ceil(x.f64);
-      break;
-    default:
-      tmp = x.f64;
-      break;
+  case RZI_OPTION:
+    tmp = trunc(x.f64);
+    break;
+  case RNI_OPTION:
+    tmp = nearbyint(x.f64);
+    break;
+  case RMI_OPTION:
+    tmp = floor(x.f64);
+    break;
+  case RPI_OPTION:
+    tmp = ceil(x.f64);
+    break;
+  default:
+    tmp = x.f64;
+    break;
   }
 
   ptx_reg_t y;
   if (to_sign == 1) {
     tmp = saturated2i(tmp, ((1 << (to_width - 1)) - 1), (1 << (to_width - 1)));
     switch (to_width) {
-      case 8:
-        y.s8 = (char)tmp;
-        break;
-      case 16:
-        y.s16 = (short)tmp;
-        break;
-      case 32:
-        y.s32 = (int)tmp;
-        break;
-      case 64:
-        y.s64 = (long long)tmp;
-        break;
-      default:
-        assert(0);
-        break;
+    case 8:
+      y.s8 = (char)tmp;
+      break;
+    case 16:
+      y.s16 = (short)tmp;
+      break;
+    case 32:
+      y.s32 = (int)tmp;
+      break;
+    case 64:
+      y.s64 = (long long)tmp;
+      break;
+    default:
+      assert(0);
+      break;
     }
   } else if (to_sign == 0) {
     tmp = saturated2i(tmp, ((1 << (to_width - 1)) - 1), 0);
     switch (to_width) {
-      case 8:
-        y.u8 = (unsigned char)tmp;
-        break;
-      case 16:
-        y.u16 = (unsigned short)tmp;
-        break;
-      case 32:
-        y.u32 = (unsigned int)tmp;
-        break;
-      case 64:
-        y.u64 = (unsigned long long)tmp;
-        break;
-      default:
-        assert(0);
-        break;
+    case 8:
+      y.u8 = (unsigned char)tmp;
+      break;
+    case 16:
+      y.u16 = (unsigned short)tmp;
+      break;
+    case 32:
+      y.u32 = (unsigned int)tmp;
+      break;
+    case 64:
+      y.u64 = (unsigned long long)tmp;
+      break;
+    default:
+      assert(0);
+      break;
     }
   } else {
     switch (to_width) {
-      case 16:
-        assert(0);
-        break;
-      case 32:
-        y.f32 = x.f64;
-        break;
-      case 64:
-        y.f64 = x.f64;  // should be handled by d2d
-        break;
-      default:
-        assert(0);
-        break;
+    case 16:
+      assert(0);
+      break;
+    case 32:
+      y.f32 = x.f64;
+      break;
+    case 64:
+      y.f64 = x.f64; // should be handled by d2d
+      break;
+    default:
+      assert(0);
+      break;
     }
   }
   return y;
@@ -2592,67 +2616,67 @@ ptx_reg_t s2f(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
               int rounding_mode, int saturation_mode) {
   ptx_reg_t y;
 
-  if (from_width < 64) {  // 32-bit conversion
+  if (from_width < 64) { // 32-bit conversion
     y = sext(x, from_width, 32, 0, rounding_mode, saturation_mode);
 
     switch (to_width) {
-      case 16:
-        assert(0);
+    case 16:
+      assert(0);
+      break;
+    case 32:
+      switch (rounding_mode) {
+      case RZ_OPTION:
+        y.f32 = cuda_math::__int2float_rz(y.s32);
         break;
-      case 32:
-        switch (rounding_mode) {
-          case RZ_OPTION:
-            y.f32 = cuda_math::__int2float_rz(y.s32);
-            break;
-          case RN_OPTION:
-            y.f32 = cuda_math::__int2float_rn(y.s32);
-            break;
-          case RM_OPTION:
-            y.f32 = cuda_math::__int2float_rd(y.s32);
-            break;
-          case RP_OPTION:
-            y.f32 = cuda_math::__int2float_ru(y.s32);
-            break;
-          default:
-            break;
-        }
+      case RN_OPTION:
+        y.f32 = cuda_math::__int2float_rn(y.s32);
         break;
-      case 64:
-        y.f64 = y.s32;
-        break;  // no rounding needed
+      case RM_OPTION:
+        y.f32 = cuda_math::__int2float_rd(y.s32);
+        break;
+      case RP_OPTION:
+        y.f32 = cuda_math::__int2float_ru(y.s32);
+        break;
       default:
-        assert(0);
         break;
+      }
+      break;
+    case 64:
+      y.f64 = y.s32;
+      break; // no rounding needed
+    default:
+      assert(0);
+      break;
     }
   } else {
     switch (to_width) {
-      case 16:
-        assert(0);
+    case 16:
+      assert(0);
+      break;
+    case 32:
+      switch (rounding_mode) {
+      case RZ_OPTION:
+        y.f32 = cuda_math::__ll2float_rz(y.s64);
         break;
-      case 32:
-        switch (rounding_mode) {
-          case RZ_OPTION:
-            y.f32 = cuda_math::__ll2float_rz(y.s64);
-            break;
-          case RN_OPTION:
-            y.f32 = cuda_math::__ll2float_rn(y.s64);
-            break;
-          case RM_OPTION:
-            y.f32 = cuda_math::__ll2float_rd(y.s64);
-            break;
-          case RP_OPTION:
-            y.f32 = cuda_math::__ll2float_ru(y.s64);
-            break;
-          default:
-            break;
-        }
+      case RN_OPTION:
+        y.f32 = cuda_math::__ll2float_rn(y.s64);
         break;
-      case 64:
-        y.f64 = y.s64;
-        break;  // no internal implementation found
+      case RM_OPTION:
+        y.f32 = cuda_math::__ll2float_rd(y.s64);
+        break;
+      case RP_OPTION:
+        y.f32 = cuda_math::__ll2float_ru(y.s64);
+        break;
       default:
-        assert(0);
         break;
+      }
+      break;
+    case 64:
+      y.f64 = y.s64;
+      break; // no internal implementation found
+    default:
+      assert(0);
+      break;
     }
   }
 
@@ -2664,67 +2688,67 @@ ptx_reg_t u2f(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
               int rounding_mode, int saturation_mode) {
   ptx_reg_t y;
 
-  if (from_width < 64) {  // 32-bit conversion
+  if (from_width < 64) { // 32-bit conversion
     y = zext(x, from_width, 32, 0, rounding_mode, saturation_mode);
 
     switch (to_width) {
-      case 16:
-        assert(0);
+    case 16:
+      assert(0);
+      break;
+    case 32:
+      switch (rounding_mode) {
+      case RZ_OPTION:
+        y.f32 = cuda_math::__uint2float_rz(y.u32);
         break;
-      case 32:
-        switch (rounding_mode) {
-          case RZ_OPTION:
-            y.f32 = cuda_math::__uint2float_rz(y.u32);
-            break;
-          case RN_OPTION:
-            y.f32 = cuda_math::__uint2float_rn(y.u32);
-            break;
-          case RM_OPTION:
-            y.f32 = cuda_math::__uint2float_rd(y.u32);
-            break;
-          case RP_OPTION:
-            y.f32 = cuda_math::__uint2float_ru(y.u32);
-            break;
-          default:
-            break;
-        }
+      case RN_OPTION:
+        y.f32 = cuda_math::__uint2float_rn(y.u32);
         break;
-      case 64:
-        y.f64 = y.u32;
-        break;  // no rounding needed
+      case RM_OPTION:
+        y.f32 = cuda_math::__uint2float_rd(y.u32);
+        break;
+      case RP_OPTION:
+        y.f32 = cuda_math::__uint2float_ru(y.u32);
+        break;
       default:
-        assert(0);
         break;
+      }
+      break;
+    case 64:
+      y.f64 = y.u32;
+      break; // no rounding needed
+    default:
+      assert(0);
+      break;
     }
   } else {
     switch (to_width) {
-      case 16:
-        assert(0);
+    case 16:
+      assert(0);
+      break;
+    case 32:
+      switch (rounding_mode) {
+      case RZ_OPTION:
+        y.f32 = cuda_math::__ull2float_rn(y.u64);
         break;
-      case 32:
-        switch (rounding_mode) {
-          case RZ_OPTION:
-            y.f32 = cuda_math::__ull2float_rn(y.u64);
-            break;
-          case RN_OPTION:
-            y.f32 = cuda_math::__ull2float_rn(y.u64);
-            break;
-          case RM_OPTION:
-            y.f32 = cuda_math::__ull2float_rn(y.u64);
-            break;
-          case RP_OPTION:
-            y.f32 = cuda_math::__ull2float_rn(y.u64);
-            break;
-          default:
-            break;
-        }
+      case RN_OPTION:
+        y.f32 = cuda_math::__ull2float_rn(y.u64);
         break;
-      case 64:
-        y.f64 = y.u64;
-        break;  // no internal implementation found
+      case RM_OPTION:
+        y.f32 = cuda_math::__ull2float_rn(y.u64);
+        break;
+      case RP_OPTION:
+        y.f32 = cuda_math::__ull2float_rn(y.u64);
+        break;
       default:
-        assert(0);
         break;
+      }
+      break;
+    case 64:
+      y.f64 = y.u64;
+      break; // no internal implementation found
+    default:
+      assert(0);
+      break;
     }
   }
 
@@ -2740,37 +2764,37 @@ ptx_reg_t f2f(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
     y.f32 = half_float::detail::half2float<float>(val);
   } else {
     switch (rounding_mode) {
-      case RZI_OPTION:
-        y.f32 = truncf(x.f32);
-        break;
-      case RNI_OPTION:
+    case RZI_OPTION:
+      y.f32 = truncf(x.f32);
+      break;
+    case RNI_OPTION:
 #if CUDART_VERSION >= 3000
-        y.f32 = nearbyintf(x.f32);
+      y.f32 = nearbyintf(x.f32);
 #else
-        y.f32 = cuda_math::__internal_nearbyintf(x.f32);
+      y.f32 = cuda_math::__internal_nearbyintf(x.f32);
 #endif
-        break;
-      case RMI_OPTION:
-        if ((x.u32 & 0x7f800000) == 0) {
-          y.u32 = x.u32 & 0x80000000;  // round denorm. FP to 0, keeping sign
-        } else {
-          y.f32 = floorf(x.f32);
-        }
-        break;
-      case RPI_OPTION:
-        if ((x.u32 & 0x7f800000) == 0) {
-          y.u32 = x.u32 & 0x80000000;  // round denorm. FP to 0, keeping sign
-        } else {
-          y.f32 = ceilf(x.f32);
-        }
-        break;
-      default:
-        if ((x.u32 & 0x7f800000) == 0) {
-          y.u32 = x.u32 & 0x80000000;  // round denorm. FP to 0, keeping sign
-        } else {
-          y.f32 = x.f32;
-        }
-        break;
+      break;
+    case RMI_OPTION:
+      if ((x.u32 & 0x7f800000) == 0) {
+        y.u32 = x.u32 & 0x80000000; // round denorm. FP to 0, keeping sign
+      } else {
+        y.f32 = floorf(x.f32);
+      }
+      break;
+    case RPI_OPTION:
+      if ((x.u32 & 0x7f800000) == 0) {
+        y.u32 = x.u32 & 0x80000000; // round denorm. FP to 0, keeping sign
+      } else {
+        y.f32 = ceilf(x.f32);
+      }
+      break;
+    default:
+      if ((x.u32 & 0x7f800000) == 0) {
+        y.u32 = x.u32 & 0x80000000; // round denorm. FP to 0, keeping sign
+      } else {
+        y.f32 = x.f32;
+      }
+      break;
     }
 #if CUDART_VERSION >= 3000
     if (isnanf(y.f32))
@@ -2791,25 +2815,25 @@ ptx_reg_t d2d(ptx_reg_t x, unsigned from_width, unsigned to_width, int to_sign,
               int rounding_mode, int saturation_mode) {
   ptx_reg_t y;
   switch (rounding_mode) {
-    case RZI_OPTION:
-      y.f64 = trunc(x.f64);
-      break;
-    case RNI_OPTION:
+  case RZI_OPTION:
+    y.f64 = trunc(x.f64);
+    break;
+  case RNI_OPTION:
 #if CUDART_VERSION >= 3000
-      y.f64 = nearbyint(x.f64);
+    y.f64 = nearbyint(x.f64);
 #else
-      y.f64 = cuda_math::__internal_nearbyintf(x.f64);
+    y.f64 = cuda_math::__internal_nearbyintf(x.f64);
 #endif
-      break;
-    case RMI_OPTION:
-      y.f64 = floor(x.f64);
-      break;
-    case RPI_OPTION:
-      y.f64 = ceil(x.f64);
-      break;
-    default:
-      y.f64 = x.f64;
-      break;
+    break;
+  case RMI_OPTION:
+    y.f64 = floor(x.f64);
+    break;
+  case RPI_OPTION:
+    y.f64 = ceil(x.f64);
+    break;
+  default:
+    y.f64 = x.f64;
+    break;
   }
   if (std::isnan(y.f64)) {
     y.u64 = 0xfff8000000000000ull;
@@ -2839,131 +2863,131 @@ void ptx_round(ptx_reg_t &data, int rounding_mode, int type) {
     return;
   }
   switch (rounding_mode) {
-    case RZI_OPTION:
-      switch (type) {
-        case S8_TYPE:
-        case S16_TYPE:
-        case S32_TYPE:
-        case S64_TYPE:
-        case U8_TYPE:
-        case U16_TYPE:
-        case U32_TYPE:
-        case U64_TYPE:
-          printf("Trying to round an integer??\n");
-          assert(0);
-          break;
-        case F16_TYPE:
-          data.f16 = truncf(data.f16);
-          break;  // assert(0); break;
-        case F32_TYPE:
-          data.f32 = truncf(data.f32);
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          if (data.f64 < 0)
-            data.f64 = ceil(data.f64);  // negative
-          else
-            data.f64 = floor(data.f64);  // positive
-          break;
-        default:
-          assert(0);
-          break;
-      }
+  case RZI_OPTION:
+    switch (type) {
+    case S8_TYPE:
+    case S16_TYPE:
+    case S32_TYPE:
+    case S64_TYPE:
+    case U8_TYPE:
+    case U16_TYPE:
+    case U32_TYPE:
+    case U64_TYPE:
+      printf("Trying to round an integer??\n");
+      assert(0);
       break;
-    case RNI_OPTION:
-      switch (type) {
-        case S8_TYPE:
-        case S16_TYPE:
-        case S32_TYPE:
-        case S64_TYPE:
-        case U8_TYPE:
-        case U16_TYPE:
-        case U32_TYPE:
-        case U64_TYPE:
-          printf("Trying to round an integer??\n");
-          assert(0);
-          break;
-        case F16_TYPE:  // assert(0); break;
-#if CUDART_VERSION >= 3000
-          data.f16 = nearbyintf(data.f16);
-#else
-          data.f16 = cuda_math::__cuda_nearbyintf(data.f16);
-#endif
-          break;
-        case F32_TYPE:
-#if CUDART_VERSION >= 3000
-          data.f32 = nearbyintf(data.f32);
-#else
-          data.f32 = cuda_math::__cuda_nearbyintf(data.f32);
-#endif
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          data.f64 = round(data.f64);
-          break;
-        default:
-          assert(0);
-          break;
-      }
+    case F16_TYPE:
+      data.f16 = truncf(data.f16);
+      break; // assert(0); break;
+    case F32_TYPE:
+      data.f32 = truncf(data.f32);
       break;
-    case RMI_OPTION:
-      switch (type) {
-        case S8_TYPE:
-        case S16_TYPE:
-        case S32_TYPE:
-        case S64_TYPE:
-        case U8_TYPE:
-        case U16_TYPE:
-        case U32_TYPE:
-        case U64_TYPE:
-          printf("Trying to round an integer??\n");
-          assert(0);
-          break;
-        case F16_TYPE:
-          data.f16 = floorf(data.f16);
-          break;  // assert(0); break;
-        case F32_TYPE:
-          data.f32 = floorf(data.f32);
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          data.f64 = floor(data.f64);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-      break;
-    case RPI_OPTION:
-      switch (type) {
-        case S8_TYPE:
-        case S16_TYPE:
-        case S32_TYPE:
-        case S64_TYPE:
-        case U8_TYPE:
-        case U16_TYPE:
-        case U32_TYPE:
-        case U64_TYPE:
-          printf("Trying to round an integer??\n");
-          assert(0);
-          break;
-        case F16_TYPE:
-          data.f16 = ceilf(data.f16);
-          break;  // assert(0); break;
-        case F32_TYPE:
-          data.f32 = ceilf(data.f32);
-          break;
-        case F64_TYPE:
-        case FF64_TYPE:
-          data.f64 = ceil(data.f64);
-          break;
-        default:
-          assert(0);
-          break;
-      }
+    case F64_TYPE:
+    case FF64_TYPE:
+      if (data.f64 < 0)
+        data.f64 = ceil(data.f64); // negative
+      else
+        data.f64 = floor(data.f64); // positive
       break;
     default:
+      assert(0);
       break;
+    }
+    break;
+  case RNI_OPTION:
+    switch (type) {
+    case S8_TYPE:
+    case S16_TYPE:
+    case S32_TYPE:
+    case S64_TYPE:
+    case U8_TYPE:
+    case U16_TYPE:
+    case U32_TYPE:
+    case U64_TYPE:
+      printf("Trying to round an integer??\n");
+      assert(0);
+      break;
+    case F16_TYPE: // assert(0); break;
+#if CUDART_VERSION >= 3000
+      data.f16 = nearbyintf(data.f16);
+#else
+      data.f16 = cuda_math::__cuda_nearbyintf(data.f16);
+#endif
+      break;
+    case F32_TYPE:
+#if CUDART_VERSION >= 3000
+      data.f32 = nearbyintf(data.f32);
+#else
+      data.f32 = cuda_math::__cuda_nearbyintf(data.f32);
+#endif
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      data.f64 = round(data.f64);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    break;
+  case RMI_OPTION:
+    switch (type) {
+    case S8_TYPE:
+    case S16_TYPE:
+    case S32_TYPE:
+    case S64_TYPE:
+    case U8_TYPE:
+    case U16_TYPE:
+    case U32_TYPE:
+    case U64_TYPE:
+      printf("Trying to round an integer??\n");
+      assert(0);
+      break;
+    case F16_TYPE:
+      data.f16 = floorf(data.f16);
+      break; // assert(0); break;
+    case F32_TYPE:
+      data.f32 = floorf(data.f32);
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      data.f64 = floor(data.f64);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    break;
+  case RPI_OPTION:
+    switch (type) {
+    case S8_TYPE:
+    case S16_TYPE:
+    case S32_TYPE:
+    case S64_TYPE:
+    case U8_TYPE:
+    case U16_TYPE:
+    case U32_TYPE:
+    case U64_TYPE:
+      printf("Trying to round an integer??\n");
+      assert(0);
+      break;
+    case F16_TYPE:
+      data.f16 = ceilf(data.f16);
+      break; // assert(0); break;
+    case F32_TYPE:
+      data.f32 = ceilf(data.f32);
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      data.f64 = ceil(data.f64);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    break;
+  default:
+    break;
   }
 
   if (type == F32_TYPE) {
@@ -2988,33 +3012,39 @@ void ptx_saturate(ptx_reg_t &data, int saturation_mode, int type) {
     return;
   }
   switch (type) {
-    case S8_TYPE:
-    case S16_TYPE:
-    case S32_TYPE:
-    case S64_TYPE:
-    case U8_TYPE:
-    case U16_TYPE:
-    case U32_TYPE:
-    case U64_TYPE:
-      printf("Trying to clamp an integer to 1??\n");
-      assert(0);
-      break;
-    case F16_TYPE:                           // assert(0); break;
-      if (data.f16 > 1.0f) data.f16 = 1.0f;  // negative
-      if (data.f16 < 0.0f) data.f16 = 0.0f;  // positive
-      break;
-    case F32_TYPE:
-      if (data.f32 > 1.0f) data.f32 = 1.0f;  // negative
-      if (data.f32 < 0.0f) data.f32 = 0.0f;  // positive
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      if (data.f64 > 1.0f) data.f64 = 1.0f;  // negative
-      if (data.f64 < 0.0f) data.f64 = 0.0f;  // positive
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+  case S16_TYPE:
+  case S32_TYPE:
+  case S64_TYPE:
+  case U8_TYPE:
+  case U16_TYPE:
+  case U32_TYPE:
+  case U64_TYPE:
+    printf("Trying to clamp an integer to 1??\n");
+    assert(0);
+    break;
+  case F16_TYPE: // assert(0); break;
+    if (data.f16 > 1.0f)
+      data.f16 = 1.0f; // negative
+    if (data.f16 < 0.0f)
+      data.f16 = 0.0f; // positive
+    break;
+  case F32_TYPE:
+    if (data.f32 > 1.0f)
+      data.f32 = 1.0f; // negative
+    if (data.f32 < 0.0f)
+      data.f32 = 0.0f; // positive
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    if (data.f64 > 1.0f)
+      data.f64 = 1.0f; // negative
+    if (data.f64 < 0.0f)
+      data.f64 = 0.0f; // positive
+    break;
+  default:
+    assert(0);
+    break;
   }
 }
 
@@ -3039,39 +3069,39 @@ void cvt_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 
   if (pI->is_neg()) {
     switch (from_type) {
-      // Default to f32 for now, need to add support for others
-      case S8_TYPE:
-      case U8_TYPE:
-      case B8_TYPE:
-        data.s8 = -data.s8;
-        break;
-      case S16_TYPE:
-      case U16_TYPE:
-      case B16_TYPE:
-        data.s16 = -data.s16;
-        break;
-      case S32_TYPE:
-      case U32_TYPE:
-      case B32_TYPE:
-        data.s32 = -data.s32;
-        break;
-      case S64_TYPE:
-      case U64_TYPE:
-      case B64_TYPE:
-        data.s64 = -data.s64;
-        break;
-      case F16_TYPE:
-        data.f16 = -data.f16;
-        break;
-      case F32_TYPE:
-        data.f32 = -data.f32;
-        break;
-      case F64_TYPE:
-      case FF64_TYPE:
-        data.f64 = -data.f64;
-        break;
-      default:
-        assert(0);
+    // Default to f32 for now, need to add support for others
+    case S8_TYPE:
+    case U8_TYPE:
+    case B8_TYPE:
+      data.s8 = -data.s8;
+      break;
+    case S16_TYPE:
+    case U16_TYPE:
+    case B16_TYPE:
+      data.s16 = -data.s16;
+      break;
+    case S32_TYPE:
+    case U32_TYPE:
+    case B32_TYPE:
+      data.s32 = -data.s32;
+      break;
+    case S64_TYPE:
+    case U64_TYPE:
+    case B64_TYPE:
+      data.s64 = -data.s64;
+      break;
+    case F16_TYPE:
+      data.f16 = -data.f16;
+      break;
+    case F32_TYPE:
+      data.f32 = -data.f32;
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      data.f64 = -data.f64;
+      break;
+    default:
+      assert(0);
     }
   }
 
@@ -3101,33 +3131,33 @@ void cvta_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 
   if (to_non_generic) {
     switch (space.get_type()) {
-      case shared_space:
-        to_addr_hw = generic_to_shared(smid, from_addr_hw);
-        break;
-      case local_space:
-        to_addr_hw = generic_to_local(smid, hwtid, from_addr_hw);
-        break;
-      case global_space:
-        to_addr_hw = generic_to_global(from_addr_hw);
-        break;
-      default:
-        abort();
+    case shared_space:
+      to_addr_hw = generic_to_shared(smid, from_addr_hw);
+      break;
+    case local_space:
+      to_addr_hw = generic_to_local(smid, hwtid, from_addr_hw);
+      break;
+    case global_space:
+      to_addr_hw = generic_to_global(from_addr_hw);
+      break;
+    default:
+      abort();
     }
   } else {
     switch (space.get_type()) {
-      case shared_space:
-        to_addr_hw = shared_to_generic(smid, from_addr_hw);
-        break;
-      case local_space:
-        to_addr_hw = local_to_generic(smid, hwtid, from_addr_hw) +
-                     thread->get_local_mem_stack_pointer();
-        break;  // add stack ptr here so that it can be passed as a pointer at
-                // function call
-      case global_space:
-        to_addr_hw = global_to_generic(from_addr_hw);
-        break;
-      default:
-        abort();
+    case shared_space:
+      to_addr_hw = shared_to_generic(smid, from_addr_hw);
+      break;
+    case local_space:
+      to_addr_hw = local_to_generic(smid, hwtid, from_addr_hw) +
+                   thread->get_local_mem_stack_pointer();
+      break; // add stack ptr here so that it can be passed as a pointer at
+             // function call
+    case global_space:
+      to_addr_hw = global_to_generic(from_addr_hw);
+      break;
+    default:
+      abort();
     }
   }
 
@@ -3149,55 +3179,55 @@ void div_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   ptx_reg_t src2_data = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case S8_TYPE:
-      data.s8 = src1_data.s8 / src2_data.s8;
-      break;
-    case S16_TYPE:
-      data.s16 = src1_data.s16 / src2_data.s16;
-      break;
-    case S32_TYPE:
-      data.s32 = src1_data.s32 / src2_data.s32;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 / src2_data.s64;
-      break;
-    case U8_TYPE:
-      data.u8 = src1_data.u8 / src2_data.u8;
-      break;
-    case U16_TYPE:
-      data.u16 = src1_data.u16 / src2_data.u16;
-      break;
-    case U32_TYPE:
-      data.u32 = src1_data.u32 / src2_data.u32;
-      break;
-    case U64_TYPE:
-      data.u64 = src1_data.u64 / src2_data.u64;
-      break;
-    case B8_TYPE:
-      data.u8 = src1_data.u8 / src2_data.u8;
-      break;
-    case B16_TYPE:
-      data.u16 = src1_data.u16 / src2_data.u16;
-      break;
-    case B32_TYPE:
-      data.u32 = src1_data.u32 / src2_data.u32;
-      break;
-    case B64_TYPE:
-      data.u64 = src1_data.u64 / src2_data.u64;
-      break;
-    case F16_TYPE:
-      data.f16 = src1_data.f16 / src2_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = src1_data.f32 / src2_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = src1_data.f64 / src2_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+    data.s8 = src1_data.s8 / src2_data.s8;
+    break;
+  case S16_TYPE:
+    data.s16 = src1_data.s16 / src2_data.s16;
+    break;
+  case S32_TYPE:
+    data.s32 = src1_data.s32 / src2_data.s32;
+    break;
+  case S64_TYPE:
+    data.s64 = src1_data.s64 / src2_data.s64;
+    break;
+  case U8_TYPE:
+    data.u8 = src1_data.u8 / src2_data.u8;
+    break;
+  case U16_TYPE:
+    data.u16 = src1_data.u16 / src2_data.u16;
+    break;
+  case U32_TYPE:
+    data.u32 = src1_data.u32 / src2_data.u32;
+    break;
+  case U64_TYPE:
+    data.u64 = src1_data.u64 / src2_data.u64;
+    break;
+  case B8_TYPE:
+    data.u8 = src1_data.u8 / src2_data.u8;
+    break;
+  case B16_TYPE:
+    data.u16 = src1_data.u16 / src2_data.u16;
+    break;
+  case B32_TYPE:
+    data.u32 = src1_data.u32 / src2_data.u32;
+    break;
+  case B64_TYPE:
+    data.u64 = src1_data.u64 / src2_data.u64;
+    break;
+  case F16_TYPE:
+    data.f16 = src1_data.f16 / src2_data.f16;
+    break; // assert(0); break;
+  case F32_TYPE:
+    data.f32 = src1_data.f32 / src2_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = src1_data.f64 / src2_data.f64;
+    break;
+  default:
+    assert(0);
+    break;
   }
   thread->set_operand_value(dst, data, i_type, thread, pI);
 }
@@ -3217,13 +3247,13 @@ void ex2_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src1_data = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      data.f32 = cuda_math::__powf(2.0, src1_data.f32);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    data.f32 = cuda_math::__powf(2.0, src1_data.f32);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
@@ -3256,14 +3286,14 @@ void isspacep_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned hwtid = thread->get_hw_tid();
 
   switch (space.get_type()) {
-    case shared_space:
-      t = isspace_shared(smid, addr);
-    case local_space:
-      t = isspace_local(smid, hwtid, addr);
-    case global_space:
-      t = isspace_global(addr);
-    default:
-      abort();
+  case shared_space:
+    t = isspace_shared(smid, addr);
+  case local_space:
+    t = isspace_local(smid, hwtid, addr);
+  case global_space:
+    t = isspace_global(addr);
+  default:
+    abort();
   }
 
   ptx_reg_t p;
@@ -3298,60 +3328,60 @@ void decode_space(memory_space_t &space, ptx_thread_info *thread,
     }
   }
   switch (space.get_type()) {
-    case global_space:
-      mem = thread->get_global_memory();
-      break;
-    case param_space_local:
-    case local_space:
-      mem = thread->m_local_mem;
-      addr += thread->get_local_mem_stack_pointer();
-      break;
-    case tex_space:
-      mem = thread->get_tex_memory();
-      break;
-    case surf_space:
-      mem = thread->get_surf_memory();
-      break;
-    case param_space_kernel:
-      mem = thread->get_param_memory();
-      break;
-    case shared_space:
-      mem = thread->m_shared_mem;
-      break;
-    case sstarr_space:
-      mem = thread->m_sstarr_mem;
-      break;
-    case const_space:
-      mem = thread->get_global_memory();
-      break;
-    case generic_space:
-      if (thread->get_ptx_version().ver() >= 2.0) {
-        // convert generic address to memory space address
-        space = whichspace(addr);
-        switch (space.get_type()) {
-          case global_space:
-            mem = thread->get_global_memory();
-            addr = generic_to_global(addr);
-            break;
-          case local_space:
-            mem = thread->m_local_mem;
-            addr = generic_to_local(smid, hwtid, addr);
-            break;
-          case shared_space:
-            mem = thread->m_shared_mem;
-            addr = generic_to_shared(smid, addr);
-            break;
-          default:
-            abort();
-        }
-      } else {
+  case global_space:
+    mem = thread->get_global_memory();
+    break;
+  case param_space_local:
+  case local_space:
+    mem = thread->m_local_mem;
+    addr += thread->get_local_mem_stack_pointer();
+    break;
+  case tex_space:
+    mem = thread->get_tex_memory();
+    break;
+  case surf_space:
+    mem = thread->get_surf_memory();
+    break;
+  case param_space_kernel:
+    mem = thread->get_param_memory();
+    break;
+  case shared_space:
+    mem = thread->m_shared_mem;
+    break;
+  case sstarr_space:
+    mem = thread->m_sstarr_mem;
+    break;
+  case const_space:
+    mem = thread->get_global_memory();
+    break;
+  case generic_space:
+    if (thread->get_ptx_version().ver() >= 2.0) {
+      // convert generic address to memory space address
+      space = whichspace(addr);
+      switch (space.get_type()) {
+      case global_space:
+        mem = thread->get_global_memory();
+        addr = generic_to_global(addr);
+        break;
+      case local_space:
+        mem = thread->m_local_mem;
+        addr = generic_to_local(smid, hwtid, addr);
+        break;
+      case shared_space:
+        mem = thread->m_shared_mem;
+        addr = generic_to_shared(smid, addr);
+        break;
+      default:
         abort();
       }
-      break;
-    case param_space_unclassified:
-    case undefined_space:
-    default:
+    } else {
       abort();
+    }
+    break;
+  case param_space_unclassified:
+  case undefined_space:
+  default:
+    abort();
   }
 }
 
@@ -3377,20 +3407,21 @@ void ld_exec(const ptx_instruction *pI, ptx_thread_info *thread) {
   type_info_key::type_decode(type, size, t);
   if (!vector_spec) {
     mem->read(addr, size / 8, &data.s64);
-    if (type == S16_TYPE || type == S32_TYPE) sign_extend(data, size, dst);
+    if (type == S16_TYPE || type == S32_TYPE)
+      sign_extend(data, size, dst);
     thread->set_operand_value(dst, data, type, thread, pI);
   } else {
     ptx_reg_t data1, data2, data3, data4;
     mem->read(addr, size / 8, &data1.s64);
     mem->read(addr + size / 8, size / 8, &data2.s64);
-    if (vector_spec != V2_TYPE) {  // either V3 or V4
+    if (vector_spec != V2_TYPE) { // either V3 or V4
       mem->read(addr + 2 * size / 8, size / 8, &data3.s64);
-      if (vector_spec != V3_TYPE) {  // v4
+      if (vector_spec != V3_TYPE) { // v4
         mem->read(addr + 3 * size / 8, size / 8, &data4.s64);
         thread->set_vector_operand_values(dst, data1, data2, data3, data4);
-      } else  // v3
+      } else // v3
         thread->set_vector_operand_values(dst, data1, data2, data3, data3);
-    } else  // v2
+    } else // v2
       thread->set_vector_operand_values(dst, data1, data2, data2, data2);
   }
   thread->m_last_effective_address = addr;
@@ -3495,7 +3526,8 @@ void mma_st_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
           // mem->write(new_addr+k*2,size/8,&nw_v[k].s64,thread,pI);
           push_addr = new_addr + k * 2;
           mem->write(push_addr, size / 8, &nw_v[k].s64, thread, pI);
-          if (k % 2 == 0) mem_txn_addr[num_mem_txn++] = push_addr;
+          if (k % 2 == 0)
+            mem_txn_addr[num_mem_txn++] = push_addr;
         } else if (wmma_layout == COL) {
           // mem->write(new_addr+k*2*stride,size/8,&nw_v[k].s64,thread,pI);
           push_addr = new_addr + k * 2 * stride;
@@ -3516,10 +3548,10 @@ void mma_st_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
     inst.set_addr(thrd, (new_addr_type *)mem_txn_addr, num_mem_txn);
 
     if ((type == F16_TYPE) &&
-        (wmma_layout == COL))  // check the profiling xls for details
-      inst.data_size = 2;      // 2 byte transaction
+        (wmma_layout == COL)) // check the profiling xls for details
+      inst.data_size = 2;     // 2 byte transaction
     else
-      inst.data_size = 4;  // 4 byte transaction
+      inst.data_size = 4; // 4 byte transaction
 
     assert(inst.memory_op == insn_memory_op);
     // thread->m_last_effective_address = addr;
@@ -3596,7 +3628,8 @@ void mma_ld_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
           printf("mma_ld:wrong_layout_type\n");
           abort();
         }
-        if (i % 2 == 0) mem_txn_addr[num_mem_txn++] = fetch_addr;
+        if (i % 2 == 0)
+          mem_txn_addr[num_mem_txn++] = fetch_addr;
       }
     } else if (wmma_type == LOAD_B) {
       for (i = 0; i < 16; i++) {
@@ -3612,7 +3645,8 @@ void mma_ld_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
           printf("mma_ld:wrong_layout_type\n");
           abort();
         }
-        if (i % 2 == 0) mem_txn_addr[num_mem_txn++] = fetch_addr;
+        if (i % 2 == 0)
+          mem_txn_addr[num_mem_txn++] = fetch_addr;
       }
     } else if (wmma_type == LOAD_C) {
       for (i = 0; i < 8; i++) {
@@ -3621,7 +3655,8 @@ void mma_ld_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
             // mem->read(new_addr+2*i,size/8,&data[i].s64);
             fetch_addr = new_addr + 2 * i;
             mem->read(fetch_addr, size / 8, &data[i].s64);
-            if (i % 2 == 0) mem_txn_addr[num_mem_txn++] = fetch_addr;
+            if (i % 2 == 0)
+              mem_txn_addr[num_mem_txn++] = fetch_addr;
           } else if (wmma_layout == COL) {
             // mem->read(new_addr+2*stride*i,size/8,&data[i].s64);
             fetch_addr = new_addr + 2 * stride * i;
@@ -3651,11 +3686,11 @@ void mma_ld_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
     inst.set_addr(thrd, (new_addr_type *)mem_txn_addr, num_mem_txn);
 
     if ((wmma_type == LOAD_C) && (type == F16_TYPE) &&
-        (wmma_layout == COL))  // memory address is scattered, check the
-                               // profiling xls for more detail.
-      inst.data_size = 2;      // 2 byte transaction
+        (wmma_layout == COL)) // memory address is scattered, check the
+                              // profiling xls for more detail.
+      inst.data_size = 2;     // 2 byte transaction
     else
-      inst.data_size = 4;  // 4 byte transaction
+      inst.data_size = 4; // 4 byte transaction
     assert(inst.memory_op == insn_memory_op);
 
     if (core->get_gpu()->gpgpu_ctx->debug_tensorcore) {
@@ -3729,18 +3764,15 @@ void mma_ld_impl(const ptx_instruction *pI, core_t *core, warp_inst_t &inst) {
           printf(
               "mma_ld:data[8].s64=%llx,data[9].s64=%llx,new_data[4].s64=%llx\n",
               data[8].u64, data[9].u64, nw_data[4].s64);
-          printf(
-              "mma_ld:data[10].s64=%llx,data[11].s64=%llx,new_data[5].s64=%"
-              "llx\n",
-              data[10].u64, data[11].u64, nw_data[5].u64);
-          printf(
-              "mma_ld:data[12].s64=%llx,data[13].s64=%llx,new_data[6].s64=%"
-              "llx\n",
-              data[12].u64, data[13].u64, nw_data[6].u64);
-          printf(
-              "mma_ld:data[14].s64=%llx,data[15].s64=%llx,new_data[7].s64=%"
-              "llx\n",
-              data[14].u64, data[15].u64, nw_data[3].u64);
+          printf("mma_ld:data[10].s64=%llx,data[11].s64=%llx,new_data[5].s64=%"
+                 "llx\n",
+                 data[10].u64, data[11].u64, nw_data[5].u64);
+          printf("mma_ld:data[12].s64=%llx,data[13].s64=%llx,new_data[6].s64=%"
+                 "llx\n",
+                 data[12].u64, data[13].u64, nw_data[6].u64);
+          printf("mma_ld:data[14].s64=%llx,data[15].s64=%llx,new_data[7].s64=%"
+                 "llx\n",
+                 data[14].u64, data[15].u64, nw_data[3].u64);
         }
       }
     }
@@ -3760,13 +3792,13 @@ void lg2_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      d.f32 = log(a.f32) / log(2);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    d.f32 = log(a.f32) / log(2);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -3789,33 +3821,33 @@ void mad24_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   assert(!pI->is_wide());
 
   switch (i_type) {
-    case S32_TYPE:
-      t.s64 = a.s32 * b.s32;
-      if (pI->is_hi()) {
-        d.s64 = (t.s64 >> 16) + c.s32;
-        if (sat_mode) {
-          if (d.s64 > (int)0x7FFFFFFF)
-            d.s64 = (int)0x7FFFFFFF;
-          else if (d.s64 < (int)0x80000000)
-            d.s64 = (int)0x80000000;
-        }
-      } else if (pI->is_lo())
-        d.s64 = t.s32 + c.s32;
-      else
-        assert(0);
-      break;
-    case U32_TYPE:
-      t.u64 = a.u32 * b.u32;
-      if (pI->is_hi())
-        d.u64 = (t.u64 >> 16) + c.u32;
-      else if (pI->is_lo())
-        d.u64 = t.u32 + c.u32;
-      else
-        assert(0);
-      break;
-    default:
+  case S32_TYPE:
+    t.s64 = a.s32 * b.s32;
+    if (pI->is_hi()) {
+      d.s64 = (t.s64 >> 16) + c.s32;
+      if (sat_mode) {
+        if (d.s64 > (int)0x7FFFFFFF)
+          d.s64 = (int)0x7FFFFFFF;
+        else if (d.s64 < (int)0x80000000)
+          d.s64 = (int)0x80000000;
+      }
+    } else if (pI->is_lo())
+      d.s64 = t.s32 + c.s32;
+    else
       assert(0);
-      break;
+    break;
+  case U32_TYPE:
+    t.u64 = a.u32 * b.u32;
+    if (pI->is_hi())
+      d.u64 = (t.u64 >> 16) + c.u32;
+    else if (pI->is_lo())
+      d.u64 = t.u32 + c.u32;
+    else
+      assert(0);
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -3862,150 +3894,150 @@ void mad_def(const ptx_instruction *pI, ptx_thread_info *thread,
   unsigned rounding_mode = pI->rounding_mode();
 
   switch (i_type) {
-    case S16_TYPE:
-      t.s32 = a.s16 * b.s16;
-      if (pI->is_wide())
-        d.s32 = t.s32 + c.s32 + carry_bit.pred;
-      else if (pI->is_hi())
-        d.s16 = (t.s32 >> 16) + c.s16 + carry_bit.pred;
-      else if (pI->is_lo())
-        d.s16 = t.s16 + c.s16 + carry_bit.pred;
-      else
-        assert(0);
-      carry =
-          ((long long int)(t.s32 + c.s32 + carry_bit.pred) & 0x100000000) >> 32;
+  case S16_TYPE:
+    t.s32 = a.s16 * b.s16;
+    if (pI->is_wide())
+      d.s32 = t.s32 + c.s32 + carry_bit.pred;
+    else if (pI->is_hi())
+      d.s16 = (t.s32 >> 16) + c.s16 + carry_bit.pred;
+    else if (pI->is_lo())
+      d.s16 = t.s16 + c.s16 + carry_bit.pred;
+    else
+      assert(0);
+    carry =
+        ((long long int)(t.s32 + c.s32 + carry_bit.pred) & 0x100000000) >> 32;
+    break;
+  case S32_TYPE:
+    t.s64 = a.s32 * b.s32;
+    if (pI->is_wide())
+      d.s64 = t.s64 + c.s64 + carry_bit.pred;
+    else if (pI->is_hi())
+      d.s32 = (t.s64 >> 32) + c.s32 + carry_bit.pred;
+    else if (pI->is_lo())
+      d.s32 = t.s32 + c.s32 + carry_bit.pred;
+    else
+      assert(0);
+    break;
+  case S64_TYPE:
+    t.s64 = a.s64 * b.s64;
+    assert(!pI->is_wide());
+    assert(!pI->is_hi());
+    assert(use_carry == false);
+    if (pI->is_lo())
+      d.s64 = t.s64 + c.s64 + carry_bit.pred;
+    else
+      assert(0);
+    break;
+  case U16_TYPE:
+    t.u32 = a.u16 * b.u16;
+    if (pI->is_wide())
+      d.u32 = t.u32 + c.u32 + carry_bit.pred;
+    else if (pI->is_hi())
+      d.u16 = (t.u32 + c.u16 + carry_bit.pred) >> 16;
+    else if (pI->is_lo())
+      d.u16 = t.u16 + c.u16 + carry_bit.pred;
+    else
+      assert(0);
+    carry = ((long long int)((long long int)t.u32 + c.u32 + carry_bit.pred) &
+             0x100000000) >>
+            32;
+    break;
+  case U32_TYPE:
+    t.u64 = a.u32 * b.u32;
+    if (pI->is_wide())
+      d.u64 = t.u64 + c.u64 + carry_bit.pred;
+    else if (pI->is_hi())
+      d.u32 = (t.u64 + c.u32 + carry_bit.pred) >> 32;
+    else if (pI->is_lo())
+      d.u32 = t.u32 + c.u32 + carry_bit.pred;
+    else
+      assert(0);
+    break;
+  case U64_TYPE:
+    t.u64 = a.u64 * b.u64;
+    assert(!pI->is_wide());
+    assert(!pI->is_hi());
+    assert(use_carry == false);
+    if (pI->is_lo())
+      d.u64 = t.u64 + c.u64 + carry_bit.pred;
+    else
+      assert(0);
+    break;
+  case F16_TYPE: {
+    // assert(0);
+    // break;
+    assert(use_carry == false);
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
       break;
-    case S32_TYPE:
-      t.s64 = a.s32 * b.s32;
-      if (pI->is_wide())
-        d.s64 = t.s64 + c.s64 + carry_bit.pred;
-      else if (pI->is_hi())
-        d.s32 = (t.s64 >> 32) + c.s32 + carry_bit.pred;
-      else if (pI->is_lo())
-        d.s32 = t.s32 + c.s32 + carry_bit.pred;
-      else
-        assert(0);
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
       break;
-    case S64_TYPE:
-      t.s64 = a.s64 * b.s64;
-      assert(!pI->is_wide());
-      assert(!pI->is_hi());
-      assert(use_carry == false);
-      if (pI->is_lo())
-        d.s64 = t.s64 + c.s64 + carry_bit.pred;
-      else
-        assert(0);
-      break;
-    case U16_TYPE:
-      t.u32 = a.u16 * b.u16;
-      if (pI->is_wide())
-        d.u32 = t.u32 + c.u32 + carry_bit.pred;
-      else if (pI->is_hi())
-        d.u16 = (t.u32 + c.u16 + carry_bit.pred) >> 16;
-      else if (pI->is_lo())
-        d.u16 = t.u16 + c.u16 + carry_bit.pred;
-      else
-        assert(0);
-      carry = ((long long int)((long long int)t.u32 + c.u32 + carry_bit.pred) &
-               0x100000000) >>
-              32;
-      break;
-    case U32_TYPE:
-      t.u64 = a.u32 * b.u32;
-      if (pI->is_wide())
-        d.u64 = t.u64 + c.u64 + carry_bit.pred;
-      else if (pI->is_hi())
-        d.u32 = (t.u64 + c.u32 + carry_bit.pred) >> 32;
-      else if (pI->is_lo())
-        d.u32 = t.u32 + c.u32 + carry_bit.pred;
-      else
-        assert(0);
-      break;
-    case U64_TYPE:
-      t.u64 = a.u64 * b.u64;
-      assert(!pI->is_wide());
-      assert(!pI->is_hi());
-      assert(use_carry == false);
-      if (pI->is_lo())
-        d.u64 = t.u64 + c.u64 + carry_bit.pred;
-      else
-        assert(0);
-      break;
-    case F16_TYPE: {
-      // assert(0);
-      // break;
-      assert(use_carry == false);
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-      d.f16 = a.f16 * b.f16 + c.f16;
-      if (pI->saturation_mode()) {
-        if (d.f16 < 0)
-          d.f16 = 0;
-        else if (d.f16 > 1.0f)
-          d.f16 = 1.0f;
-      }
-      fesetround(orig_rm);
-      break;
-    }
-    case F32_TYPE: {
-      assert(use_carry == false);
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-      d.f32 = a.f32 * b.f32 + c.f32;
-      if (pI->saturation_mode()) {
-        if (d.f32 < 0)
-          d.f32 = 0;
-        else if (d.f32 > 1.0f)
-          d.f32 = 1.0f;
-      }
-      fesetround(orig_rm);
-      break;
-    }
-    case F64_TYPE:
-    case FF64_TYPE: {
-      assert(use_carry == false);
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-      d.f64 = a.f64 * b.f64 + c.f64;
-      if (pI->saturation_mode()) {
-        if (d.f64 < 0)
-          d.f64 = 0;
-        else if (d.f64 > 1.0f)
-          d.f64 = 1.0;
-      }
-      fesetround(orig_rm);
-      break;
-    }
     default:
       assert(0);
       break;
+    }
+    d.f16 = a.f16 * b.f16 + c.f16;
+    if (pI->saturation_mode()) {
+      if (d.f16 < 0)
+        d.f16 = 0;
+      else if (d.f16 > 1.0f)
+        d.f16 = 1.0f;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  case F32_TYPE: {
+    assert(use_carry == false);
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
+      break;
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    d.f32 = a.f32 * b.f32 + c.f32;
+    if (pI->saturation_mode()) {
+      if (d.f32 < 0)
+        d.f32 = 0;
+      else if (d.f32 > 1.0f)
+        d.f32 = 1.0f;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  case F64_TYPE:
+  case FF64_TYPE: {
+    assert(use_carry == false);
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
+      break;
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    d.f64 = a.f64 * b.f64 + c.f64;
+    if (pI->saturation_mode()) {
+      if (d.f64 < 0)
+        d.f64 = 0;
+      else if (d.f64 > 1.0f)
+        d.f64 = 1.0;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  default:
+    assert(0);
+    break;
   }
   thread->set_operand_value(dst, d, i_type, thread, pI, overflow, carry);
 }
@@ -4025,35 +4057,35 @@ void max_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   b = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case U16_TYPE:
-      d.u16 = MY_MAX_I(a.u16, b.u16);
-      break;
-    case U32_TYPE:
-      d.u32 = MY_MAX_I(a.u32, b.u32);
-      break;
-    case U64_TYPE:
-      d.u64 = MY_MAX_I(a.u64, b.u64);
-      break;
-    case S16_TYPE:
-      d.s16 = MY_MAX_I(a.s16, b.s16);
-      break;
-    case S32_TYPE:
-      d.s32 = MY_MAX_I(a.s32, b.s32);
-      break;
-    case S64_TYPE:
-      d.s64 = MY_MAX_I(a.s64, b.s64);
-      break;
-    case F32_TYPE:
-      d.f32 = MY_MAX_F(a.f32, b.f32);
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      d.f64 = MY_MAX_F(a.f64, b.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case U16_TYPE:
+    d.u16 = MY_MAX_I(a.u16, b.u16);
+    break;
+  case U32_TYPE:
+    d.u32 = MY_MAX_I(a.u32, b.u32);
+    break;
+  case U64_TYPE:
+    d.u64 = MY_MAX_I(a.u64, b.u64);
+    break;
+  case S16_TYPE:
+    d.s16 = MY_MAX_I(a.s16, b.s16);
+    break;
+  case S32_TYPE:
+    d.s32 = MY_MAX_I(a.s32, b.s32);
+    break;
+  case S64_TYPE:
+    d.s64 = MY_MAX_I(a.s64, b.s64);
+    break;
+  case F32_TYPE:
+    d.f32 = MY_MAX_F(a.f32, b.f32);
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    d.f64 = MY_MAX_F(a.f64, b.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4074,35 +4106,35 @@ void min_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   b = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case U16_TYPE:
-      d.u16 = MY_MIN_I(a.u16, b.u16);
-      break;
-    case U32_TYPE:
-      d.u32 = MY_MIN_I(a.u32, b.u32);
-      break;
-    case U64_TYPE:
-      d.u64 = MY_MIN_I(a.u64, b.u64);
-      break;
-    case S16_TYPE:
-      d.s16 = MY_MIN_I(a.s16, b.s16);
-      break;
-    case S32_TYPE:
-      d.s32 = MY_MIN_I(a.s32, b.s32);
-      break;
-    case S64_TYPE:
-      d.s64 = MY_MIN_I(a.s64, b.s64);
-      break;
-    case F32_TYPE:
-      d.f32 = MY_MIN_F(a.f32, b.f32);
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      d.f64 = MY_MIN_F(a.f64, b.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case U16_TYPE:
+    d.u16 = MY_MIN_I(a.u16, b.u16);
+    break;
+  case U32_TYPE:
+    d.u32 = MY_MIN_I(a.u32, b.u32);
+    break;
+  case U64_TYPE:
+    d.u64 = MY_MIN_I(a.u64, b.u64);
+    break;
+  case S16_TYPE:
+    d.s16 = MY_MIN_I(a.s16, b.s16);
+    break;
+  case S32_TYPE:
+    d.s32 = MY_MIN_I(a.s32, b.s32);
+    break;
+  case S64_TYPE:
+    d.s64 = MY_MIN_I(a.s64, b.s64);
+    break;
+  case F32_TYPE:
+    d.f32 = MY_MIN_F(a.f32, b.f32);
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    d.f64 = MY_MIN_F(a.f64, b.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4123,21 +4155,20 @@ void mov_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
     ptx_reg_t tmp_bits;
 
     switch (pI->get_type()) {
-      case B16_TYPE:
-        nbits_to_move = 16;
-        break;
-      case B32_TYPE:
-        nbits_to_move = 32;
-        break;
-      case B64_TYPE:
-        nbits_to_move = 64;
-        break;
-      default:
-        printf(
-            "Execution error: mov pack/unpack with unsupported type "
-            "qualifier\n");
-        assert(0);
-        break;
+    case B16_TYPE:
+      nbits_to_move = 16;
+      break;
+    case B32_TYPE:
+      nbits_to_move = 32;
+      break;
+    case B64_TYPE:
+      nbits_to_move = 64;
+      break;
+    default:
+      printf("Execution error: mov pack/unpack with unsupported type "
+             "qualifier\n");
+      assert(0);
+      break;
     }
 
     if (src1.is_vector()) {
@@ -4148,39 +4179,38 @@ void mov_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
       unsigned bits_per_src_elem = nbits_to_move / nelem;
       for (unsigned i = 0; i < nelem; i++) {
         switch (bits_per_src_elem) {
-          case 8:
-            tmp_bits.u64 |= ((unsigned long long)(v[i].u8) << (8 * i));
-            break;
-          case 16:
-            tmp_bits.u64 |= ((unsigned long long)(v[i].u16) << (16 * i));
-            break;
-          case 32:
-            tmp_bits.u64 |= ((unsigned long long)(v[i].u32) << (32 * i));
-            break;
-          default:
-            printf(
-                "Execution error: mov pack/unpack with unsupported source/dst "
-                "size ratio (src)\n");
-            assert(0);
-            break;
+        case 8:
+          tmp_bits.u64 |= ((unsigned long long)(v[i].u8) << (8 * i));
+          break;
+        case 16:
+          tmp_bits.u64 |= ((unsigned long long)(v[i].u16) << (16 * i));
+          break;
+        case 32:
+          tmp_bits.u64 |= ((unsigned long long)(v[i].u32) << (32 * i));
+          break;
+        default:
+          printf("Execution error: mov pack/unpack with unsupported source/dst "
+                 "size ratio (src)\n");
+          assert(0);
+          break;
         }
       }
     } else {
       data = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
       switch (pI->get_type()) {
-        case B16_TYPE:
-          tmp_bits.u16 = data.u16;
-          break;
-        case B32_TYPE:
-          tmp_bits.u32 = data.u32;
-          break;
-        case B64_TYPE:
-          tmp_bits.u64 = data.u64;
-          break;
-        default:
-          assert(0);
-          break;
+      case B16_TYPE:
+        tmp_bits.u16 = data.u16;
+        break;
+      case B32_TYPE:
+        tmp_bits.u32 = data.u32;
+        break;
+      case B64_TYPE:
+        tmp_bits.u64 = data.u64;
+        break;
+      default:
+        assert(0);
+        break;
       }
     }
 
@@ -4190,23 +4220,21 @@ void mov_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
       unsigned bits_per_dst_elem = nbits_to_move / nelem;
       for (unsigned i = 0; i < nelem; i++) {
         switch (bits_per_dst_elem) {
-          case 8:
-            v[i].u8 = (tmp_bits.u64 >> (8 * i)) & ((unsigned long long)0xFF);
-            break;
-          case 16:
-            v[i].u16 =
-                (tmp_bits.u64 >> (16 * i)) & ((unsigned long long)0xFFFF);
-            break;
-          case 32:
-            v[i].u32 =
-                (tmp_bits.u64 >> (32 * i)) & ((unsigned long long)0xFFFFFFFF);
-            break;
-          default:
-            printf(
-                "Execution error: mov pack/unpack with unsupported source/dst "
-                "size ratio (dst)\n");
-            assert(0);
-            break;
+        case 8:
+          v[i].u8 = (tmp_bits.u64 >> (8 * i)) & ((unsigned long long)0xFF);
+          break;
+        case 16:
+          v[i].u16 = (tmp_bits.u64 >> (16 * i)) & ((unsigned long long)0xFFFF);
+          break;
+        case 32:
+          v[i].u32 =
+              (tmp_bits.u64 >> (32 * i)) & ((unsigned long long)0xFFFFFFFF);
+          break;
+        default:
+          printf("Execution error: mov pack/unpack with unsupported source/dst "
+                 "size ratio (dst)\n");
+          assert(0);
+          break;
         }
       }
       thread->set_vector_operand_values(dst, v[0], v[1], v[2], v[3]);
@@ -4220,7 +4248,7 @@ void mov_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
     data = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
     ptx_reg_t finaldata;
-    finaldata.pred = (data.u32 == 0) ? 1 : 0;  // setting zero-flag in predicate
+    finaldata.pred = (data.u32 == 0) ? 1 : 0; // setting zero-flag in predicate
     thread->set_operand_value(dst, finaldata, i_type, thread, pI);
   } else {
     data = thread->get_operand_value(src1, dst, i_type, thread, 1);
@@ -4247,19 +4275,20 @@ void mul24_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src2_data.mask_and(0, 0x00FFFFFF);
 
   switch (i_type) {
-    case S32_TYPE:
-      if (src1_data.get_bit(23)) src1_data.mask_or(0xFFFFFFFF, 0xFF000000);
-      if (src2_data.get_bit(23)) src2_data.mask_or(0xFFFFFFFF, 0xFF000000);
-      data.s64 = src1_data.s64 * src2_data.s64;
-      break;
-    case U32_TYPE:
-      data.u64 = src1_data.u64 * src2_data.u64;
-      break;
-    default:
-      printf(
-          "GPGPU-Sim PTX: Execution error - type mismatch with instruction\n");
-      assert(0);
-      break;
+  case S32_TYPE:
+    if (src1_data.get_bit(23))
+      src1_data.mask_or(0xFFFFFFFF, 0xFF000000);
+    if (src2_data.get_bit(23))
+      src2_data.mask_or(0xFFFFFFFF, 0xFF000000);
+    data.s64 = src1_data.s64 * src2_data.s64;
+    break;
+  case U32_TYPE:
+    data.u64 = src1_data.u64 * src2_data.u64;
+    break;
+  default:
+    printf("GPGPU-Sim PTX: Execution error - type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   if (pI->is_hi()) {
@@ -4287,144 +4316,144 @@ void mul_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned rounding_mode = pI->rounding_mode();
 
   switch (i_type) {
-    case S16_TYPE:
-      t.s32 = ((int)a.s16) * ((int)b.s16);
-      if (pI->is_wide())
-        d.s32 = t.s32;
-      else if (pI->is_hi())
-        d.s16 = (t.s32 >> 16);
-      else if (pI->is_lo())
-        d.s16 = t.s16;
-      else
-        assert(0);
+  case S16_TYPE:
+    t.s32 = ((int)a.s16) * ((int)b.s16);
+    if (pI->is_wide())
+      d.s32 = t.s32;
+    else if (pI->is_hi())
+      d.s16 = (t.s32 >> 16);
+    else if (pI->is_lo())
+      d.s16 = t.s16;
+    else
+      assert(0);
+    break;
+  case S32_TYPE:
+    t.s64 = ((long long)a.s32) * ((long long)b.s32);
+    if (pI->is_wide())
+      d.s64 = t.s64;
+    else if (pI->is_hi())
+      d.s32 = (t.s64 >> 32);
+    else if (pI->is_lo())
+      d.s32 = t.s32;
+    else
+      assert(0);
+    break;
+  case S64_TYPE:
+    t.s64 = a.s64 * b.s64;
+    assert(!pI->is_wide());
+    assert(!pI->is_hi());
+    if (pI->is_lo())
+      d.s64 = t.s64;
+    else
+      assert(0);
+    break;
+  case U16_TYPE:
+    t.u32 = ((unsigned)a.u16) * ((unsigned)b.u16);
+    if (pI->is_wide())
+      d.u32 = t.u32;
+    else if (pI->is_lo())
+      d.u16 = t.u16;
+    else if (pI->is_hi())
+      d.u16 = (t.u32 >> 16);
+    else
+      assert(0);
+    break;
+  case U32_TYPE:
+    t.u64 = ((unsigned long long)a.u32) * ((unsigned long long)b.u32);
+    if (pI->is_wide())
+      d.u64 = t.u64;
+    else if (pI->is_lo())
+      d.u32 = t.u32;
+    else if (pI->is_hi())
+      d.u32 = (t.u64 >> 32);
+    else
+      assert(0);
+    break;
+  case U64_TYPE:
+    t.u64 = a.u64 * b.u64;
+    assert(!pI->is_wide());
+    assert(!pI->is_hi());
+    if (pI->is_lo())
+      d.u64 = t.u64;
+    else
+      assert(0);
+    break;
+  case F16_TYPE: {
+    // assert(0);
+    // break;
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
       break;
-    case S32_TYPE:
-      t.s64 = ((long long)a.s32) * ((long long)b.s32);
-      if (pI->is_wide())
-        d.s64 = t.s64;
-      else if (pI->is_hi())
-        d.s32 = (t.s64 >> 32);
-      else if (pI->is_lo())
-        d.s32 = t.s32;
-      else
-        assert(0);
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
       break;
-    case S64_TYPE:
-      t.s64 = a.s64 * b.s64;
-      assert(!pI->is_wide());
-      assert(!pI->is_hi());
-      if (pI->is_lo())
-        d.s64 = t.s64;
-      else
-        assert(0);
-      break;
-    case U16_TYPE:
-      t.u32 = ((unsigned)a.u16) * ((unsigned)b.u16);
-      if (pI->is_wide())
-        d.u32 = t.u32;
-      else if (pI->is_lo())
-        d.u16 = t.u16;
-      else if (pI->is_hi())
-        d.u16 = (t.u32 >> 16);
-      else
-        assert(0);
-      break;
-    case U32_TYPE:
-      t.u64 = ((unsigned long long)a.u32) * ((unsigned long long)b.u32);
-      if (pI->is_wide())
-        d.u64 = t.u64;
-      else if (pI->is_lo())
-        d.u32 = t.u32;
-      else if (pI->is_hi())
-        d.u32 = (t.u64 >> 32);
-      else
-        assert(0);
-      break;
-    case U64_TYPE:
-      t.u64 = a.u64 * b.u64;
-      assert(!pI->is_wide());
-      assert(!pI->is_hi());
-      if (pI->is_lo())
-        d.u64 = t.u64;
-      else
-        assert(0);
-      break;
-    case F16_TYPE: {
-      // assert(0);
-      // break;
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-
-      d.f16 = a.f16 * b.f16;
-
-      if (pI->saturation_mode()) {
-        if (d.f16 < 0)
-          d.f16 = 0;
-        else if (d.f16 > 1.0f)
-          d.f16 = 1.0f;
-      }
-      fesetround(orig_rm);
-      break;
-    }
-    case F32_TYPE: {
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-
-      d.f32 = a.f32 * b.f32;
-
-      if (pI->saturation_mode()) {
-        if (d.f32 < 0)
-          d.f32 = 0;
-        else if (d.f32 > 1.0f)
-          d.f32 = 1.0f;
-      }
-      fesetround(orig_rm);
-      break;
-    }
-    case F64_TYPE:
-    case FF64_TYPE: {
-      int orig_rm = fegetround();
-      switch (rounding_mode) {
-        case RN_OPTION:
-          break;
-        case RZ_OPTION:
-          fesetround(FE_TOWARDZERO);
-          break;
-        default:
-          assert(0);
-          break;
-      }
-      d.f64 = a.f64 * b.f64;
-      if (pI->saturation_mode()) {
-        if (d.f64 < 0)
-          d.f64 = 0;
-        else if (d.f64 > 1.0f)
-          d.f64 = 1.0;
-      }
-      fesetround(orig_rm);
-      break;
-    }
     default:
       assert(0);
       break;
+    }
+
+    d.f16 = a.f16 * b.f16;
+
+    if (pI->saturation_mode()) {
+      if (d.f16 < 0)
+        d.f16 = 0;
+      else if (d.f16 > 1.0f)
+        d.f16 = 1.0f;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  case F32_TYPE: {
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
+      break;
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+
+    d.f32 = a.f32 * b.f32;
+
+    if (pI->saturation_mode()) {
+      if (d.f32 < 0)
+        d.f32 = 0;
+      else if (d.f32 > 1.0f)
+        d.f32 = 1.0f;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  case F64_TYPE:
+  case FF64_TYPE: {
+    int orig_rm = fegetround();
+    switch (rounding_mode) {
+    case RN_OPTION:
+      break;
+    case RZ_OPTION:
+      fesetround(FE_TOWARDZERO);
+      break;
+    default:
+      assert(0);
+      break;
+    }
+    d.f64 = a.f64 * b.f64;
+    if (pI->saturation_mode()) {
+      if (d.f64 < 0)
+        d.f64 = 0;
+      else if (d.f64 > 1.0f)
+        d.f64 = 1.0;
+    }
+    fesetround(orig_rm);
+    break;
+  }
+  default:
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4440,31 +4469,31 @@ void neg_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src1_data = thread->get_operand_value(src1, dst, to_type, thread, 1);
 
   switch (to_type) {
-    case S8_TYPE:
-    case S16_TYPE:
-    case S32_TYPE:
-    case S64_TYPE:
-      data.s64 = 0 - src1_data.s64;
-      break;  // seems buggy, but not (just ignore higher bits)
-    case U8_TYPE:
-    case U16_TYPE:
-    case U32_TYPE:
-    case U64_TYPE:
-      assert(0);
-      break;
-    case F16_TYPE:
-      data.f16 = 0.0f - src1_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = 0.0f - src1_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = 0.0f - src1_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+  case S16_TYPE:
+  case S32_TYPE:
+  case S64_TYPE:
+    data.s64 = 0 - src1_data.s64;
+    break; // seems buggy, but not (just ignore higher bits)
+  case U8_TYPE:
+  case U16_TYPE:
+  case U32_TYPE:
+  case U64_TYPE:
+    assert(0);
+    break;
+  case F16_TYPE:
+    data.f16 = 0.0f - src1_data.f16;
+    break; // assert(0); break;
+  case F32_TYPE:
+    data.f32 = 0.0f - src1_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = 0.0f - src1_data.f64;
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, to_type, thread, pI);
@@ -4522,22 +4551,22 @@ void not_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case PRED_TYPE:
-      d.pred = (~(a.pred) & 0x000F);
-      break;
-    case B16_TYPE:
-      d.u16 = ~a.u16;
-      break;
-    case B32_TYPE:
-      d.u32 = ~a.u32;
-      break;
-    case B64_TYPE:
-      d.u64 = ~a.u64;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case PRED_TYPE:
+    d.pred = (~(a.pred) & 0x000F);
+    break;
+  case B16_TYPE:
+    d.u16 = ~a.u16;
+    break;
+  case B32_TYPE:
+    d.u32 = ~a.u32;
+    break;
+  case B64_TYPE:
+    d.u64 = ~a.u64;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4593,18 +4622,18 @@ void popc_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src_data = thread->get_operand_value(src, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case B32_TYPE: {
-      std::bitset<32> mask(src_data.u32);
-      data.u32 = mask.count();
-    } break;
-    case B64_TYPE: {
-      std::bitset<64> mask(src_data.u64);
-      data.u32 = mask.count();
-    } break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case B32_TYPE: {
+    std::bitset<32> mask(src_data.u32);
+    data.u32 = mask.count();
+  } break;
+  case B64_TYPE: {
+    std::bitset<64> mask(src_data.u64);
+    data.u32 = mask.count();
+  } break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
@@ -4619,16 +4648,16 @@ void prefetchu_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 int prmt_mode_present(int mode) {
   int returnval = 0;
   switch (mode) {
-    case PRMT_F4E_MODE:
-    case PRMT_B4E_MODE:
-    case PRMT_RC8_MODE:
-    case PRMT_RC16_MODE:
-    case PRMT_ECL_MODE:
-    case PRMT_ECR_MODE:
-      returnval = 1;
-      break;
-    default:
-      break;
+  case PRMT_F4E_MODE:
+  case PRMT_B4E_MODE:
+  case PRMT_RC8_MODE:
+  case PRMT_RC16_MODE:
+  case PRMT_ECL_MODE:
+  case PRMT_ECR_MODE:
+    returnval = 1;
+    break;
+  default:
+    break;
   }
   return returnval;
 }
@@ -4655,27 +4684,27 @@ int read_byte(int mode, int control, int d_sel_index, signed long long value) {
     }
   } else {
     switch (mode) {
-      case PRMT_F4E_MODE:
-        returnval = prmt_f4e_mode[control][d_sel_index];
-        break;
-      case PRMT_B4E_MODE:
-        returnval = prmt_b4e_mode[control][d_sel_index];
-        break;
-      case PRMT_RC8_MODE:
-        returnval = prmt_rc8_mode[control][d_sel_index];
-        break;
-      case PRMT_ECL_MODE:
-        returnval = prmt_ecl_mode[control][d_sel_index];
-        break;
-      case PRMT_ECR_MODE:
-        returnval = prmt_ecr_mode[control][d_sel_index];
-        break;
-      case PRMT_RC16_MODE:
-        returnval = prmt_rc16_mode[control][d_sel_index];
-        break;
-        // Change the default from printing "ERROR" to just asserting
-      default:
-        assert(false);
+    case PRMT_F4E_MODE:
+      returnval = prmt_f4e_mode[control][d_sel_index];
+      break;
+    case PRMT_B4E_MODE:
+      returnval = prmt_b4e_mode[control][d_sel_index];
+      break;
+    case PRMT_RC8_MODE:
+      returnval = prmt_rc8_mode[control][d_sel_index];
+      break;
+    case PRMT_ECL_MODE:
+      returnval = prmt_ecl_mode[control][d_sel_index];
+      break;
+    case PRMT_ECR_MODE:
+      returnval = prmt_ecr_mode[control][d_sel_index];
+      break;
+    case PRMT_RC16_MODE:
+      returnval = prmt_rc16_mode[control][d_sel_index];
+      break;
+      // Change the default from printing "ERROR" to just asserting
+    default:
+      assert(false);
     }
   }
   return (returnval << 8 * d_sel_index);
@@ -4708,14 +4737,14 @@ void prmt_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   }
 
   data.s32 = 0;
-  data.s32 = data.s32 | read_byte(mode, ctl[0], 0, tmpdata.s64);  // First
-                                                                  // byte-0
+  data.s32 = data.s32 | read_byte(mode, ctl[0], 0, tmpdata.s64); // First
+                                                                 // byte-0
   data.s32 =
-      data.s32 | read_byte(mode, ctl[1], 1, tmpdata.s64);  // Second byte-1
-  data.s32 = data.s32 | read_byte(mode, ctl[2], 2, tmpdata.s64);  // Third
-                                                                  // byte-2
+      data.s32 | read_byte(mode, ctl[1], 1, tmpdata.s64); // Second byte-1
+  data.s32 = data.s32 | read_byte(mode, ctl[2], 2, tmpdata.s64); // Third
+                                                                 // byte-2
   data.s32 =
-      data.s32 | read_byte(mode, ctl[3], 3, tmpdata.s64);  // Fourth byte-3
+      data.s32 | read_byte(mode, ctl[3], 3, tmpdata.s64); // Fourth byte-3
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
 }
@@ -4729,17 +4758,17 @@ void rcp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src1_data = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      data.f32 = 1.0f / src1_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = 1.0f / src1_data.f64;
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    data.f32 = 1.0f / src1_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = 1.0f / src1_data.f64;
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
@@ -4761,21 +4790,21 @@ void rem_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   src2_data = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case S32_TYPE:
-      data.s32 = src1_data.s32 % src2_data.s32;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 % src2_data.s64;
-      break;
-    case U32_TYPE:
-      data.u32 = src1_data.u32 % src2_data.u32;
-      break;
-    case U64_TYPE:
-      data.u64 = src1_data.u64 % src2_data.u64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S32_TYPE:
+    data.s32 = src1_data.s32 % src2_data.s32;
+    break;
+  case S64_TYPE:
+    data.s64 = src1_data.s64 % src2_data.s64;
+    break;
+  case U32_TYPE:
+    data.u32 = src1_data.u32 % src2_data.u32;
+    break;
+  case U64_TYPE:
+    data.u64 = src1_data.u64 % src2_data.u64;
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
@@ -4809,35 +4838,35 @@ void rsqrt_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      if (a.f32 < 0) {
-        d.u64 = 0;
-        d.u64 = 0x7fc00000;  // NaN
-      } else if (a.f32 == 0) {
-        d.u64 = 0;
-        d.u32 = 0x7f800000;  // Inf
-      } else
-        d.f32 = cuda_math::__internal_accurate_fdividef(1.0f, sqrtf(a.f32));
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      if (a.f32 < 0) {
-        d.u64 = 0;
-        d.u32 = 0x7fc00000;  // NaN
-        float x = d.f32;
-        d.f64 = (double)x;
-      } else if (a.f32 == 0) {
-        d.u64 = 0;
-        d.u32 = 0x7f800000;  // Inf
-        float x = d.f32;
-        d.f64 = (double)x;
-      } else
-        d.f64 = 1.0 / sqrt(a.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    if (a.f32 < 0) {
+      d.u64 = 0;
+      d.u64 = 0x7fc00000; // NaN
+    } else if (a.f32 == 0) {
+      d.u64 = 0;
+      d.u32 = 0x7f800000; // Inf
+    } else
+      d.f32 = cuda_math::__internal_accurate_fdividef(1.0f, sqrtf(a.f32));
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    if (a.f32 < 0) {
+      d.u64 = 0;
+      d.u32 = 0x7fc00000; // NaN
+      float x = d.f32;
+      d.f64 = (double)x;
+    } else if (a.f32 == 0) {
+      d.u64 = 0;
+      d.u32 = 0x7f800000; // Inf
+      float x = d.f32;
+      d.f64 = (double)x;
+    } else
+      d.f64 = 1.0 / sqrt(a.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4858,35 +4887,35 @@ void sad_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   c = thread->get_operand_value(src3, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case U16_TYPE:
-      SAD(d.u16, a.u16, b.u16, c.u16);
-      break;
-    case U32_TYPE:
-      SAD(d.u32, a.u32, b.u32, c.u32);
-      break;
-    case U64_TYPE:
-      SAD(d.u64, a.u64, b.u64, c.u64);
-      break;
-    case S16_TYPE:
-      SAD(d.s16, a.s16, b.s16, c.s16);
-      break;
-    case S32_TYPE:
-      SAD(d.s32, a.s32, b.s32, c.s32);
-      break;
-    case S64_TYPE:
-      SAD(d.s64, a.s64, b.s64, c.s64);
-      break;
-    case F32_TYPE:
-      SAD(d.f32, a.f32, b.f32, c.f32);
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      SAD(d.f64, a.f64, b.f64, c.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case U16_TYPE:
+    SAD(d.u16, a.u16, b.u16, c.u16);
+    break;
+  case U32_TYPE:
+    SAD(d.u32, a.u32, b.u32, c.u32);
+    break;
+  case U64_TYPE:
+    SAD(d.u64, a.u64, b.u64, c.u64);
+    break;
+  case S16_TYPE:
+    SAD(d.s16, a.s16, b.s16, c.s16);
+    break;
+  case S32_TYPE:
+    SAD(d.s32, a.s32, b.s32, c.s32);
+    break;
+  case S64_TYPE:
+    SAD(d.s64, a.s64, b.s64, c.s64);
+    break;
+  case F32_TYPE:
+    SAD(d.f32, a.f32, b.f32, c.f32);
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    SAD(d.f64, a.f64, b.f64, c.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -4915,13 +4944,13 @@ void selp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 
 bool isFloat(int type) {
   switch (type) {
-    case F16_TYPE:
-    case F32_TYPE:
-    case F64_TYPE:
-    case FF64_TYPE:
-      return true;
-    default:
-      return false;
+  case F16_TYPE:
+  case F32_TYPE:
+  case F64_TYPE:
+  case FF64_TYPE:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -4929,326 +4958,326 @@ bool CmpOp(int type, ptx_reg_t a, ptx_reg_t b, unsigned cmpop) {
   bool t = false;
 
   switch (type) {
-    case B16_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u16 == b.u16);
-          break;
-        case NE_OPTION:
-          t = (a.u16 != b.u16);
-          break;
-        default:
-          assert(0);
-      }
-
-    case B32_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u32 == b.u32);
-          break;
-        case NE_OPTION:
-          t = (a.u32 != b.u32);
-          break;
-        default:
-          assert(0);
-      }
-    case B64_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u64 == b.u64);
-          break;
-        case NE_OPTION:
-          t = (a.u64 != b.u64);
-          break;
-        default:
-          assert(0);
-      }
+  case B16_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u16 == b.u16);
       break;
-    case S8_TYPE:
-    case S16_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.s16 == b.s16);
-          break;
-        case NE_OPTION:
-          t = (a.s16 != b.s16);
-          break;
-        case LT_OPTION:
-          t = (a.s16 < b.s16);
-          break;
-        case LE_OPTION:
-          t = (a.s16 <= b.s16);
-          break;
-        case GT_OPTION:
-          t = (a.s16 > b.s16);
-          break;
-        case GE_OPTION:
-          t = (a.s16 >= b.s16);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case S32_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.s32 == b.s32);
-          break;
-        case NE_OPTION:
-          t = (a.s32 != b.s32);
-          break;
-        case LT_OPTION:
-          t = (a.s32 < b.s32);
-          break;
-        case LE_OPTION:
-          t = (a.s32 <= b.s32);
-          break;
-        case GT_OPTION:
-          t = (a.s32 > b.s32);
-          break;
-        case GE_OPTION:
-          t = (a.s32 >= b.s32);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case S64_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.s64 == b.s64);
-          break;
-        case NE_OPTION:
-          t = (a.s64 != b.s64);
-          break;
-        case LT_OPTION:
-          t = (a.s64 < b.s64);
-          break;
-        case LE_OPTION:
-          t = (a.s64 <= b.s64);
-          break;
-        case GT_OPTION:
-          t = (a.s64 > b.s64);
-          break;
-        case GE_OPTION:
-          t = (a.s64 >= b.s64);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case U8_TYPE:
-    case U16_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u16 == b.u16);
-          break;
-        case NE_OPTION:
-          t = (a.u16 != b.u16);
-          break;
-        case LT_OPTION:
-          t = (a.u16 < b.u16);
-          break;
-        case LE_OPTION:
-          t = (a.u16 <= b.u16);
-          break;
-        case GT_OPTION:
-          t = (a.u16 > b.u16);
-          break;
-        case GE_OPTION:
-          t = (a.u16 >= b.u16);
-          break;
-        case LO_OPTION:
-          t = (a.u16 < b.u16);
-          break;
-        case LS_OPTION:
-          t = (a.u16 <= b.u16);
-          break;
-        case HI_OPTION:
-          t = (a.u16 > b.u16);
-          break;
-        case HS_OPTION:
-          t = (a.u16 >= b.u16);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case U32_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u32 == b.u32);
-          break;
-        case NE_OPTION:
-          t = (a.u32 != b.u32);
-          break;
-        case LT_OPTION:
-          t = (a.u32 < b.u32);
-          break;
-        case LE_OPTION:
-          t = (a.u32 <= b.u32);
-          break;
-        case GT_OPTION:
-          t = (a.u32 > b.u32);
-          break;
-        case GE_OPTION:
-          t = (a.u32 >= b.u32);
-          break;
-        case LO_OPTION:
-          t = (a.u32 < b.u32);
-          break;
-        case LS_OPTION:
-          t = (a.u32 <= b.u32);
-          break;
-        case HI_OPTION:
-          t = (a.u32 > b.u32);
-          break;
-        case HS_OPTION:
-          t = (a.u32 >= b.u32);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case U64_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.u64 == b.u64);
-          break;
-        case NE_OPTION:
-          t = (a.u64 != b.u64);
-          break;
-        case LT_OPTION:
-          t = (a.u64 < b.u64);
-          break;
-        case LE_OPTION:
-          t = (a.u64 <= b.u64);
-          break;
-        case GT_OPTION:
-          t = (a.u64 > b.u64);
-          break;
-        case GE_OPTION:
-          t = (a.u64 >= b.u64);
-          break;
-        case LO_OPTION:
-          t = (a.u64 < b.u64);
-          break;
-        case LS_OPTION:
-          t = (a.u64 <= b.u64);
-          break;
-        case HI_OPTION:
-          t = (a.u64 > b.u64);
-          break;
-        case HS_OPTION:
-          t = (a.u64 >= b.u64);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case F16_TYPE:
-      assert(0);
-      break;
-    case F32_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.f32 == b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case NE_OPTION:
-          t = (a.f32 != b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case LT_OPTION:
-          t = (a.f32 < b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case LE_OPTION:
-          t = (a.f32 <= b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case GT_OPTION:
-          t = (a.f32 > b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case GE_OPTION:
-          t = (a.f32 >= b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case EQU_OPTION:
-          t = (a.f32 == b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case NEU_OPTION:
-          t = (a.f32 != b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case LTU_OPTION:
-          t = (a.f32 < b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case LEU_OPTION:
-          t = (a.f32 <= b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case GTU_OPTION:
-          t = (a.f32 > b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case GEU_OPTION:
-          t = (a.f32 >= b.f32) || isNaN(a.f32) || isNaN(b.f32);
-          break;
-        case NUM_OPTION:
-          t = !isNaN(a.f32) && !isNaN(b.f32);
-          break;
-        case NAN_OPTION:
-          t = isNaN(a.f32) || isNaN(b.f32);
-          break;
-        default:
-          assert(0);
-      }
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      switch (cmpop) {
-        case EQ_OPTION:
-          t = (a.f64 == b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case NE_OPTION:
-          t = (a.f64 != b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case LT_OPTION:
-          t = (a.f64 < b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case LE_OPTION:
-          t = (a.f64 <= b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case GT_OPTION:
-          t = (a.f64 > b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case GE_OPTION:
-          t = (a.f64 >= b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case EQU_OPTION:
-          t = (a.f64 == b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case NEU_OPTION:
-          t = (a.f64 != b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case LTU_OPTION:
-          t = (a.f64 < b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case LEU_OPTION:
-          t = (a.f64 <= b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case GTU_OPTION:
-          t = (a.f64 > b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case GEU_OPTION:
-          t = (a.f64 >= b.f64) || isNaN(a.f64) || isNaN(b.f64);
-          break;
-        case NUM_OPTION:
-          t = !isNaN(a.f64) && !isNaN(b.f64);
-          break;
-        case NAN_OPTION:
-          t = isNaN(a.f64) || isNaN(b.f64);
-          break;
-        default:
-          assert(0);
-      }
+    case NE_OPTION:
+      t = (a.u16 != b.u16);
       break;
     default:
       assert(0);
+    }
+
+  case B32_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u32 == b.u32);
       break;
+    case NE_OPTION:
+      t = (a.u32 != b.u32);
+      break;
+    default:
+      assert(0);
+    }
+  case B64_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u64 == b.u64);
+      break;
+    case NE_OPTION:
+      t = (a.u64 != b.u64);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case S8_TYPE:
+  case S16_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.s16 == b.s16);
+      break;
+    case NE_OPTION:
+      t = (a.s16 != b.s16);
+      break;
+    case LT_OPTION:
+      t = (a.s16 < b.s16);
+      break;
+    case LE_OPTION:
+      t = (a.s16 <= b.s16);
+      break;
+    case GT_OPTION:
+      t = (a.s16 > b.s16);
+      break;
+    case GE_OPTION:
+      t = (a.s16 >= b.s16);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case S32_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.s32 == b.s32);
+      break;
+    case NE_OPTION:
+      t = (a.s32 != b.s32);
+      break;
+    case LT_OPTION:
+      t = (a.s32 < b.s32);
+      break;
+    case LE_OPTION:
+      t = (a.s32 <= b.s32);
+      break;
+    case GT_OPTION:
+      t = (a.s32 > b.s32);
+      break;
+    case GE_OPTION:
+      t = (a.s32 >= b.s32);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case S64_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.s64 == b.s64);
+      break;
+    case NE_OPTION:
+      t = (a.s64 != b.s64);
+      break;
+    case LT_OPTION:
+      t = (a.s64 < b.s64);
+      break;
+    case LE_OPTION:
+      t = (a.s64 <= b.s64);
+      break;
+    case GT_OPTION:
+      t = (a.s64 > b.s64);
+      break;
+    case GE_OPTION:
+      t = (a.s64 >= b.s64);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case U8_TYPE:
+  case U16_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u16 == b.u16);
+      break;
+    case NE_OPTION:
+      t = (a.u16 != b.u16);
+      break;
+    case LT_OPTION:
+      t = (a.u16 < b.u16);
+      break;
+    case LE_OPTION:
+      t = (a.u16 <= b.u16);
+      break;
+    case GT_OPTION:
+      t = (a.u16 > b.u16);
+      break;
+    case GE_OPTION:
+      t = (a.u16 >= b.u16);
+      break;
+    case LO_OPTION:
+      t = (a.u16 < b.u16);
+      break;
+    case LS_OPTION:
+      t = (a.u16 <= b.u16);
+      break;
+    case HI_OPTION:
+      t = (a.u16 > b.u16);
+      break;
+    case HS_OPTION:
+      t = (a.u16 >= b.u16);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case U32_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u32 == b.u32);
+      break;
+    case NE_OPTION:
+      t = (a.u32 != b.u32);
+      break;
+    case LT_OPTION:
+      t = (a.u32 < b.u32);
+      break;
+    case LE_OPTION:
+      t = (a.u32 <= b.u32);
+      break;
+    case GT_OPTION:
+      t = (a.u32 > b.u32);
+      break;
+    case GE_OPTION:
+      t = (a.u32 >= b.u32);
+      break;
+    case LO_OPTION:
+      t = (a.u32 < b.u32);
+      break;
+    case LS_OPTION:
+      t = (a.u32 <= b.u32);
+      break;
+    case HI_OPTION:
+      t = (a.u32 > b.u32);
+      break;
+    case HS_OPTION:
+      t = (a.u32 >= b.u32);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case U64_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.u64 == b.u64);
+      break;
+    case NE_OPTION:
+      t = (a.u64 != b.u64);
+      break;
+    case LT_OPTION:
+      t = (a.u64 < b.u64);
+      break;
+    case LE_OPTION:
+      t = (a.u64 <= b.u64);
+      break;
+    case GT_OPTION:
+      t = (a.u64 > b.u64);
+      break;
+    case GE_OPTION:
+      t = (a.u64 >= b.u64);
+      break;
+    case LO_OPTION:
+      t = (a.u64 < b.u64);
+      break;
+    case LS_OPTION:
+      t = (a.u64 <= b.u64);
+      break;
+    case HI_OPTION:
+      t = (a.u64 > b.u64);
+      break;
+    case HS_OPTION:
+      t = (a.u64 >= b.u64);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case F16_TYPE:
+    assert(0);
+    break;
+  case F32_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.f32 == b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case NE_OPTION:
+      t = (a.f32 != b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case LT_OPTION:
+      t = (a.f32 < b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case LE_OPTION:
+      t = (a.f32 <= b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case GT_OPTION:
+      t = (a.f32 > b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case GE_OPTION:
+      t = (a.f32 >= b.f32) && !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case EQU_OPTION:
+      t = (a.f32 == b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case NEU_OPTION:
+      t = (a.f32 != b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case LTU_OPTION:
+      t = (a.f32 < b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case LEU_OPTION:
+      t = (a.f32 <= b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case GTU_OPTION:
+      t = (a.f32 > b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case GEU_OPTION:
+      t = (a.f32 >= b.f32) || isNaN(a.f32) || isNaN(b.f32);
+      break;
+    case NUM_OPTION:
+      t = !isNaN(a.f32) && !isNaN(b.f32);
+      break;
+    case NAN_OPTION:
+      t = isNaN(a.f32) || isNaN(b.f32);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    switch (cmpop) {
+    case EQ_OPTION:
+      t = (a.f64 == b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case NE_OPTION:
+      t = (a.f64 != b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case LT_OPTION:
+      t = (a.f64 < b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case LE_OPTION:
+      t = (a.f64 <= b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case GT_OPTION:
+      t = (a.f64 > b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case GE_OPTION:
+      t = (a.f64 >= b.f64) && !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case EQU_OPTION:
+      t = (a.f64 == b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case NEU_OPTION:
+      t = (a.f64 != b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case LTU_OPTION:
+      t = (a.f64 < b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case LEU_OPTION:
+      t = (a.f64 <= b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case GTU_OPTION:
+      t = (a.f64 > b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case GEU_OPTION:
+      t = (a.f64 >= b.f64) || isNaN(a.f64) || isNaN(b.f64);
+      break;
+    case NUM_OPTION:
+      t = !isNaN(a.f64) && !isNaN(b.f64);
+      break;
+    case NAN_OPTION:
+      t = isNaN(a.f64) || isNaN(b.f64);
+      break;
+    default:
+      assert(0);
+    }
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   return t;
@@ -5263,7 +5292,7 @@ void setp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   const operand_info &src2 = pI->src2();
 
   assert(pI->get_num_operands() <
-         4);  // or need to deal with "c" operand / boolOp
+         4); // or need to deal with "c" operand / boolOp
 
   unsigned type = pI->get_type();
   unsigned cmpop = pI->get_cmpop();
@@ -5277,7 +5306,7 @@ void setp_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   // the way ptxplus handles the zero flag, 1 = false and 0 = true
   data.pred =
       (t ==
-       0);  // inverting predicate since ptxplus uses "1" for a set zero flag
+       0); // inverting predicate since ptxplus uses "1" for a set zero flag
 
   thread->set_operand_value(dst, data, PRED_TYPE, thread, pI);
 }
@@ -5291,7 +5320,7 @@ void set_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   const operand_info &src2 = pI->src2();
 
   assert(pI->get_num_operands() <
-         4);  // or need to deal with "c" operand / boolOp
+         4); // or need to deal with "c" operand / boolOp
 
   unsigned src_type = pI->get_type2();
   unsigned cmpop = pI->get_cmpop();
@@ -5302,35 +5331,35 @@ void set_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   // Take abs of first operand if needed
   if (pI->is_abs()) {
     switch (src_type) {
-      case S16_TYPE:
-        a.s16 = my_abs(a.s16);
-        break;
-      case S32_TYPE:
-        a.s32 = my_abs(a.s32);
-        break;
-      case S64_TYPE:
-        a.s64 = my_abs(a.s64);
-        break;
-      case U16_TYPE:
-        a.u16 = a.u16;
-        break;
-      case U32_TYPE:
-        a.u32 = my_abs(a.u32);
-        break;
-      case U64_TYPE:
-        a.u64 = my_abs(a.u64);
-        break;
-      case F32_TYPE:
-        a.f32 = my_abs(a.f32);
-        break;
-      case F64_TYPE:
-      case FF64_TYPE:
-        a.f64 = my_abs(a.f64);
-        break;
-      default:
-        printf("Execution error: type mismatch with instruction\n");
-        assert(0);
-        break;
+    case S16_TYPE:
+      a.s16 = my_abs(a.s16);
+      break;
+    case S32_TYPE:
+      a.s32 = my_abs(a.s32);
+      break;
+    case S64_TYPE:
+      a.s64 = my_abs(a.s64);
+      break;
+    case U16_TYPE:
+      a.u16 = a.u16;
+      break;
+    case U32_TYPE:
+      a.u32 = my_abs(a.u32);
+      break;
+    case U64_TYPE:
+      a.u64 = my_abs(a.u64);
+      break;
+    case F32_TYPE:
+      a.f32 = my_abs(a.f32);
+      break;
+    case F64_TYPE:
+    case FF64_TYPE:
+      a.f64 = my_abs(a.f64);
+      break;
+    default:
+      printf("Execution error: type mismatch with instruction\n");
+      assert(0);
+      break;
     }
   }
 
@@ -5376,29 +5405,30 @@ void shfl_impl(const ptx_instruction *pI, core_t *core, warp_inst_t inst) {
   int src_idx;
   unsigned p;
   switch (pI->shfl_op()) {
-    case UP_OPTION:
-      src_idx = lane - bval;
-      p = (src_idx >= maxLane);
-      break;
-    case DOWN_OPTION:
-      src_idx = lane + bval;
-      p = (src_idx <= maxLane);
-      break;
-    case BFLY_OPTION:
-      src_idx = lane ^ bval;
-      p = (src_idx <= maxLane);
-      break;
-    case IDX_OPTION:
-      src_idx = minLane | (bval & ~mask);
-      p = (src_idx <= maxLane);
-      break;
-    default:
-      printf("GPGPU-Sim PTX: ERROR: Invalid shfl option\n");
-      assert(0);
-      break;
+  case UP_OPTION:
+    src_idx = lane - bval;
+    p = (src_idx >= maxLane);
+    break;
+  case DOWN_OPTION:
+    src_idx = lane + bval;
+    p = (src_idx <= maxLane);
+    break;
+  case BFLY_OPTION:
+    src_idx = lane ^ bval;
+    p = (src_idx <= maxLane);
+    break;
+  case IDX_OPTION:
+    src_idx = minLane | (bval & ~mask);
+    p = (src_idx <= maxLane);
+    break;
+  default:
+    printf("GPGPU-Sim PTX: ERROR: Invalid shfl option\n");
+    assert(0);
+    break;
   }
   // copy from own lane
-  if (!p) src_idx = lane;
+  if (!p)
+    src_idx = lane;
 
   // copy input from lane src_idx
   ptx_reg_t data;
@@ -5440,31 +5470,31 @@ void shl_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   b = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case B16_TYPE:
-    case U16_TYPE:
-      if (b.u16 >= 16)
-        d.u16 = 0;
-      else
-        d.u16 = (unsigned short)((a.u16 << b.u16) & 0xFFFF);
-      break;
-    case B32_TYPE:
-    case U32_TYPE:
-      if (b.u32 >= 32)
-        d.u32 = 0;
-      else
-        d.u32 = (unsigned)((a.u32 << b.u32) & 0xFFFFFFFF);
-      break;
-    case B64_TYPE:
-    case U64_TYPE:
-      if (b.u32 >= 64)
-        d.u64 = 0;
-      else
-        d.u64 = (a.u64 << b.u64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case B16_TYPE:
+  case U16_TYPE:
+    if (b.u16 >= 16)
+      d.u16 = 0;
+    else
+      d.u16 = (unsigned short)((a.u16 << b.u16) & 0xFFFF);
+    break;
+  case B32_TYPE:
+  case U32_TYPE:
+    if (b.u32 >= 32)
+      d.u32 = 0;
+    else
+      d.u32 = (unsigned)((a.u32 << b.u32) & 0xFFFFFFFF);
+    break;
+  case B64_TYPE:
+  case U64_TYPE:
+    if (b.u32 >= 64)
+      d.u64 = 0;
+    else
+      d.u64 = (a.u64 << b.u64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -5481,69 +5511,69 @@ void shr_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   b = thread->get_operand_value(src2, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case U16_TYPE:
-    case B16_TYPE:
-      if (b.u16 < 16)
-        d.u16 = (unsigned short)((a.u16 >> b.u16) & 0xFFFF);
-      else
-        d.u16 = 0;
-      break;
-    case U32_TYPE:
-    case B32_TYPE:
-      if (b.u32 < 32)
-        d.u32 = (unsigned)((a.u32 >> b.u32) & 0xFFFFFFFF);
-      else
-        d.u32 = 0;
-      break;
-    case U64_TYPE:
-    case B64_TYPE:
-      if (b.u32 < 64)
-        d.u64 = (a.u64 >> b.u64);
-      else
-        d.u64 = 0;
-      break;
-    case S16_TYPE:
-      if (b.u16 < 16)
-        d.s64 = (a.s16 >> b.s16);
-      else {
-        if (a.s16 < 0) {
+  case U16_TYPE:
+  case B16_TYPE:
+    if (b.u16 < 16)
+      d.u16 = (unsigned short)((a.u16 >> b.u16) & 0xFFFF);
+    else
+      d.u16 = 0;
+    break;
+  case U32_TYPE:
+  case B32_TYPE:
+    if (b.u32 < 32)
+      d.u32 = (unsigned)((a.u32 >> b.u32) & 0xFFFFFFFF);
+    else
+      d.u32 = 0;
+    break;
+  case U64_TYPE:
+  case B64_TYPE:
+    if (b.u32 < 64)
+      d.u64 = (a.u64 >> b.u64);
+    else
+      d.u64 = 0;
+    break;
+  case S16_TYPE:
+    if (b.u16 < 16)
+      d.s64 = (a.s16 >> b.s16);
+    else {
+      if (a.s16 < 0) {
+        d.s64 = -1;
+      } else {
+        d.s64 = 0;
+      }
+    }
+    break;
+  case S32_TYPE:
+    if (b.u32 < 32)
+      d.s64 = (a.s32 >> b.s32);
+    else {
+      if (a.s32 < 0) {
+        d.s64 = -1;
+      } else {
+        d.s64 = 0;
+      }
+    }
+    break;
+  case S64_TYPE:
+    if (b.u64 < 64)
+      d.s64 = (a.s64 >> b.u64);
+    else {
+      if (a.s64 < 0) {
+        if (b.s32 < 0) {
+          d.u64 = -1;
+          d.s32 = 0;
+        } else {
           d.s64 = -1;
-        } else {
-          d.s64 = 0;
         }
+      } else {
+        d.s64 = 0;
       }
-      break;
-    case S32_TYPE:
-      if (b.u32 < 32)
-        d.s64 = (a.s32 >> b.s32);
-      else {
-        if (a.s32 < 0) {
-          d.s64 = -1;
-        } else {
-          d.s64 = 0;
-        }
-      }
-      break;
-    case S64_TYPE:
-      if (b.u64 < 64)
-        d.s64 = (a.s64 >> b.u64);
-      else {
-        if (a.s64 < 0) {
-          if (b.s32 < 0) {
-            d.u64 = -1;
-            d.s32 = 0;
-          } else {
-            d.s64 = -1;
-          }
-        } else {
-          d.s64 = 0;
-        }
-      }
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+    }
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -5558,13 +5588,13 @@ void sin_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      d.f32 = sin(a.f32);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    d.f32 = sin(a.f32);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -5586,37 +5616,37 @@ void slct_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   c = thread->get_operand_value(src3, dst, c_type, thread, 1);
 
   switch (c_type) {
-    case S32_TYPE:
-      t = c.s32 >= 0;
-      break;
-    case F32_TYPE:
-      t = c.f32 >= 0;
-      break;
-    default:
-      assert(0);
+  case S32_TYPE:
+    t = c.s32 >= 0;
+    break;
+  case F32_TYPE:
+    t = c.f32 >= 0;
+    break;
+  default:
+    assert(0);
   }
 
   switch (i_type) {
-    case B16_TYPE:
-    case S16_TYPE:
-    case U16_TYPE:
-      d.u16 = t ? a.u16 : b.u16;
-      break;
-    case F32_TYPE:
-    case B32_TYPE:
-    case S32_TYPE:
-    case U32_TYPE:
-      d.u32 = t ? a.u32 : b.u32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-    case B64_TYPE:
-    case S64_TYPE:
-    case U64_TYPE:
-      d.u64 = t ? a.u64 : b.u64;
-      break;
-    default:
-      assert(0);
+  case B16_TYPE:
+  case S16_TYPE:
+  case U16_TYPE:
+    d.u16 = t ? a.u16 : b.u16;
+    break;
+  case F32_TYPE:
+  case B32_TYPE:
+  case S32_TYPE:
+  case U32_TYPE:
+    d.u32 = t ? a.u32 : b.u32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+  case B64_TYPE:
+  case S64_TYPE:
+  case U64_TYPE:
+    d.u64 = t ? a.u64 : b.u64;
+    break;
+  default:
+    assert(0);
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
@@ -5631,30 +5661,30 @@ void sqrt_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   a = thread->get_operand_value(src1, dst, i_type, thread, 1);
 
   switch (i_type) {
-    case F32_TYPE:
-      if (a.f32 < 0)
-        d.f32 = nanf("");
-      else
-        d.f32 = sqrt(a.f32);
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      if (a.f64 < 0)
-        d.f64 = nan("");
-      else
-        d.f64 = sqrt(a.f64);
-      break;
-    default:
-      printf("Execution error: type mismatch with instruction\n");
-      assert(0);
-      break;
+  case F32_TYPE:
+    if (a.f32 < 0)
+      d.f32 = nanf("");
+    else
+      d.f32 = sqrt(a.f32);
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    if (a.f64 < 0)
+      d.f64 = nan("");
+    else
+      d.f64 = sqrt(a.f64);
+    break;
+  default:
+    printf("Execution error: type mismatch with instruction\n");
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, d, i_type, thread, pI);
 }
 
 void sst_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
-  ptx_instruction *cpI = const_cast<ptx_instruction *>(pI);  // constant
+  ptx_instruction *cpI = const_cast<ptx_instruction *>(pI); // constant
   const operand_info &dst = cpI->dst();
   const operand_info &src1 = pI->src1();
   const operand_info &src2 = pI->src2();
@@ -5667,7 +5697,7 @@ void sst_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   memory_space_t space = pI->get_space();
   memory_space *mem = NULL;
   addr_t addr =
-      src2_data.u32 * 4;  // this assumes sstarr memory starts at address 0
+      src2_data.u32 * 4; // this assumes sstarr memory starts at address 0
   ptx_cta_info *cta_info = thread->m_cta_info;
 
   decode_space(space, thread, src1, mem, addr);
@@ -5680,7 +5710,7 @@ void sst_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   mem->write(addr, size / 8, &src3_data.s64, thread, pI);
 
   // sync threads
-  cpI->set_bar_id(16);  // use 16 for sst because bar uses an int from 0-15
+  cpI->set_bar_id(16); // use 16 for sst because bar uses an int from 0-15
 
   thread->m_last_effective_address = addr;
   thread->m_last_memory_space = space;
@@ -5746,7 +5776,7 @@ void ssy_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 
 void st_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   const operand_info &dst = pI->dst();
-  const operand_info &src1 = pI->src1();  // may be scalar or vector of regs
+  const operand_info &src1 = pI->src1(); // may be scalar or vector of regs
   unsigned type = pI->get_type();
   ptx_reg_t addr_reg = thread->get_operand_value(dst, dst, type, thread, 1);
   ptx_reg_t data;
@@ -5812,67 +5842,65 @@ void sub_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   // the constant is added in during subtraction so the carry bit is set
   // properly.
   switch (i_type) {
-    case S8_TYPE:
-      data.s64 = (src1_data.s64 & 0xFF) - (src2_data.s64 & 0xFF) + 0x100;
-      if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) != 0) {
-        overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
-      }
-      carry = (data.s32 & 0x100) >> 8;
-      break;
-    case S16_TYPE:
-      data.s64 = (src1_data.s64 & 0xFFFF) - (src2_data.s64 & 0xFFFF) + 0x10000;
-      if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) != 0) {
-        overflow =
-            ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
-      }
-      carry = (data.s32 & 0x10000) >> 16;
-      break;
-    case S32_TYPE:
-      data.s64 = (src1_data.s64 & 0xFFFFFFFF) - (src2_data.s64 & 0xFFFFFFFF) +
-                 0x100000000;
-      if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) != 0) {
-        overflow = ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0
-                       ? 0
-                       : 1;
-      }
-      carry = ((data.u64) >> 32) & 0x0001;
-      break;
-    case S64_TYPE:
-      data.s64 = src1_data.s64 - src2_data.s64;
-      break;
-    case B8_TYPE:
-    case U8_TYPE:
-      data.u64 = (src1_data.u64 & 0xFF) - (src2_data.u64 & 0xFF) + 0x100;
-      carry = (data.u64 & 0x100) >> 8;
-      break;
-    case B16_TYPE:
-    case U16_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFF) - (src2_data.u64 & 0xFFFF) + 0x10000;
-      carry = (data.u64 & 0x10000) >> 16;
-      break;
-    case B32_TYPE:
-    case U32_TYPE:
-      data.u64 = (src1_data.u64 & 0xFFFFFFFF) - (src2_data.u64 & 0xFFFFFFFF) +
-                 0x100000000;
-      carry = (data.u64 & 0x100000000) >> 32;
-      break;
-    case B64_TYPE:
-    case U64_TYPE:
-      data.u64 = src1_data.u64 - src2_data.u64;
-      break;
-    case F16_TYPE:
-      data.f16 = src1_data.f16 - src2_data.f16;
-      break;  // assert(0); break;
-    case F32_TYPE:
-      data.f32 = src1_data.f32 - src2_data.f32;
-      break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      data.f64 = src1_data.f64 - src2_data.f64;
-      break;
-    default:
-      assert(0);
-      break;
+  case S8_TYPE:
+    data.s64 = (src1_data.s64 & 0xFF) - (src2_data.s64 & 0xFF) + 0x100;
+    if (((src1_data.s64 & 0x80) - (src2_data.s64 & 0x80)) != 0) {
+      overflow = ((src1_data.s64 & 0x80) - (data.s64 & 0x80)) == 0 ? 0 : 1;
+    }
+    carry = (data.s32 & 0x100) >> 8;
+    break;
+  case S16_TYPE:
+    data.s64 = (src1_data.s64 & 0xFFFF) - (src2_data.s64 & 0xFFFF) + 0x10000;
+    if (((src1_data.s64 & 0x8000) - (src2_data.s64 & 0x8000)) != 0) {
+      overflow = ((src1_data.s64 & 0x8000) - (data.s64 & 0x8000)) == 0 ? 0 : 1;
+    }
+    carry = (data.s32 & 0x10000) >> 16;
+    break;
+  case S32_TYPE:
+    data.s64 = (src1_data.s64 & 0xFFFFFFFF) - (src2_data.s64 & 0xFFFFFFFF) +
+               0x100000000;
+    if (((src1_data.s64 & 0x80000000) - (src2_data.s64 & 0x80000000)) != 0) {
+      overflow =
+          ((src1_data.s64 & 0x80000000) - (data.s64 & 0x80000000)) == 0 ? 0 : 1;
+    }
+    carry = ((data.u64) >> 32) & 0x0001;
+    break;
+  case S64_TYPE:
+    data.s64 = src1_data.s64 - src2_data.s64;
+    break;
+  case B8_TYPE:
+  case U8_TYPE:
+    data.u64 = (src1_data.u64 & 0xFF) - (src2_data.u64 & 0xFF) + 0x100;
+    carry = (data.u64 & 0x100) >> 8;
+    break;
+  case B16_TYPE:
+  case U16_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFF) - (src2_data.u64 & 0xFFFF) + 0x10000;
+    carry = (data.u64 & 0x10000) >> 16;
+    break;
+  case B32_TYPE:
+  case U32_TYPE:
+    data.u64 = (src1_data.u64 & 0xFFFFFFFF) - (src2_data.u64 & 0xFFFFFFFF) +
+               0x100000000;
+    carry = (data.u64 & 0x100000000) >> 32;
+    break;
+  case B64_TYPE:
+  case U64_TYPE:
+    data.u64 = src1_data.u64 - src2_data.u64;
+    break;
+  case F16_TYPE:
+    data.f16 = src1_data.f16 - src2_data.f16;
+    break; // assert(0); break;
+  case F32_TYPE:
+    data.f32 = src1_data.f32 - src2_data.f32;
+    break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    data.f64 = src1_data.f64 - src2_data.f64;
+    break;
+  default:
+    assert(0);
+    break;
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI, overflow, carry);
@@ -5925,7 +5953,8 @@ unsigned wrap(unsigned x, unsigned y, unsigned mx, unsigned my,
 unsigned clamp(unsigned x, unsigned y, unsigned mx, unsigned my,
                size_t elem_size) {
   unsigned nx = x;
-  while (nx >= mx) nx -= elem_size;
+  while (nx >= mx)
+    nx -= elem_size;
   unsigned ny = (y >= my) ? my - 1 : y;
   return nx + mx * ny;
 }
@@ -5946,9 +5975,9 @@ float tex_linf_sampling(memory_space *mem, unsigned tex_array_base, int x,
             4, &Ti1j);
   mem->read(tex_array_base + b_lim(x, y + 1, width, height, elem_size), 4,
             &Tij1);
-  mem->read(
-      tex_array_base + b_lim(x + elem_size, y + 1, width, height, elem_size), 4,
-      &Ti1j1);
+  mem->read(tex_array_base +
+                b_lim(x + elem_size, y + 1, width, height, elem_size),
+            4, &Ti1j1);
 
   float sample = (1 - alpha) * (1 - beta) * Tij + alpha * (1 - beta) * Ti1j +
                  (1 - alpha) * beta * Tij1 + alpha * beta * Ti1j1;
@@ -5964,7 +5993,8 @@ float textureNormalizeElementSigned(int element, int bits) {
     // normalizing the number to [-1.0,1.0]
     maxN >>= 1;
     float output = (float)element / maxN;
-    if (output < -1.0f) output = -1.0f;
+    if (output < -1.0f)
+      output = -1.0f;
     return output;
   } else {
     return 0.0f;
@@ -6004,11 +6034,11 @@ void textureNormalizeOutput(const struct cudaChannelFormatDesc &desc,
 void tex_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned dimension = pI->dimension();
   const operand_info &dst =
-      pI->dst();  // the registers to which fetched texel will be placed
-  const operand_info &src1 = pI->src1();  // the name of the texture
+      pI->dst(); // the registers to which fetched texel will be placed
+  const operand_info &src1 = pI->src1(); // the name of the texture
   const operand_info &src2 =
-      pI->src2();  // the vector registers containing coordinates of the texel
-                   // to be fetched
+      pI->src2(); // the vector registers containing coordinates of the texel
+                  // to be fetched
 
   std::string texname = src1.name();
   unsigned to_type = pI->get_type();
@@ -6020,8 +6050,8 @@ void tex_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   unsigned nelem = src2.get_vect_nelem();
   thread->get_vector_operand_values(
       src2, thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs,
-      nelem);  // ptx_reg should be 4 entry vector type...coordinates into
-               // texture
+      nelem); // ptx_reg should be 4 entry vector type...coordinates into
+              // texture
   /*
     For programs with many streams, textures can be bound and unbound
     asynchronously.  This means we need to use the kernel's "snapshot" of
@@ -6053,259 +6083,271 @@ void tex_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   tex_array_base = cuArray->devPtr32;
 
   switch (dimension) {
-    case GEOM_MODIFIER_1D:
-      width = cuArray->width;
-      height = cuArray->height;
-      if (texref->normalized) {
-        assert(c_type == F32_TYPE);
-        x_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32;
-        if (texref->addressMode[0] == cudaAddressModeClamp) {
-          x_f32 = (x_f32 > 1.0) ? 1.0 : x_f32;
-          x_f32 = (x_f32 < 0.0) ? 0.0 : x_f32;
-        } else if (texref->addressMode[0] == cudaAddressModeWrap) {
-          x_f32 = x_f32 - floor(x_f32);
-        }
-
-        if (texref->filterMode == cudaFilterModeLinear) {
-          float xb = x_f32 * width - 0.5;
-          alpha = xb - floor(xb);
-          alpha = reduce_precision(alpha, 9);
-          beta = 0.0;
-
-          x = (int)floor(xb);
-          y = 0;
-        } else {
-          x = (int)floor(x_f32 * width);
-          y = 0;
-        }
-      } else {
-        switch (c_type) {
-          case S32_TYPE:
-            x = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].s32;
-            assert(texref->filterMode == cudaFilterModePoint);
-            break;
-          case F32_TYPE:
-            x_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32;
-            alpha = x_f32 -
-                    floor(x_f32);  // offset into subtexel (for linear sampling)
-            x = (int)x_f32;
-            break;
-          default:
-            assert(0 && "Unsupported texture coordinate type.");
-        }
-        // handle texture fetch that exceeded boundaries
-        if (texref->addressMode[0] == cudaAddressModeClamp) {
-          x = (x > width - 1) ? (width - 1) : x;
-          x = (x < 0) ? 0 : x;
-        } else if (texref->addressMode[0] == cudaAddressModeWrap) {
-          x = x % width;
-        }
+  case GEOM_MODIFIER_1D:
+    width = cuArray->width;
+    height = cuArray->height;
+    if (texref->normalized) {
+      assert(c_type == F32_TYPE);
+      x_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32;
+      if (texref->addressMode[0] == cudaAddressModeClamp) {
+        x_f32 = (x_f32 > 1.0) ? 1.0 : x_f32;
+        x_f32 = (x_f32 < 0.0) ? 0.0 : x_f32;
+      } else if (texref->addressMode[0] == cudaAddressModeWrap) {
+        x_f32 = x_f32 - floor(x_f32);
       }
-      width *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
-                cuArray->desc.z) /
-               8;
-      x *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
-            cuArray->desc.z) /
-           8;
-      tex_array_index = tex_array_base + x;
 
-      break;
-    case GEOM_MODIFIER_2D:
-      width = cuArray->width;
-      height = cuArray->height;
-      if (texref->normalized) {
-        x_f32 = reduce_precision(
-            thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32, 16);
-        y_f32 = reduce_precision(
-            thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[1].f32, 15);
+      if (texref->filterMode == cudaFilterModeLinear) {
+        float xb = x_f32 * width - 0.5;
+        alpha = xb - floor(xb);
+        alpha = reduce_precision(alpha, 9);
+        beta = 0.0;
 
-        if (texref->addressMode[0]) {  // clamp
-          if (x_f32 < 0) x_f32 = 0;
-          if (x_f32 >= 1) x_f32 = 1 - 1 / x_f32;
-        } else {  // wrap
-          x_f32 = x_f32 - floor(x_f32);
-        }
-        if (texref->addressMode[1]) {  // clamp
-          if (y_f32 < 0) y_f32 = 0;
-          if (y_f32 >= 1) y_f32 = 1 - 1 / y_f32;
-        } else {  // wrap
-          y_f32 = y_f32 - floor(y_f32);
-        }
-
-        if (texref->filterMode == cudaFilterModeLinear) {
-          float xb = x_f32 * width - 0.5;
-          float yb = y_f32 * height - 0.5;
-          alpha = xb - floor(xb);
-          beta = yb - floor(yb);
-          alpha = reduce_precision(alpha, 9);
-          beta = reduce_precision(beta, 9);
-
-          x = (int)floor(xb);
-          y = (int)floor(yb);
-        } else {
-          x = (int)floor(x_f32 * width);
-          y = (int)floor(y_f32 * height);
-        }
+        x = (int)floor(xb);
+        y = 0;
       } else {
+        x = (int)floor(x_f32 * width);
+        y = 0;
+      }
+    } else {
+      switch (c_type) {
+      case S32_TYPE:
+        x = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].s32;
+        assert(texref->filterMode == cudaFilterModePoint);
+        break;
+      case F32_TYPE:
         x_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32;
-        y_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[1].f32;
-
-        alpha = x_f32 - floor(x_f32);
-        beta = y_f32 - floor(y_f32);
-
+        alpha =
+            x_f32 - floor(x_f32); // offset into subtexel (for linear sampling)
         x = (int)x_f32;
-        y = (int)y_f32;
-        if (texref->addressMode[0]) {  // clamp
-          if (x < 0) x = 0;
-          if (x >= (int)width) x = width - 1;
-        } else {  // wrap
-          x = x % width;
-          if (x < 0) x *= -1;
-        }
-        if (texref->addressMode[1]) {  // clamp
-          if (y < 0) y = 0;
-          if (y >= (int)height) y = height - 1;
-        } else {  // wrap
-          y = y % height;
-          if (y < 0) y *= -1;
-        }
+        break;
+      default:
+        assert(0 && "Unsupported texture coordinate type.");
+      }
+      // handle texture fetch that exceeded boundaries
+      if (texref->addressMode[0] == cudaAddressModeClamp) {
+        x = (x > width - 1) ? (width - 1) : x;
+        x = (x < 0) ? 0 : x;
+      } else if (texref->addressMode[0] == cudaAddressModeWrap) {
+        x = x % width;
+      }
+    }
+    width *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
+              cuArray->desc.z) /
+             8;
+    x *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
+          cuArray->desc.z) /
+         8;
+    tex_array_index = tex_array_base + x;
+
+    break;
+  case GEOM_MODIFIER_2D:
+    width = cuArray->width;
+    height = cuArray->height;
+    if (texref->normalized) {
+      x_f32 = reduce_precision(
+          thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32, 16);
+      y_f32 = reduce_precision(
+          thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[1].f32, 15);
+
+      if (texref->addressMode[0]) { // clamp
+        if (x_f32 < 0)
+          x_f32 = 0;
+        if (x_f32 >= 1)
+          x_f32 = 1 - 1 / x_f32;
+      } else { // wrap
+        x_f32 = x_f32 - floor(x_f32);
+      }
+      if (texref->addressMode[1]) { // clamp
+        if (y_f32 < 0)
+          y_f32 = 0;
+        if (y_f32 >= 1)
+          y_f32 = 1 - 1 / y_f32;
+      } else { // wrap
+        y_f32 = y_f32 - floor(y_f32);
       }
 
-      width *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
-                cuArray->desc.z) /
-               8;
-      x *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
-            cuArray->desc.z) /
-           8;
-      tex_array_index = tex_array_base + (x + width * y);
-      break;
-    default:
-      assert(0);
-      break;
+      if (texref->filterMode == cudaFilterModeLinear) {
+        float xb = x_f32 * width - 0.5;
+        float yb = y_f32 * height - 0.5;
+        alpha = xb - floor(xb);
+        beta = yb - floor(yb);
+        alpha = reduce_precision(alpha, 9);
+        beta = reduce_precision(beta, 9);
+
+        x = (int)floor(xb);
+        y = (int)floor(yb);
+      } else {
+        x = (int)floor(x_f32 * width);
+        y = (int)floor(y_f32 * height);
+      }
+    } else {
+      x_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[0].f32;
+      y_f32 = thread->get_gpu()->gpgpu_ctx->func_sim->ptx_tex_regs[1].f32;
+
+      alpha = x_f32 - floor(x_f32);
+      beta = y_f32 - floor(y_f32);
+
+      x = (int)x_f32;
+      y = (int)y_f32;
+      if (texref->addressMode[0]) { // clamp
+        if (x < 0)
+          x = 0;
+        if (x >= (int)width)
+          x = width - 1;
+      } else { // wrap
+        x = x % width;
+        if (x < 0)
+          x *= -1;
+      }
+      if (texref->addressMode[1]) { // clamp
+        if (y < 0)
+          y = 0;
+        if (y >= (int)height)
+          y = height - 1;
+      } else { // wrap
+        y = y % height;
+        if (y < 0)
+          y *= -1;
+      }
+    }
+
+    width *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
+              cuArray->desc.z) /
+             8;
+    x *= (cuArray->desc.w + cuArray->desc.x + cuArray->desc.y +
+          cuArray->desc.z) /
+         8;
+    tex_array_index = tex_array_base + (x + width * y);
+    break;
+  default:
+    assert(0);
+    break;
   }
   switch (to_type) {
-    case U8_TYPE:
-    case U16_TYPE:
-    case U32_TYPE:
-    case B8_TYPE:
-    case B16_TYPE:
-    case B32_TYPE:
-    case S8_TYPE:
-    case S16_TYPE:
-    case S32_TYPE: {
-      unsigned long long elementOffset = 0;  // offset into the next element
-      mem->read(tex_array_index, cuArray->desc.x / 8, &data1.u32);
-      elementOffset += cuArray->desc.x / 8;
-      if (cuArray->desc.y) {
-        mem->read(tex_array_index + elementOffset, cuArray->desc.y / 8,
-                  &data2.u32);
-        elementOffset += cuArray->desc.y / 8;
-        if (cuArray->desc.z) {
-          mem->read(tex_array_index + elementOffset, cuArray->desc.z / 8,
-                    &data3.u32);
-          elementOffset += cuArray->desc.z / 8;
-          if (cuArray->desc.w)
-            mem->read(tex_array_index + elementOffset, cuArray->desc.w / 8,
-                      &data4.u32);
-        }
+  case U8_TYPE:
+  case U16_TYPE:
+  case U32_TYPE:
+  case B8_TYPE:
+  case B16_TYPE:
+  case B32_TYPE:
+  case S8_TYPE:
+  case S16_TYPE:
+  case S32_TYPE: {
+    unsigned long long elementOffset = 0; // offset into the next element
+    mem->read(tex_array_index, cuArray->desc.x / 8, &data1.u32);
+    elementOffset += cuArray->desc.x / 8;
+    if (cuArray->desc.y) {
+      mem->read(tex_array_index + elementOffset, cuArray->desc.y / 8,
+                &data2.u32);
+      elementOffset += cuArray->desc.y / 8;
+      if (cuArray->desc.z) {
+        mem->read(tex_array_index + elementOffset, cuArray->desc.z / 8,
+                  &data3.u32);
+        elementOffset += cuArray->desc.z / 8;
+        if (cuArray->desc.w)
+          mem->read(tex_array_index + elementOffset, cuArray->desc.w / 8,
+                    &data4.u32);
       }
-      break;
     }
-    case B64_TYPE:
-    case U64_TYPE:
-    case S64_TYPE:
-      mem->read(tex_array_index, 8, &data1.u64);
-      if (cuArray->desc.y) {
-        mem->read(tex_array_index + 8, 8, &data2.u64);
-        if (cuArray->desc.z) {
-          mem->read(tex_array_index + 16, 8, &data3.u64);
-          if (cuArray->desc.w) mem->read(tex_array_index + 24, 8, &data4.u64);
-        }
+    break;
+  }
+  case B64_TYPE:
+  case U64_TYPE:
+  case S64_TYPE:
+    mem->read(tex_array_index, 8, &data1.u64);
+    if (cuArray->desc.y) {
+      mem->read(tex_array_index + 8, 8, &data2.u64);
+      if (cuArray->desc.z) {
+        mem->read(tex_array_index + 16, 8, &data3.u64);
+        if (cuArray->desc.w)
+          mem->read(tex_array_index + 24, 8, &data4.u64);
       }
-      break;
-    case F16_TYPE:
-      assert(0);
-      break;
-    case F32_TYPE: {
-      if (texref->filterMode == cudaFilterModeLinear) {
-        texAddr_t b_lim = wrap;
-        if (texref->addressMode[0] == cudaAddressModeClamp) {
-          b_lim = clamp;
-        }
-        size_t elem_size = (cuArray->desc.x + cuArray->desc.y +
-                            cuArray->desc.z + cuArray->desc.w) /
-                           8;
-        size_t elem_ofst = 0;
+    }
+    break;
+  case F16_TYPE:
+    assert(0);
+    break;
+  case F32_TYPE: {
+    if (texref->filterMode == cudaFilterModeLinear) {
+      texAddr_t b_lim = wrap;
+      if (texref->addressMode[0] == cudaAddressModeClamp) {
+        b_lim = clamp;
+      }
+      size_t elem_size = (cuArray->desc.x + cuArray->desc.y + cuArray->desc.z +
+                          cuArray->desc.w) /
+                         8;
+      size_t elem_ofst = 0;
 
-        data1.f32 =
+      data1.f32 =
+          tex_linf_sampling(mem, tex_array_base, x + elem_ofst, y, width,
+                            height, elem_size, alpha, beta, b_lim);
+      elem_ofst += cuArray->desc.x / 8;
+      if (cuArray->desc.y) {
+        data2.f32 =
             tex_linf_sampling(mem, tex_array_base, x + elem_ofst, y, width,
                               height, elem_size, alpha, beta, b_lim);
-        elem_ofst += cuArray->desc.x / 8;
-        if (cuArray->desc.y) {
-          data2.f32 =
+        elem_ofst += cuArray->desc.y / 8;
+        if (cuArray->desc.z) {
+          data3.f32 =
               tex_linf_sampling(mem, tex_array_base, x + elem_ofst, y, width,
                                 height, elem_size, alpha, beta, b_lim);
-          elem_ofst += cuArray->desc.y / 8;
-          if (cuArray->desc.z) {
-            data3.f32 =
+          elem_ofst += cuArray->desc.z / 8;
+          if (cuArray->desc.w)
+            data4.f32 =
                 tex_linf_sampling(mem, tex_array_base, x + elem_ofst, y, width,
                                   height, elem_size, alpha, beta, b_lim);
-            elem_ofst += cuArray->desc.z / 8;
-            if (cuArray->desc.w)
-              data4.f32 = tex_linf_sampling(mem, tex_array_base, x + elem_ofst,
-                                            y, width, height, elem_size, alpha,
-                                            beta, b_lim);
-          }
-        }
-      } else {
-        mem->read(tex_array_index, cuArray->desc.x / 8, &data1.f32);
-        if (cuArray->desc.y) {
-          mem->read(tex_array_index + 4, cuArray->desc.y / 8, &data2.f32);
-          if (cuArray->desc.z) {
-            mem->read(tex_array_index + 8, cuArray->desc.z / 8, &data3.f32);
-            if (cuArray->desc.w)
-              mem->read(tex_array_index + 12, cuArray->desc.w / 8, &data4.f32);
-          }
         }
       }
-    } break;
-    case F64_TYPE:
-    case FF64_TYPE:
-      mem->read(tex_array_index, 8, &data1.f64);
+    } else {
+      mem->read(tex_array_index, cuArray->desc.x / 8, &data1.f32);
       if (cuArray->desc.y) {
-        mem->read(tex_array_index + 8, 8, &data2.f64);
+        mem->read(tex_array_index + 4, cuArray->desc.y / 8, &data2.f32);
         if (cuArray->desc.z) {
-          mem->read(tex_array_index + 16, 8, &data3.f64);
-          if (cuArray->desc.w) mem->read(tex_array_index + 24, 8, &data4.f64);
+          mem->read(tex_array_index + 8, cuArray->desc.z / 8, &data3.f32);
+          if (cuArray->desc.w)
+            mem->read(tex_array_index + 12, cuArray->desc.w / 8, &data4.f32);
         }
       }
-      break;
-    default:
-      assert(0);
-      break;
+    }
+  } break;
+  case F64_TYPE:
+  case FF64_TYPE:
+    mem->read(tex_array_index, 8, &data1.f64);
+    if (cuArray->desc.y) {
+      mem->read(tex_array_index + 8, 8, &data2.f64);
+      if (cuArray->desc.z) {
+        mem->read(tex_array_index + 16, 8, &data3.f64);
+        if (cuArray->desc.w)
+          mem->read(tex_array_index + 24, 8, &data4.f64);
+      }
+    }
+    break;
+  default:
+    assert(0);
+    break;
   }
   int x_block_coord, y_block_coord, memreqindex, blockoffset;
 
   switch (dimension) {
-    case GEOM_MODIFIER_1D:
-      thread->m_last_effective_address = tex_array_index;
-      break;
-    case GEOM_MODIFIER_2D:
-      x_block_coord = x >> (texInfo->Tx_numbits + texInfo->texel_size_numbits);
-      y_block_coord = y >> texInfo->Ty_numbits;
+  case GEOM_MODIFIER_1D:
+    thread->m_last_effective_address = tex_array_index;
+    break;
+  case GEOM_MODIFIER_2D:
+    x_block_coord = x >> (texInfo->Tx_numbits + texInfo->texel_size_numbits);
+    y_block_coord = y >> texInfo->Ty_numbits;
 
-      memreqindex =
-          ((y_block_coord * cuArray->width / texInfo->Tx) + x_block_coord) << 6;
+    memreqindex =
+        ((y_block_coord * cuArray->width / texInfo->Tx) + x_block_coord) << 6;
 
-      blockoffset = (x % (texInfo->Tx * texInfo->texel_size) +
-                     (y % (texInfo->Ty)
-                      << (texInfo->Tx_numbits + texInfo->texel_size_numbits)));
-      memreqindex += blockoffset;
-      thread->m_last_effective_address =
-          tex_array_base + memreqindex;  // tex_array_index;
-      break;
-    default:
-      assert(0);
+    blockoffset = (x % (texInfo->Tx * texInfo->texel_size) +
+                   (y % (texInfo->Ty)
+                    << (texInfo->Tx_numbits + texInfo->texel_size_numbits)));
+    memreqindex += blockoffset;
+    thread->m_last_effective_address =
+        tex_array_base + memreqindex; // tex_array_index;
+    break;
+  default:
+    assert(0);
   }
   thread->m_last_memory_space = tex_space;
 
@@ -6339,12 +6381,10 @@ void vmad_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
 #define VMAX 0
 #define VMIN 1
 
-void vmax_impl(const ptx_instruction *pI, ptx_thread_info *thread)
-{
-   video_mem_instruction(pI, thread, VMAX);
+void vmax_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
+  video_mem_instruction(pI, thread, VMAX);
 }
-void vmin_impl(const ptx_instruction *pI, ptx_thread_info *thread)
-{
+void vmin_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   video_mem_instruction(pI, thread, VMIN);
 }
 void vset_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
@@ -6375,7 +6415,8 @@ void vote_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
     or_all = false;
     ballot_result = 0;
     int offset = 31;
-    while ((offset >= 0) && !pI->active(offset)) offset--;
+    while ((offset >= 0) && !pI->active(offset))
+      offset--;
     assert(offset >= 0);
     last_tid =
         (thread->get_hw_tid() - (thread->get_hw_tid() % pI->warp_size())) +
@@ -6414,21 +6455,21 @@ void vote_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
       bool pred_value = false;
 
       switch (pI->vote_mode()) {
-        case ptx_instruction::vote_any:
-          pred_value = or_all;
-          break;
-        case ptx_instruction::vote_all:
-          pred_value = and_all;
-          break;
-        case ptx_instruction::vote_uni:
-          pred_value = (or_all ^ and_all);
-          break;
-        default:
-          abort();
+      case ptx_instruction::vote_any:
+        pred_value = or_all;
+        break;
+      case ptx_instruction::vote_all:
+        pred_value = and_all;
+        break;
+      case ptx_instruction::vote_uni:
+        pred_value = (or_all ^ and_all);
+        break;
+      default:
+        abort();
       }
       ptx_reg_t data;
-      data.pred = pred_value ? 0 : 1;  // the way ptxplus handles the zero flag,
-                                       // 1 = false and 0 = true
+      data.pred = pred_value ? 0 : 1; // the way ptxplus handles the zero flag,
+                                      // 1 = false and 0 = true
 
       for (std::list<ptx_thread_info *>::iterator t = threads_in_warp.begin();
            t != threads_in_warp.end(); ++t) {
@@ -6440,12 +6481,12 @@ void vote_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   }
 }
 
-void activemask_impl( const ptx_instruction *pI, ptx_thread_info *thread )
-{
+void activemask_impl(const ptx_instruction *pI, ptx_thread_info *thread) {
   active_mask_t l_activemask_bitset = pI->get_warp_active_mask();
-  uint32_t l_activemask_uint = static_cast<uint32_t>(l_activemask_bitset.to_ulong());
+  uint32_t l_activemask_uint =
+      static_cast<uint32_t>(l_activemask_bitset.to_ulong());
 
-  const operand_info &dst  = pI->dst();
+  const operand_info &dst = pI->dst();
   thread->set_operand_value(dst, l_activemask_uint, U32_TYPE, thread, pI);
 }
 
@@ -6527,9 +6568,9 @@ ptx_reg_t srcOperandModifiers(ptx_reg_t opData, operand_info opInfo,
   return result;
 }
 
-void video_mem_instruction(const ptx_instruction *pI, ptx_thread_info *thread, int op_code)
-{
-  const operand_info &dst  = pI->dst(); // d
+void video_mem_instruction(const ptx_instruction *pI, ptx_thread_info *thread,
+                           int op_code) {
+  const operand_info &dst = pI->dst();   // d
   const operand_info &src1 = pI->src1(); // a
   const operand_info &src2 = pI->src2(); // b
   const operand_info &src3 = pI->src3(); // c
@@ -6557,49 +6598,45 @@ void video_mem_instruction(const ptx_instruction *pI, ptx_thread_info *thread, i
   auto option = options.begin();
   assert(*option == ATOMIC_MAX || *option == ATOMIC_MIN);
 
-  switch ( i_type ) {
-    case S32_TYPE: {
-      // assert all operands are S32_TYPE:
-      scalar_type = pI->get_scalar_type();
-      for (std::list<int>::iterator scalar = scalar_type.begin(); scalar != scalar_type.end(); scalar++)
-      {
-        assert(*scalar == S32_TYPE);
-      }
-      assert(scalar_type.size() == 3);
-      scalar_type.clear();
-
-      switch (op_code)
-      {
-        case VMAX:
-          data.s32 = MY_MAX_I(ta.s32, tb.s32);
-          break;
-        case VMIN:
-          data.s32 = MY_MIN_I(ta.s32, tb.s32);
-          break;
-        default:
-          assert(0);
-      }
-
-      switch (*option)
-      {
-        case ATOMIC_MAX:
-          data.s32 = MY_MAX_I(data.s32, c.s32);
-        break;
-        case ATOMIC_MIN:
-          data.s32 = MY_MIN_I(data.s32, c.s32);
-        break;
-        default:
-          assert(0); // not yet implemented
-      }
-      break;
-
+  switch (i_type) {
+  case S32_TYPE: {
+    // assert all operands are S32_TYPE:
+    scalar_type = pI->get_scalar_type();
+    for (std::list<int>::iterator scalar = scalar_type.begin();
+         scalar != scalar_type.end(); scalar++) {
+      assert(*scalar == S32_TYPE);
     }
+    assert(scalar_type.size() == 3);
+    scalar_type.clear();
+
+    switch (op_code) {
+    case VMAX:
+      data.s32 = MY_MAX_I(ta.s32, tb.s32);
+      break;
+    case VMIN:
+      data.s32 = MY_MIN_I(ta.s32, tb.s32);
+      break;
+    default:
+      assert(0);
+    }
+
+    switch (*option) {
+    case ATOMIC_MAX:
+      data.s32 = MY_MAX_I(data.s32, c.s32);
+      break;
+    case ATOMIC_MIN:
+      data.s32 = MY_MIN_I(data.s32, c.s32);
+      break;
     default:
       assert(0); // not yet implemented
+    }
+    break;
+  }
+  default:
+    assert(0); // not yet implemented
   }
 
   thread->set_operand_value(dst, data, i_type, thread, pI);
 
   return;
 }
-

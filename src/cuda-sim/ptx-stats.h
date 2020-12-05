@@ -33,7 +33,7 @@
 #ifdef __cplusplus
 // stat collection interface to cuda-sim
 class ptx_instruction;
-void ptx_file_line_stats_add_exec_count(const ptx_instruction* pInsn);
+void ptx_file_line_stats_add_exec_count(const ptx_instruction *pInsn);
 #endif
 
 // stat collection interface to gpgpu-sim
@@ -43,14 +43,14 @@ void ptx_file_line_stats_commit_exposed_latency(int sc_id, int exposed_latency);
 
 class gpgpu_context;
 class ptx_stats {
- public:
-  ptx_stats(gpgpu_context* ctx) {
+public:
+  ptx_stats(gpgpu_context *ctx) {
     ptx_line_stats_filename = NULL;
     gpgpu_ctx = ctx;
   }
-  char* ptx_line_stats_filename;
+  char *ptx_line_stats_filename;
   bool enable_ptx_file_line_stats;
-  gpgpu_context* gpgpu_ctx;
+  gpgpu_context *gpgpu_ctx;
   // set options
   void ptx_file_line_stats_options(option_parser_t opp);
 

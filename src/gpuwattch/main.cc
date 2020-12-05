@@ -28,13 +28,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.”
  *
  ***************************************************************************/
-#include <iostream>
 #include "XML_Parse.h"
 #include "globalvar.h"
 #include "io.h"
 #include "processor.h"
 #include "version.h"
 #include "xmlParser.h"
+#include <iostream>
 
 using namespace std;
 

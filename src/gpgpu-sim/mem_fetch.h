@@ -29,21 +29,21 @@
 #ifndef MEM_FETCH_H
 #define MEM_FETCH_H
 
-#include <bitset>
 #include "../abstract_hardware_model.h"
 #include "addrdec.h"
+#include <bitset>
 
 enum mf_type {
   READ_REQUEST = 0,
   WRITE_REQUEST,
-  READ_REPLY,  // send to shader
+  READ_REPLY, // send to shader
   WRITE_ACK
 };
 
 #define MF_TUP_BEGIN(X) enum X {
 #define MF_TUP(X) X
-#define MF_TUP_END(X) \
-  }                   \
+#define MF_TUP_END(X)                                                          \
+  }                                                                            \
   ;
 #include "mem_fetch_status.tup"
 #undef MF_TUP_BEGIN
@@ -52,7 +52,7 @@ enum mf_type {
 
 class memory_config;
 class mem_fetch {
- public:
+public:
   mem_fetch(const mem_access_t &access, const warp_inst_t *inst,
             unsigned ctrl_size, unsigned wid, unsigned sid, unsigned tpc,
             const memory_config *config, unsigned long long cycle,
@@ -101,14 +101,11 @@ class mem_fetch {
   bool isatomic() const;
 
   /* Track if L2 saw these accesses before */
-  void set_accessed_prior(bool acc_p){ m_was_accessed_prior =  acc_p;}
-  bool was_accessed_prior(){ return m_was_accessed_prior; }
+  void set_accessed_prior(bool acc_p) { m_was_accessed_prior = acc_p; }
+  bool was_accessed_prior() { return m_was_accessed_prior; }
 
-  void set_bypass_predict(bool bp){ bypass_predict = bp;}
-  bool get_bypass_predict(){ return bypass_predict; }
-
-
-
+  void set_bypass_predict(bool bp) { bypass_predict = bp; }
+  bool get_bypass_predict() { return bypass_predict; }
 
   void set_return_timestamp(unsigned t) { m_timestamp2 = t; }
   void set_icnt_receive_time(unsigned t) { m_icnt_receive_time = t; }
@@ -138,7 +135,7 @@ class mem_fetch {
   mem_fetch *get_original_mf() { return original_mf; }
   mem_fetch *get_original_wr_mf() { return original_wr_mf; }
 
- private:
+private:
   // request source information
   unsigned m_request_uid;
   unsigned m_sid;
@@ -151,24 +148,23 @@ class mem_fetch {
 
   // request type, address, size, mask
   mem_access_t m_access;
-  unsigned m_data_size;  // how much data is being written
-  unsigned
-      m_ctrl_size;  // how big would all this meta data be in hardware (does not
-                    // necessarily match actual size of mem_fetch)
+  unsigned m_data_size; // how much data is being written
+  unsigned m_ctrl_size; // how big would all this meta data be in hardware (does
+                        // not necessarily match actual size of mem_fetch)
   new_addr_type
-      m_partition_addr;  // linear physical address *within* dram partition
-                         // (partition bank select bits squeezed out)
-  addrdec_t m_raw_addr;  // raw physical address (i.e., decoded DRAM
-                         // chip-row-bank-column address)
+      m_partition_addr; // linear physical address *within* dram partition
+                        // (partition bank select bits squeezed out)
+  addrdec_t m_raw_addr; // raw physical address (i.e., decoded DRAM
+                        // chip-row-bank-column address)
   enum mf_type m_type;
 
   // statistics
   unsigned
-      m_timestamp;  // set to gpu_sim_cycle+gpu_tot_sim_cycle at struct creation
-  unsigned m_timestamp2;  // set to gpu_sim_cycle+gpu_tot_sim_cycle when pushed
-                          // onto icnt to shader; only used for reads
-  unsigned m_icnt_receive_time;  // set to gpu_sim_cycle + interconnect_latency
-                                 // when fixed icnt latency mode is enabled
+      m_timestamp; // set to gpu_sim_cycle+gpu_tot_sim_cycle at struct creation
+  unsigned m_timestamp2; // set to gpu_sim_cycle+gpu_tot_sim_cycle when pushed
+                         // onto icnt to shader; only used for reads
+  unsigned m_icnt_receive_time; // set to gpu_sim_cycle + interconnect_latency
+                                // when fixed icnt latency mode is enabled
 
   // requesting instruction (put last so mem_fetch prints nicer in gdb)
   warp_inst_t m_inst;
@@ -182,11 +178,11 @@ class mem_fetch {
   bool bypass_predict;
 
   mem_fetch
-      *original_mf;  // this pointer is set up when a request is divided into
-                     // sector requests at L2 cache (if the req size > L2 sector
-                     // size), so the pointer refers to the original request
-  mem_fetch *original_wr_mf;  // this pointer refers to the original write req,
-                              // when fetch-on-write policy is used
+      *original_mf; // this pointer is set up when a request is divided into
+                    // sector requests at L2 cache (if the req size > L2 sector
+                    // size), so the pointer refers to the original request
+  mem_fetch *original_wr_mf; // this pointer refers to the original write req,
+                             // when fetch-on-write policy is used
 };
 
 #endif

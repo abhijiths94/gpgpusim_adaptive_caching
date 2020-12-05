@@ -1,10 +1,10 @@
 // author: Mahmoud Khairy, (Purdue Univ)
 // email: abdallm@purdue.edu
 
+#include "../option_parser.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../option_parser.h"
 
 #ifndef HASHING_H
 #define HASHING_H

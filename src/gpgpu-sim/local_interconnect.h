@@ -50,14 +50,14 @@ struct inct_config {
 };
 
 class xbar_router {
- public:
+public:
   xbar_router(unsigned router_id, enum Interconnect_type m_type,
               unsigned n_shader, unsigned n_mem,
-              const struct inct_config& m_localinct_config);
+              const struct inct_config &m_localinct_config);
   ~xbar_router();
-  void Push(unsigned input_deviceID, unsigned output_deviceID, void* data,
+  void Push(unsigned input_deviceID, unsigned output_deviceID, void *data,
             unsigned int size);
-  void* Pop(unsigned ouput_deviceID);
+  void *Pop(unsigned ouput_deviceID);
   void Advance();
 
   bool Busy() const;
@@ -77,24 +77,24 @@ class xbar_router {
   unsigned long long in_buffer_util;
   unsigned long long packets_num;
 
- private:
+private:
   void iSLIP_Advance();
   void RR_Advance();
 
   struct Packet {
-    Packet(void* m_data, unsigned m_output_deviceID) {
+    Packet(void *m_data, unsigned m_output_deviceID) {
       data = m_data;
       output_deviceID = m_output_deviceID;
     }
-    void* data;
+    void *data;
     unsigned output_deviceID;
   };
-  vector<queue<Packet> > in_buffers;
-  vector<queue<Packet> > out_buffers;
+  vector<queue<Packet>> in_buffers;
+  vector<queue<Packet>> out_buffers;
   unsigned _n_shader, _n_mem, total_nodes;
   unsigned in_buffer_limit, out_buffer_limit;
-  vector<unsigned> next_node;  // used for iSLIP arbit
-  unsigned next_node_id;       // used for RR arbit
+  vector<unsigned> next_node; // used for iSLIP arbit
+  unsigned next_node_id;      // used for RR arbit
   unsigned m_id;
   enum Interconnect_type router_type;
   unsigned active_in_buffers, active_out_buffers;
@@ -108,17 +108,17 @@ class xbar_router {
 };
 
 class LocalInterconnect {
- public:
-  LocalInterconnect(const struct inct_config& m_localinct_config);
+public:
+  LocalInterconnect(const struct inct_config &m_localinct_config);
   ~LocalInterconnect();
-  static LocalInterconnect* New(const struct inct_config& m_inct_config);
+  static LocalInterconnect *New(const struct inct_config &m_inct_config);
   void CreateInterconnect(unsigned n_shader, unsigned n_mem);
 
   // node side functions
   void Init();
-  void Push(unsigned input_deviceID, unsigned output_deviceID, void* data,
+  void Push(unsigned input_deviceID, unsigned output_deviceID, void *data,
             unsigned int size);
-  void* Pop(unsigned ouput_deviceID);
+  void *Pop(unsigned ouput_deviceID);
   void Advance();
   bool Busy() const;
   bool HasBuffer(unsigned deviceID, unsigned int size) const;
@@ -126,14 +126,14 @@ class LocalInterconnect {
   void DisplayOverallStats() const;
   unsigned GetFlitSize() const;
 
-  void DisplayState(FILE* fp) const;
+  void DisplayState(FILE *fp) const;
 
- protected:
-  const inct_config& m_inct_config;
+protected:
+  const inct_config &m_inct_config;
 
   unsigned n_shader, n_mem;
   unsigned n_subnets;
-  vector<xbar_router*> net;
+  vector<xbar_router *> net;
 };
 
 #endif

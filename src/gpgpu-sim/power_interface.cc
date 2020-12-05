@@ -49,7 +49,7 @@ void mcpat_cycle(const gpgpu_sim_config &config,
                  unsigned inst) {
   static bool mcpat_init = true;
 
-  if (mcpat_init) {  // If first cycle, don't have any power numbers yet
+  if (mcpat_init) { // If first cycle, don't have any power numbers yet
     mcpat_init = false;
     return;
   }
@@ -124,15 +124,15 @@ void mcpat_cycle(const gpgpu_sim_config &config,
 
     double n_icnt_simt_to_mem =
         (double)
-            power_stats->get_icnt_simt_to_mem();  // # flits from SIMT clusters
-                                                  // to memory partitions
+            power_stats->get_icnt_simt_to_mem(); // # flits from SIMT clusters
+                                                 // to memory partitions
     double n_icnt_mem_to_simt =
         (double)
-            power_stats->get_icnt_mem_to_simt();  // # flits from memory
-                                                  // partitions to SIMT clusters
+            power_stats->get_icnt_mem_to_simt(); // # flits from memory
+                                                 // partitions to SIMT clusters
     wrapper->set_NoC_power(
         n_icnt_mem_to_simt,
-        n_icnt_simt_to_mem);  // Number of flits traversing the interconnect
+        n_icnt_simt_to_mem); // Number of flits traversing the interconnect
 
     wrapper->compute();
 

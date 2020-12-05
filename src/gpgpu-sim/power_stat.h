@@ -29,28 +29,27 @@
 #ifndef POWER_STAT_H
 #define POWER_STAT_H
 
-#include <stdio.h>
-#include <zlib.h>
 #include "gpu-sim.h"
 #include "mem_latency_stat.h"
+#include <stdio.h>
+#include <zlib.h>
 
 typedef enum _stat_idx {
-  CURRENT_STAT_IDX = 0,  // Current activity count
-  PREV_STAT_IDX,         // Previous sample activity count
-  NUM_STAT_IDX           // Total number of samples
+  CURRENT_STAT_IDX = 0, // Current activity count
+  PREV_STAT_IDX,        // Previous sample activity count
+  NUM_STAT_IDX          // Total number of samples
 } stat_idx;
 
 struct shader_core_power_stats_pod {
   // [CURRENT_STAT_IDX] = CURRENT_STAT_IDX stat, [PREV_STAT_IDX] = last reading
   float *m_pipeline_duty_cycle[NUM_STAT_IDX];
-  unsigned *m_num_decoded_insn[NUM_STAT_IDX];  // number of instructions
-                                               // committed by this shader core
+  unsigned *m_num_decoded_insn[NUM_STAT_IDX];   // number of instructions
+                                                // committed by this shader core
+  unsigned *m_num_FPdecoded_insn[NUM_STAT_IDX]; // number of instructions
+                                                // committed by this shader core
   unsigned
-      *m_num_FPdecoded_insn[NUM_STAT_IDX];  // number of instructions committed
+      *m_num_INTdecoded_insn[NUM_STAT_IDX]; // number of instructions committed
                                             // by this shader core
-  unsigned
-      *m_num_INTdecoded_insn[NUM_STAT_IDX];  // number of instructions committed
-                                             // by this shader core
   unsigned *m_num_storequeued_insn[NUM_STAT_IDX];
   unsigned *m_num_loadqueued_insn[NUM_STAT_IDX];
   unsigned *m_num_ialu_acesses[NUM_STAT_IDX];
@@ -77,7 +76,7 @@ struct shader_core_power_stats_pod {
 };
 
 class power_core_stat_t : public shader_core_power_stats_pod {
- public:
+public:
   power_core_stat_t(const shader_core_config *shader_config,
                     shader_core_stats *core_stats);
   void visualizer_print(gzFile visualizer_file);
@@ -85,7 +84,7 @@ class power_core_stat_t : public shader_core_power_stats_pod {
   void init();
   void save_stats();
 
- private:
+private:
   shader_core_stats *m_core_stats;
   const shader_core_config *m_config;
   float average_duty_cycle;
@@ -93,10 +92,10 @@ class power_core_stat_t : public shader_core_power_stats_pod {
 
 struct mem_power_stats_pod {
   // [CURRENT_STAT_IDX] = CURRENT_STAT_IDX stat, [PREV_STAT_IDX] = last reading
-  class cache_stats core_cache_stats[NUM_STAT_IDX];  // Total core stats
-  class cache_stats l2_cache_stats[NUM_STAT_IDX];    // Total L2 partition stats
+  class cache_stats core_cache_stats[NUM_STAT_IDX]; // Total core stats
+  class cache_stats l2_cache_stats[NUM_STAT_IDX];   // Total L2 partition stats
 
-  unsigned *shmem_read_access[NUM_STAT_IDX];  // Shared memory access
+  unsigned *shmem_read_access[NUM_STAT_IDX]; // Shared memory access
 
   // Low level DRAM stats
   unsigned *n_cmd[NUM_STAT_IDX];
@@ -114,7 +113,7 @@ struct mem_power_stats_pod {
 };
 
 class power_mem_stat_t : public mem_power_stats_pod {
- public:
+public:
   power_mem_stat_t(const memory_config *mem_config,
                    const shader_core_config *shdr_config,
                    memory_stats_t *mem_stats, shader_core_stats *shdr_stats);
@@ -123,7 +122,7 @@ class power_mem_stat_t : public mem_power_stats_pod {
   void init();
   void save_stats();
 
- private:
+private:
   memory_stats_t *m_mem_stats;
   shader_core_stats *m_core_stats;
   const memory_config *m_config;
@@ -131,7 +130,7 @@ class power_mem_stat_t : public mem_power_stats_pod {
 };
 
 class power_stat_t {
- public:
+public:
   power_stat_t(const shader_core_config *shader_config,
                float *average_pipeline_duty_cycle, float *active_sms,
                shader_core_stats *shader_stats, const memory_config *mem_config,

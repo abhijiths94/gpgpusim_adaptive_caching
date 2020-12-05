@@ -33,9 +33,9 @@
 #include "gpgpu-sim/gpu-sim.h"
 #include "gpgpu-sim/shader.h"
 
+#include <map>
 #include <stdio.h>
 #include <string.h>
-#include <map>
 
 void gpgpu_sim::hit_watchpoint(unsigned watchpoint_num, ptx_thread_info *thd,
                                const ptx_instruction *pI) {
@@ -53,7 +53,8 @@ void gpgpu_sim::gpgpu_debug() {
 
   /// if single stepping, go to interactive debugger
 
-  if (single_step) done = false;
+  if (single_step)
+    done = false;
 
   /// check if we've reached a breakpoint
   const ptx_thread_info *brk_thd = NULL;
@@ -69,10 +70,9 @@ void gpgpu_sim::gpgpu_debug() {
       m_global_mem->read(addr, 4, &new_value);
       if (new_value != b.get_value() ||
           g_watchpoint_hits.find(num) != g_watchpoint_hits.end()) {
-        printf(
-            "GPGPU-Sim PTX DBG: watch point %u triggered (old value=%x, new "
-            "value=%x)\n",
-            num, b.get_value(), new_value);
+        printf("GPGPU-Sim PTX DBG: watch point %u triggered (old value=%x, new "
+               "value=%x)\n",
+               num, b.get_value(), new_value);
         std::map<unsigned, watchpoint_event>::iterator w =
             g_watchpoint_hits.find(num);
         if (w == g_watchpoint_hits.end())
@@ -81,10 +81,10 @@ void gpgpu_sim::gpgpu_debug() {
           watchpoint_event wa = w->second;
           brk_thd = wa.thread();
           brk_inst = wa.inst();
-          printf(
-              "GPGPU-Sim PTX DBG: modified by thread uid=%u, sid=%u, "
-              "hwtid=%u\n",
-              brk_thd->get_uid(), brk_thd->get_hw_sid(), brk_thd->get_hw_tid());
+          printf("GPGPU-Sim PTX DBG: modified by thread uid=%u, sid=%u, "
+                 "hwtid=%u\n",
+                 brk_thd->get_uid(), brk_thd->get_hw_sid(),
+                 brk_thd->get_hw_tid());
           printf("GPGPU-Sim PTX DBG: ");
           brk_inst->print_insn(stdout);
           printf("\n");
@@ -115,7 +115,8 @@ void gpgpu_sim::gpgpu_debug() {
     }
   }
 
-  if (done) assert(g_watchpoint_hits.empty());
+  if (done)
+    assert(g_watchpoint_hits.empty());
 
   /// enter interactive debugger loop
 
@@ -199,12 +200,10 @@ void gpgpu_sim::gpgpu_debug() {
       printf(
           "  c                           - continue simulation without single "
           "stepping\n");
-      printf(
-          "  l                           - list PTX around current "
-          "breakpoint\n");
-      printf(
-          "  dp <n>                      - display pipeline contents on SM "
-          "<n>\n");
+      printf("  l                           - list PTX around current "
+             "breakpoint\n");
+      printf("  dp <n>                      - display pipeline contents on SM "
+             "<n>\n");
       printf("  h                           - print this message\n");
     } else {
       printf("\ncommand not understood.\n");

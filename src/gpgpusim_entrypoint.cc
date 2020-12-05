@@ -140,7 +140,6 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
 
     } while (active && !ctx->the_gpgpusim->g_sim_done);
 
-    
     if (g_debug_execution >= 3) {
       printf("GPGPU-Sim: ** STOP simulation thread (no work) **\n");
       fflush(stdout);
@@ -151,21 +150,18 @@ void *gpgpu_sim_thread_concurrent(void *ctx_ptr) {
       ctx->print_simulation_time();
     }
 
-
     pthread_mutex_lock(&(ctx->the_gpgpusim->g_sim_lock));
     ctx->the_gpgpusim->g_sim_active = false;
     pthread_mutex_unlock(&(ctx->the_gpgpusim->g_sim_lock));
-    
+
   } while (!ctx->the_gpgpusim->g_sim_done);
-  
 
   printf("GPGPU-Sim: *** simulation thread exiting ***\n");
   fflush(stdout);
 
   if (ctx->the_gpgpusim->break_limit) {
-    printf(
-        "GPGPU-Sim: ** break due to reaching the maximum cycles (or "
-        "instructions) **\n");
+    printf("GPGPU-Sim: ** break due to reaching the maximum cycles (or "
+           "instructions) **\n");
     exit(1);
   }
 
@@ -201,7 +197,7 @@ void gpgpu_context::exit_simulation() {
 }
 
 gpgpu_sim *gpgpu_context::gpgpu_ptx_sim_init_perf() {
-  
+
   fflush(stdout);
   srand(1);
   print_splash();
@@ -215,12 +211,11 @@ gpgpu_sim *gpgpu_context::gpgpu_ptx_sim_init_perf() {
   icnt_reg_options(opp);
   the_gpgpusim->g_the_gpu_config = new gpgpu_sim_config(this);
   the_gpgpusim->g_the_gpu_config->reg_options(
-      opp);  // register GPU microrachitecture options
+      opp); // register GPU microrachitecture options
 
-  option_parser_cmdline(opp, sg_argc, sg_argv);  // parse configuration options
+  option_parser_cmdline(opp, sg_argc, sg_argv); // parse configuration options
   fprintf(stdout, "GPGPU-Sim: Configuration options:\n\n");
   option_parser_print(opp, stdout);
-
 
   // Set the Numeric locale to a standard locale where a decimal point is a
   // "dot" not a "comma" so it does the parsing correctly independent of the

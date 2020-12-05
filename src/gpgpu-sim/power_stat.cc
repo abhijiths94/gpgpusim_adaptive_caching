@@ -56,7 +56,7 @@ power_mem_stat_t::power_mem_stat_t(const memory_config *mem_config,
 
 void power_mem_stat_t::init() {
   shmem_read_access[CURRENT_STAT_IDX] =
-      m_core_stats->gpgpu_n_shmem_bank_access;  // Shared memory access
+      m_core_stats->gpgpu_n_shmem_bank_access; // Shared memory access
   shmem_read_access[PREV_STAT_IDX] =
       (unsigned *)calloc(m_core_config->num_shader(), sizeof(unsigned));
 
@@ -75,9 +75,9 @@ void power_mem_stat_t::init() {
 
     // Interconnect stats
     n_mem_to_simt[i] = (long *)calloc(m_core_config->n_simt_clusters,
-                                      sizeof(long));  // Counted at SM
+                                      sizeof(long)); // Counted at SM
     n_simt_to_mem[i] = (long *)calloc(m_core_config->n_simt_clusters,
-                                      sizeof(long));  // Counted at SM
+                                      sizeof(long)); // Counted at SM
   }
 }
 
@@ -87,7 +87,7 @@ void power_mem_stat_t::save_stats() {
 
   for (unsigned i = 0; i < m_core_config->num_shader(); ++i) {
     shmem_read_access[PREV_STAT_IDX][i] =
-        shmem_read_access[CURRENT_STAT_IDX][i];  // Shared memory access
+        shmem_read_access[CURRENT_STAT_IDX][i]; // Shared memory access
   }
 
   for (unsigned i = 0; i < m_config->m_n_mem; ++i) {
@@ -103,9 +103,9 @@ void power_mem_stat_t::save_stats() {
 
   for (unsigned i = 0; i < m_core_config->n_simt_clusters; i++) {
     n_simt_to_mem[PREV_STAT_IDX][i] =
-        n_simt_to_mem[CURRENT_STAT_IDX][i];  // Interconnect
+        n_simt_to_mem[CURRENT_STAT_IDX][i]; // Interconnect
     n_mem_to_simt[PREV_STAT_IDX][i] =
-        n_mem_to_simt[CURRENT_STAT_IDX][i];  // Interconnect
+        n_mem_to_simt[CURRENT_STAT_IDX][i]; // Interconnect
   }
 }
 

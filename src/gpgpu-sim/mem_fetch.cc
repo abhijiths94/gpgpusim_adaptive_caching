@@ -32,23 +32,32 @@
 #include "shader.h"
 #include "visualizer.h"
 
-
-char* conv_acc_type(unsigned int mt)
-{
-  switch(mt)
-  {
-    case 0: return "GLOBAL_ACC_R";
-    case 1: return "LOCAL_ACC_R";
-    case 2: return "CONST_ACC_R";
-    case 3: return "TEXTURE_ACC_R";
-    case 4: return "GLOBAL_ACC_W";
-    case 5: return "LOCAL_ACC_W";
-    case 6: return "L1_WRBK_ACC";
-    case 7: return "L2_WRBK_ACC";
-    case 8: return "INST_ACC_R";
-    case 9: return "L1_WR_ALLOC_R";
-    case 10: return "L2_WR_ALLOC_R";
-    default:  return "INVALID";
+char *conv_acc_type(unsigned int mt) {
+  switch (mt) {
+  case 0:
+    return "GLOBAL_ACC_R";
+  case 1:
+    return "LOCAL_ACC_R";
+  case 2:
+    return "CONST_ACC_R";
+  case 3:
+    return "TEXTURE_ACC_R";
+  case 4:
+    return "GLOBAL_ACC_W";
+  case 5:
+    return "LOCAL_ACC_W";
+  case 6:
+    return "L1_WRBK_ACC";
+  case 7:
+    return "L2_WRBK_ACC";
+  case 8:
+    return "INST_ACC_R";
+  case 9:
+    return "L1_WR_ALLOC_R";
+  case 10:
+    return "L2_WR_ALLOC_R";
+  default:
+    return "INVALID";
   }
 }
 unsigned mem_fetch::sm_next_mf_request_uid = 1;
@@ -61,7 +70,8 @@ mem_fetch::mem_fetch(const mem_access_t &access, const warp_inst_t *inst,
     : m_access(access)
 
 {
-  DBPRINTF(stdout, "ABSO : MF request created ..... !!!! %s 0x%llX\n ", conv_acc_type(access.get_type()), access.get_addr());
+  DBPRINTF(stdout, "ABSO : MF request created ..... !!!! %s 0x%llX\n ",
+           conv_acc_type(access.get_type()), access.get_addr());
   m_request_uid = sm_next_mf_request_uid++;
   m_access = access;
   if (inst) {
@@ -94,12 +104,12 @@ mem_fetch::mem_fetch(const mem_access_t &access, const warp_inst_t *inst,
   }
 }
 
-mem_fetch::~mem_fetch() { m_status = MEM_FETCH_DELETED;}
+mem_fetch::~mem_fetch() { m_status = MEM_FETCH_DELETED; }
 
 #define MF_TUP_BEGIN(X) static const char *Status_str[] = {
 #define MF_TUP(X) #X
-#define MF_TUP_END(X) \
-  }                   \
+#define MF_TUP_END(X)                                                          \
+  }                                                                            \
   ;
 #include "mem_fetch_status.tup"
 #undef MF_TUP_BEGIN
@@ -131,19 +141,22 @@ void mem_fetch::set_status(enum mem_fetch_status status,
 }
 
 bool mem_fetch::isatomic() const {
-  if (m_inst.empty()) return false;
+  if (m_inst.empty())
+    return false;
   return m_inst.isatomic();
 }
 
 void mem_fetch::do_atomic() { m_inst.do_atomic(m_access.get_warp_mask()); }
 
 bool mem_fetch::istexture() const {
-  if (m_inst.empty()) return false;
+  if (m_inst.empty())
+    return false;
   return m_inst.space.get_type() == tex_space;
 }
 
 bool mem_fetch::isconst() const {
-  if (m_inst.empty()) return false;
+  if (m_inst.empty())
+    return false;
   return (m_inst.space.get_type() == const_space) ||
          (m_inst.space.get_type() == param_space_kernel);
 }

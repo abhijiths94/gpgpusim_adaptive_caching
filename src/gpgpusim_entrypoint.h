@@ -29,16 +29,16 @@
 #ifndef GPGPUSIM_ENTRYPOINT_H_INCLUDED
 #define GPGPUSIM_ENTRYPOINT_H_INCLUDED
 
+#include "abstract_hardware_model.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <time.h>
-#include "abstract_hardware_model.h"
 
 // extern time_t g_simulation_starttime;
 class gpgpu_context;
 
 class GPGPUsim_ctx {
- public:
+public:
   GPGPUsim_ctx(gpgpu_context *ctx) {
     g_sim_active = false;
     g_sim_done = true;

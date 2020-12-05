@@ -40,19 +40,18 @@
 #endif
 
 #include <assert.h>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <map>
 #include <string>
 
 typedef address_type mem_addr_t;
 
 #define MEM_BLOCK_SIZE (4 * 1024)
 
-template <unsigned BSIZE>
-class mem_storage {
- public:
+template <unsigned BSIZE> class mem_storage {
+public:
   mem_storage(const mem_storage &another) {
     m_data = (unsigned char *)calloc(1, BSIZE);
     memcpy(m_data, another.m_data, BSIZE);
@@ -83,7 +82,7 @@ class mem_storage {
     fflush(fout);
   }
 
- private:
+private:
   unsigned m_nbytes;
   unsigned char *m_data;
 };
@@ -92,7 +91,7 @@ class ptx_thread_info;
 class ptx_instruction;
 
 class memory_space {
- public:
+public:
   virtual ~memory_space() {}
   virtual void write(mem_addr_t addr, size_t length, const void *data,
                      ptx_thread_info *thd, const ptx_instruction *pI) = 0;
@@ -103,9 +102,8 @@ class memory_space {
   virtual void set_watch(addr_t addr, unsigned watchpoint) = 0;
 };
 
-template <unsigned BSIZE>
-class memory_space_impl : public memory_space {
- public:
+template <unsigned BSIZE> class memory_space_impl : public memory_space {
+public:
   memory_space_impl(std::string name, unsigned hash_size);
 
   virtual void write(mem_addr_t addr, size_t length, const void *data,
@@ -117,12 +115,12 @@ class memory_space_impl : public memory_space {
 
   virtual void set_watch(addr_t addr, unsigned watchpoint);
 
- private:
+private:
   void read_single_block(mem_addr_t blk_idx, mem_addr_t addr, size_t length,
                          void *data) const;
   std::string m_name;
   unsigned m_log2_block_size;
-  typedef mem_map<mem_addr_t, mem_storage<BSIZE> > map_t;
+  typedef mem_map<mem_addr_t, mem_storage<BSIZE>> map_t;
   map_t m_data;
   std::map<unsigned, mem_addr_t> m_watchpoints;
 };

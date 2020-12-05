@@ -28,15 +28,15 @@
 
 #include "option_parser.h"
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <list>
 #include <map>
 #include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <string>
 #include <vector>
 
@@ -44,7 +44,7 @@ using namespace std;
 
 // A generic option registry regardless of data type
 class OptionRegistryInterface {
- public:
+public:
   OptionRegistryInterface(const string optionName, const string optionDesc)
       : m_optionName(optionName), m_optionDesc(optionDesc), m_isParsed(false) {}
 
@@ -58,17 +58,16 @@ class OptionRegistryInterface {
   virtual bool isFlag() = 0;
   virtual bool assignDefault(const char *str) = 0;
 
- protected:
+protected:
   string m_optionName;
   string m_optionDesc;
-  bool m_isParsed;  // true if the target variable has been updated by
-                    // fromString()
+  bool m_isParsed; // true if the target variable has been updated by
+                   // fromString()
 };
 
 // Template for option registry - class T = specify data type of the option
-template <class T>
-class OptionRegistry : public OptionRegistryInterface {
- public:
+template <class T> class OptionRegistry : public OptionRegistryInterface {
+public:
   OptionRegistry(const string name, const string desc, T &variable)
       : OptionRegistryInterface(name, desc), m_variable(variable) {}
 
@@ -107,21 +106,19 @@ class OptionRegistry : public OptionRegistryInterface {
 
   operator T() { return m_variable; }
 
- private:
+private:
   T &m_variable;
 };
 
 // specialized parser for string-type options
-template <>
-bool OptionRegistry<string>::fromString(const string str) {
+template <> bool OptionRegistry<string>::fromString(const string str) {
   m_variable = str;
   m_isParsed = true;
   return true;
 }
 
 // specialized parser for c-string type options
-template <>
-bool OptionRegistry<char *>::fromString(const string str) {
+template <> bool OptionRegistry<char *>::fromString(const string str) {
   m_variable = new char[str.size() + 1];
   strcpy(m_variable, str.c_str());
   m_isParsed = true;
@@ -129,17 +126,15 @@ bool OptionRegistry<char *>::fromString(const string str) {
 }
 
 // specialized default assignment for c-string type option to allow NULL default
-template <>
-bool OptionRegistry<char *>::assignDefault(const char *str) {
+template <> bool OptionRegistry<char *>::assignDefault(const char *str) {
   m_variable = const_cast<char *>(
-      str);  // c-string options are not meant to be edited anyway
+      str); // c-string options are not meant to be edited anyway
   m_isParsed = true;
   return true;
 }
 
 // specialized default assignment for c-string type option to allow NULL default
-template <>
-string OptionRegistry<char *>::toString() {
+template <> string OptionRegistry<char *>::toString() {
   stringstream ss;
   if (m_variable != NULL) {
     ss << m_variable;
@@ -150,8 +145,7 @@ string OptionRegistry<char *>::toString() {
 }
 
 // specialized parser for boolean options
-template <>
-bool OptionRegistry<bool>::fromString(const string str) {
+template <> bool OptionRegistry<bool>::fromString(const string str) {
   int value = 1;
   bool parsed = true;
   stringstream ss(str);
@@ -163,22 +157,19 @@ bool OptionRegistry<bool>::fromString(const string str) {
   }
   assert(value == 0 or
          value ==
-             1);  // sanity check for boolean options (it can only be 1 or 0)
+             1); // sanity check for boolean options (it can only be 1 or 0)
   m_variable = (value != 0);
   m_isParsed = true;
   return parsed;
 }
 
 // specializing a flag query function to identify boolean option
-template <>
-bool OptionRegistry<bool>::isFlag() {
-  return true;
-}
+template <> bool OptionRegistry<bool>::isFlag() { return true; }
 
 // class holding a collection of options and parse them from command
 // line/configfile
 class OptionParser {
- public:
+public:
   OptionParser() {}
   ~OptionParser() {
     OptionCollection::iterator i_option;
@@ -224,9 +215,8 @@ class OptionParser {
         optionFound = true;
       } else if (string(argv[i]) == "-config") {
         if (i + 1 >= argc) {
-          fprintf(stderr,
-                  "\n\nGPGPU-Sim ** ERROR: Missing filename for option "
-                  "'-config'.\n");
+          fprintf(stderr, "\n\nGPGPU-Sim ** ERROR: Missing filename for option "
+                          "'-config'.\n");
           exit(1);
         }
 
@@ -294,7 +284,8 @@ class OptionParser {
       string argNew;
       args >> argNew;
 
-      if (argNew.size() == 0) continue;  // this is probably the last token
+      if (argNew.size() == 0)
+        continue; // this is probably the last token
 
       if (argNew[0] == '"') {
         while (args.good() && argNew[argNew.size() - 1] != '"') {
@@ -313,7 +304,8 @@ class OptionParser {
 
     // pass the string token into normal commandline parser
     char **targv = (char **)calloc(argv.size(), sizeof(char *));
-    for (unsigned k = 0; k < argv.size(); k++) targv[k] = argv[k];
+    for (unsigned k = 0; k < argv.size(); k++)
+      targv[k] = argv[k];
     ParseCommandLine(argv.size(), targv);
     free(targv);
     for (size_t i = 0; i < argv.size(); i++) {
@@ -339,7 +331,7 @@ class OptionParser {
     }
   }
 
- private:
+private:
   typedef list<OptionRegistryInterface *> OptionCollection;
   OptionCollection m_optionReg;
   typedef map<string, OptionRegistryInterface *> OptionMap;
@@ -363,42 +355,42 @@ void option_parser_register(option_parser_t opp, const char *name,
                             const char *desc, const char *defaultvalue) {
   OptionParser *p_opr = reinterpret_cast<OptionParser *>(opp);
   switch (type) {
-    case OPT_INT32:
-      p_opr->Register<int>(name, desc, *(int *)variable, defaultvalue);
-      break;
-    case OPT_UINT32:
-      p_opr->Register<unsigned int>(name, desc, *(unsigned int *)variable,
-                                    defaultvalue);
-      break;
-    case OPT_INT64:
-      p_opr->Register<long long>(name, desc, *(long long *)variable,
-                                 defaultvalue);
-      break;
-    case OPT_UINT64:
-      p_opr->Register<unsigned long long>(
-          name, desc, *(unsigned long long *)variable, defaultvalue);
-      break;
-    case OPT_BOOL:
-      p_opr->Register<bool>(name, desc, *(bool *)variable, defaultvalue);
-      break;
-    case OPT_FLOAT:
-      p_opr->Register<float>(name, desc, *(float *)variable, defaultvalue);
-      break;
-    case OPT_DOUBLE:
-      p_opr->Register<double>(name, desc, *(double *)variable, defaultvalue);
-      break;
-    case OPT_CHAR:
-      p_opr->Register<char>(name, desc, *(char *)variable, defaultvalue);
-      break;
-    case OPT_CSTR:
-      p_opr->Register<char *>(name, desc, *(char **)variable, defaultvalue);
-      break;
-    default:
-      fprintf(stderr,
-              "\n\nGPGPU-Sim ** ERROR: option data type (%d) not supported!\n",
-              type);
-      exit(1);
-      break;
+  case OPT_INT32:
+    p_opr->Register<int>(name, desc, *(int *)variable, defaultvalue);
+    break;
+  case OPT_UINT32:
+    p_opr->Register<unsigned int>(name, desc, *(unsigned int *)variable,
+                                  defaultvalue);
+    break;
+  case OPT_INT64:
+    p_opr->Register<long long>(name, desc, *(long long *)variable,
+                               defaultvalue);
+    break;
+  case OPT_UINT64:
+    p_opr->Register<unsigned long long>(
+        name, desc, *(unsigned long long *)variable, defaultvalue);
+    break;
+  case OPT_BOOL:
+    p_opr->Register<bool>(name, desc, *(bool *)variable, defaultvalue);
+    break;
+  case OPT_FLOAT:
+    p_opr->Register<float>(name, desc, *(float *)variable, defaultvalue);
+    break;
+  case OPT_DOUBLE:
+    p_opr->Register<double>(name, desc, *(double *)variable, defaultvalue);
+    break;
+  case OPT_CHAR:
+    p_opr->Register<char>(name, desc, *(char *)variable, defaultvalue);
+    break;
+  case OPT_CSTR:
+    p_opr->Register<char *>(name, desc, *(char **)variable, defaultvalue);
+    break;
+  default:
+    fprintf(stderr,
+            "\n\nGPGPU-Sim ** ERROR: option data type (%d) not supported!\n",
+            type);
+    exit(1);
+    break;
   }
 }
 
@@ -428,7 +420,7 @@ void option_parser_print(option_parser_t opp, FILE *fout) {
 #ifdef UNIT_TEST
 
 class testtype {
- public:
+public:
   int idata;
   float fdata;
   string sdata;

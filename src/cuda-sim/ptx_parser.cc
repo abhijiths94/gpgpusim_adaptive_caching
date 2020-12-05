@@ -31,8 +31,8 @@
 #include "ptx_ir.h"
 
 typedef void *yyscan_t;
-#include <stdarg.h>
 #include "ptx.tab.h"
+#include <stdarg.h>
 
 extern int ptx_get_lineno(yyscan_t yyscanner);
 extern YYSTYPE *ptx_get_lval(yyscan_t yyscanner);
@@ -48,13 +48,13 @@ void ptx_recognizer::set_ptx_warp_size(const struct core_config *warp_size) {
   g_shader_core_config = warp_size;
 }
 
-#define PTX_PARSE_DPRINTF(...)                                            \
-  if (g_debug_ir_generation) {                                            \
-    printf(" %s:%u => ", gpgpu_ctx->g_filename, ptx_get_lineno(scanner)); \
-    printf("   (%s:%u) ", __FILE__, __LINE__);                            \
-    printf(__VA_ARGS__);                                                  \
-    printf("\n");                                                         \
-    fflush(stdout);                                                       \
+#define PTX_PARSE_DPRINTF(...)                                                 \
+  if (g_debug_ir_generation) {                                                 \
+    printf(" %s:%u => ", gpgpu_ctx->g_filename, ptx_get_lineno(scanner));      \
+    printf("   (%s:%u) ", __FILE__, __LINE__);                                 \
+    printf(__VA_ARGS__);                                                       \
+    printf("\n");                                                              \
+    fflush(stdout);                                                            \
   }
 
 static std::map<unsigned, std::string> g_ptx_token_decode;
@@ -67,7 +67,8 @@ void ptx_recognizer::read_parser_environment_variables() {
   if (dbg_level && strlen(dbg_level)) {
     int debug_execution = 0;
     sscanf(dbg_level, "%d", &debug_execution);
-    if (debug_execution >= 30) g_debug_ir_generation = true;
+    if (debug_execution >= 30)
+      g_debug_ir_generation = true;
   }
 }
 
@@ -154,10 +155,10 @@ void ptx_recognizer::start_function(int entry_point) {
 }
 
 void ptx_recognizer::add_function_name(const char *name) {
-  PTX_PARSE_DPRINTF(
-      "add_function_name %s %s", name,
-      ((g_entry_point == 1) ? "(entrypoint)"
-                            : ((g_entry_point == 2) ? "(extern)" : "")));
+  PTX_PARSE_DPRINTF("add_function_name %s %s", name,
+                    ((g_entry_point == 1)
+                         ? "(entrypoint)"
+                         : ((g_entry_point == 2) ? "(extern)" : "")));
   bool prior_decl = g_global_symbol_table->add_function_decl(
       name, g_entry_point, &g_func_info, &g_current_symbol_table);
   if (g_add_identifier_cached__identifier) {
@@ -210,9 +211,9 @@ void ptx_recognizer::end_function() {
                     g_func_info->get_start_PC());
 }
 
-#define parse_error(msg, ...) \
+#define parse_error(msg, ...)                                                  \
   parse_error_impl(__FILE__, __LINE__, msg, ##__VA_ARGS__)
-#define parse_assert(cond, msg, ...) \
+#define parse_assert(cond, msg, ...)                                           \
   parse_assert_impl((cond), __FILE__, __LINE__, msg, ##__VA_ARGS__)
 
 void ptx_recognizer::parse_error_impl(const char *file, unsigned line,
@@ -239,7 +240,8 @@ void ptx_recognizer::parse_assert_impl(int test_value, const char *file,
   vsnprintf(buf, 1024, msg, ap);
   va_end(ap);
 
-  if (test_value == 0) parse_error_impl(file, line, msg);
+  if (test_value == 0)
+    parse_error_impl(file, line, msg);
 }
 
 void ptx_recognizer::set_return() {
@@ -249,14 +251,17 @@ void ptx_recognizer::set_return() {
   g_return_var = g_operands.front();
 }
 
-const ptx_instruction *ptx_recognizer::ptx_instruction_lookup(
-    const char *filename, unsigned linenumber) {
-  std::map<std::string, std::map<unsigned, const ptx_instruction *> >::iterator
+const ptx_instruction *
+ptx_recognizer::ptx_instruction_lookup(const char *filename,
+                                       unsigned linenumber) {
+  std::map<std::string, std::map<unsigned, const ptx_instruction *>>::iterator
       f = g_inst_lookup.find(filename);
-  if (f == g_inst_lookup.end()) return NULL;
+  if (f == g_inst_lookup.end())
+    return NULL;
   std::map<unsigned, const ptx_instruction *>::iterator l =
       f->second.find(linenumber);
-  if (l == f->second.end()) return NULL;
+  if (l == f->second.end())
+    return NULL;
   return l->second;
 }
 
@@ -291,7 +296,7 @@ void ptx_recognizer::set_variable_type() {
                "variable has no space specification");
   parse_assert(
       g_scalar_type_spec != -1,
-      "variable has no type information");  // need to extend for structs?
+      "variable has no type information"); // need to extend for structs?
   g_var_type = g_current_symbol_table->add_type(
       g_space_spec, g_scalar_type_spec, g_vector_spec, g_alignment_spec,
       g_extern_spec);
@@ -314,7 +319,7 @@ int pad_address(new_addr_type address, unsigned size, unsigned maxalign) {
   assert(size >= 0);
   assert(maxalign > 0);
   int alignto = maxalign;
-  if (size < maxalign && (size & (size - 1)) == 0) {  // size is a power of 2
+  if (size < maxalign && (size & (size - 1)) == 0) { // size is a power of 2
     alignto = size;
   }
   return alignto ? ((alignto - (address % alignto)) % alignto) : 0;
@@ -348,7 +353,8 @@ void ptx_recognizer::add_identifier(const char *identifier, int array_dim,
   if (duplicates) {
     symbol *s = g_current_symbol_table->lookup(identifier);
     g_last_symbol = s;
-    if (g_func_decl) return;
+    if (g_func_decl)
+      return;
     std::string msg = std::string(identifier) + " was declared previous at " +
                       s->decl_location() + " skipping new declaration";
     printf("GPGPU-Sim PTX: Warning %s\n", msg.c_str());
@@ -357,149 +363,146 @@ void ptx_recognizer::add_identifier(const char *identifier, int array_dim,
 
   assert(g_var_type != NULL);
   switch (array_ident) {
-    case ARRAY_IDENTIFIER:
-      type = g_current_symbol_table->get_array_type(type, array_dim);
-      num_bits = array_dim * num_bits;
-      break;
-    case ARRAY_IDENTIFIER_NO_DIM:
-      type = g_current_symbol_table->get_array_type(type, (unsigned)-1);
-      num_bits = 0;
-      break;
-    default:
-      break;
+  case ARRAY_IDENTIFIER:
+    type = g_current_symbol_table->get_array_type(type, array_dim);
+    num_bits = array_dim * num_bits;
+    break;
+  case ARRAY_IDENTIFIER_NO_DIM:
+    type = g_current_symbol_table->get_array_type(type, (unsigned)-1);
+    num_bits = 0;
+    break;
+  default:
+    break;
   }
   g_last_symbol = g_current_symbol_table->add_variable(
       identifier, type, num_bits / 8, gpgpu_ctx->g_filename,
       ptx_get_lineno(scanner));
   switch (ti.get_memory_space().get_type()) {
-    case reg_space: {
-      regnum = g_current_symbol_table->next_reg_num();
-      int arch_regnum = -1;
-      for (int d = 0; d < strlen(identifier); d++) {
-        if (isdigit(identifier[d])) {
-          sscanf(identifier + d, "%d", &arch_regnum);
-          break;
-        }
+  case reg_space: {
+    regnum = g_current_symbol_table->next_reg_num();
+    int arch_regnum = -1;
+    for (int d = 0; d < strlen(identifier); d++) {
+      if (isdigit(identifier[d])) {
+        sscanf(identifier + d, "%d", &arch_regnum);
+        break;
       }
-      if (strcmp(identifier, "%sp") == 0) {
-        arch_regnum = 0;
-      }
-      g_last_symbol->set_regno(regnum, arch_regnum);
-    } break;
-    case shared_space:
-      printf("GPGPU-Sim PTX: allocating shared region for \"%s\" ", identifier);
-      fflush(stdout);
-      assert((num_bits % 8) == 0);
-      addr = g_current_symbol_table->get_shared_next();
-      addr_pad = pad_address(addr, num_bits / 8, 128);
-      printf("from 0x%llx to 0x%llx (shared memory space)\n", addr + addr_pad,
-             addr + addr_pad + num_bits / 8);
-      fflush(stdout);
-      g_last_symbol->set_address(addr + addr_pad);
-      g_current_symbol_table->alloc_shared(num_bits / 8 + addr_pad);
-      break;
-    case sstarr_space:
-      printf("GPGPU-Sim PTX: allocating sstarr region for \"%s\" ", identifier);
-      fflush(stdout);
-      assert((num_bits % 8) == 0);
-      addr = g_current_symbol_table->get_sstarr_next();
-      addr_pad = pad_address(addr, num_bits / 8, 128);
-      printf("from 0x%llx to 0x%llx (sstarr memory space)\n", addr + addr_pad,
-             addr + addr_pad + num_bits / 8);
-      fflush(stdout);
-      g_last_symbol->set_address(addr + addr_pad);
-      g_current_symbol_table->alloc_sstarr(num_bits / 8 + addr_pad);
-      break;
-    case const_space:
-      if (array_ident == ARRAY_IDENTIFIER_NO_DIM) {
-        printf(
-            "GPGPU-Sim PTX: deferring allocation of constant region for \"%s\" "
-            "(need size information)\n",
-            identifier);
-      } else {
-        printf("GPGPU-Sim PTX: allocating constant region for \"%s\" ",
-               identifier);
-        fflush(stdout);
-        assert((num_bits % 8) == 0);
-        addr = g_current_symbol_table->get_global_next();
-        addr_pad = pad_address(addr, num_bits / 8, 128);
-        printf("from 0x%llx to 0x%llx (global memory space) %u\n",
-               addr + addr_pad, addr + addr_pad + num_bits / 8,
-               g_const_alloc++);
-        fflush(stdout);
-        g_last_symbol->set_address(addr + addr_pad);
-        g_current_symbol_table->alloc_global(num_bits / 8 + addr_pad);
-      }
-      if (g_current_symbol_table == g_global_symbol_table) {
-        gpgpu_ctx->func_sim->g_constants.insert(identifier);
-      }
-      assert(g_current_symbol_table != NULL);
-      g_sym_name_to_symbol_table[identifier] = g_current_symbol_table;
-      break;
-    case global_space:
-      printf("GPGPU-Sim PTX: allocating global region for \"%s\" ", identifier);
+    }
+    if (strcmp(identifier, "%sp") == 0) {
+      arch_regnum = 0;
+    }
+    g_last_symbol->set_regno(regnum, arch_regnum);
+  } break;
+  case shared_space:
+    printf("GPGPU-Sim PTX: allocating shared region for \"%s\" ", identifier);
+    fflush(stdout);
+    assert((num_bits % 8) == 0);
+    addr = g_current_symbol_table->get_shared_next();
+    addr_pad = pad_address(addr, num_bits / 8, 128);
+    printf("from 0x%llx to 0x%llx (shared memory space)\n", addr + addr_pad,
+           addr + addr_pad + num_bits / 8);
+    fflush(stdout);
+    g_last_symbol->set_address(addr + addr_pad);
+    g_current_symbol_table->alloc_shared(num_bits / 8 + addr_pad);
+    break;
+  case sstarr_space:
+    printf("GPGPU-Sim PTX: allocating sstarr region for \"%s\" ", identifier);
+    fflush(stdout);
+    assert((num_bits % 8) == 0);
+    addr = g_current_symbol_table->get_sstarr_next();
+    addr_pad = pad_address(addr, num_bits / 8, 128);
+    printf("from 0x%llx to 0x%llx (sstarr memory space)\n", addr + addr_pad,
+           addr + addr_pad + num_bits / 8);
+    fflush(stdout);
+    g_last_symbol->set_address(addr + addr_pad);
+    g_current_symbol_table->alloc_sstarr(num_bits / 8 + addr_pad);
+    break;
+  case const_space:
+    if (array_ident == ARRAY_IDENTIFIER_NO_DIM) {
+      printf(
+          "GPGPU-Sim PTX: deferring allocation of constant region for \"%s\" "
+          "(need size information)\n",
+          identifier);
+    } else {
+      printf("GPGPU-Sim PTX: allocating constant region for \"%s\" ",
+             identifier);
       fflush(stdout);
       assert((num_bits % 8) == 0);
       addr = g_current_symbol_table->get_global_next();
       addr_pad = pad_address(addr, num_bits / 8, 128);
-      printf("from 0x%llx to 0x%llx (global memory space)\n", addr + addr_pad,
-             addr + addr_pad + num_bits / 8);
+      printf("from 0x%llx to 0x%llx (global memory space) %u\n",
+             addr + addr_pad, addr + addr_pad + num_bits / 8, g_const_alloc++);
       fflush(stdout);
       g_last_symbol->set_address(addr + addr_pad);
       g_current_symbol_table->alloc_global(num_bits / 8 + addr_pad);
-      gpgpu_ctx->func_sim->g_globals.insert(identifier);
-      assert(g_current_symbol_table != NULL);
-      g_sym_name_to_symbol_table[identifier] = g_current_symbol_table;
-      break;
-    case local_space:
-      if (g_func_info == NULL) {
-        printf("GPGPU-Sim PTX: allocating local region for \"%s\" ",
-               identifier);
-        fflush(stdout);
-        assert((num_bits % 8) == 0);
-        addr = g_current_symbol_table->get_local_next();
-        addr_pad = pad_address(addr, num_bits / 8, 128);
-        printf("from 0x%llx to 0x%llx (local memory space)\n", addr + addr_pad,
-               addr + addr_pad + num_bits / 8);
-        fflush(stdout);
-        g_last_symbol->set_address(addr + addr_pad);
-        g_current_symbol_table->alloc_local(num_bits / 8 + addr_pad);
-      } else {
-        printf(
-            "GPGPU-Sim PTX: allocating stack frame region for .local \"%s\" ",
-            identifier);
-        fflush(stdout);
-        assert((num_bits % 8) == 0);
-        addr = g_current_symbol_table->get_local_next();
-        addr_pad = pad_address(addr, num_bits / 8, 128);
-        printf("from 0x%llx to 0x%llx\n", addr + addr_pad,
-               addr + addr_pad + num_bits / 8);
-        fflush(stdout);
-        g_last_symbol->set_address(addr + addr_pad);
-        g_current_symbol_table->alloc_local(num_bits / 8 + addr_pad);
-        g_func_info->set_framesize(g_current_symbol_table->get_local_next());
-      }
-      break;
-    case tex_space:
-      printf("GPGPU-Sim PTX: encountered texture directive %s.\n", identifier);
-      break;
-    case param_space_local:
-      printf(
-          "GPGPU-Sim PTX: allocating stack frame region for .param \"%s\" from "
-          "0x%x to 0x%lx\n",
-          identifier, g_current_symbol_table->get_local_next(),
-          g_current_symbol_table->get_local_next() + num_bits / 8);
+    }
+    if (g_current_symbol_table == g_global_symbol_table) {
+      gpgpu_ctx->func_sim->g_constants.insert(identifier);
+    }
+    assert(g_current_symbol_table != NULL);
+    g_sym_name_to_symbol_table[identifier] = g_current_symbol_table;
+    break;
+  case global_space:
+    printf("GPGPU-Sim PTX: allocating global region for \"%s\" ", identifier);
+    fflush(stdout);
+    assert((num_bits % 8) == 0);
+    addr = g_current_symbol_table->get_global_next();
+    addr_pad = pad_address(addr, num_bits / 8, 128);
+    printf("from 0x%llx to 0x%llx (global memory space)\n", addr + addr_pad,
+           addr + addr_pad + num_bits / 8);
+    fflush(stdout);
+    g_last_symbol->set_address(addr + addr_pad);
+    g_current_symbol_table->alloc_global(num_bits / 8 + addr_pad);
+    gpgpu_ctx->func_sim->g_globals.insert(identifier);
+    assert(g_current_symbol_table != NULL);
+    g_sym_name_to_symbol_table[identifier] = g_current_symbol_table;
+    break;
+  case local_space:
+    if (g_func_info == NULL) {
+      printf("GPGPU-Sim PTX: allocating local region for \"%s\" ", identifier);
       fflush(stdout);
       assert((num_bits % 8) == 0);
-      g_last_symbol->set_address(g_current_symbol_table->get_local_next());
-      g_current_symbol_table->alloc_local(num_bits / 8);
+      addr = g_current_symbol_table->get_local_next();
+      addr_pad = pad_address(addr, num_bits / 8, 128);
+      printf("from 0x%llx to 0x%llx (local memory space)\n", addr + addr_pad,
+             addr + addr_pad + num_bits / 8);
+      fflush(stdout);
+      g_last_symbol->set_address(addr + addr_pad);
+      g_current_symbol_table->alloc_local(num_bits / 8 + addr_pad);
+    } else {
+      printf("GPGPU-Sim PTX: allocating stack frame region for .local \"%s\" ",
+             identifier);
+      fflush(stdout);
+      assert((num_bits % 8) == 0);
+      addr = g_current_symbol_table->get_local_next();
+      addr_pad = pad_address(addr, num_bits / 8, 128);
+      printf("from 0x%llx to 0x%llx\n", addr + addr_pad,
+             addr + addr_pad + num_bits / 8);
+      fflush(stdout);
+      g_last_symbol->set_address(addr + addr_pad);
+      g_current_symbol_table->alloc_local(num_bits / 8 + addr_pad);
       g_func_info->set_framesize(g_current_symbol_table->get_local_next());
-      break;
-    case param_space_kernel:
-      break;
-    default:
-      abort();
-      break;
+    }
+    break;
+  case tex_space:
+    printf("GPGPU-Sim PTX: encountered texture directive %s.\n", identifier);
+    break;
+  case param_space_local:
+    printf(
+        "GPGPU-Sim PTX: allocating stack frame region for .param \"%s\" from "
+        "0x%x to 0x%lx\n",
+        identifier, g_current_symbol_table->get_local_next(),
+        g_current_symbol_table->get_local_next() + num_bits / 8);
+    fflush(stdout);
+    assert((num_bits % 8) == 0);
+    g_last_symbol->set_address(g_current_symbol_table->get_local_next());
+    g_current_symbol_table->alloc_local(num_bits / 8);
+    g_func_info->set_framesize(g_current_symbol_table->get_local_next());
+    break;
+  case param_space_kernel:
+    break;
+  default:
+    abort();
+    break;
   }
 
   assert(!ti.is_param_unclassified());
@@ -534,7 +537,7 @@ void ptx_recognizer::add_function_arg() {
     g_func_info->add_arg(g_last_symbol);
     unsigned alignment = (g_alignment_spec == -1) ? g_size : g_alignment_spec;
     assert(alignment == 1 || alignment == 2 || alignment == 4 ||
-           alignment == 8 || alignment == 16);  // known valid alignment values
+           alignment == 8 || alignment == 16); // known valid alignment values
     g_func_info->add_config_param(g_size, alignment);
   }
 }
@@ -556,9 +559,9 @@ void ptx_recognizer::add_ptr_spec(enum _memory_space_t spec) {
   PTX_PARSE_DPRINTF("add_ptr_spec \"%s\"", g_ptx_token_decode[spec].c_str());
   parse_assert(g_ptr_spec == undefined_space,
                "multiple ptr space specifiers not allowed.");
-  parse_assert(
-      spec == global_space or spec == local_space or spec == shared_space,
-      "invalid space for ptr directive.");
+  parse_assert(spec == global_space or spec == local_space or
+                   spec == shared_space,
+               "invalid space for ptr directive.");
   g_ptr_spec = spec;
 }
 
@@ -576,7 +579,8 @@ void ptx_recognizer::add_space_spec(enum _memory_space_t spec, int value) {
       g_space_spec = param_space_unclassified;
   } else {
     g_space_spec = spec;
-    if (g_space_spec == const_space) g_space_spec.set_bank((unsigned)value);
+    if (g_space_spec == const_space)
+      g_space_spec.set_bank((unsigned)value);
   }
 }
 
@@ -589,46 +593,46 @@ void ptx_recognizer::add_vector_spec(int spec) {
 void ptx_recognizer::add_scalar_type_spec(int type_spec) {
   // save size of parameter
   switch (type_spec) {
-    case B8_TYPE:
-    case S8_TYPE:
-    case U8_TYPE:
-      g_size = 1;
-      break;
-    case B16_TYPE:
-    case S16_TYPE:
-    case U16_TYPE:
-    case F16_TYPE:
-      g_size = 2;
-      break;
-    case B32_TYPE:
-    case S32_TYPE:
-    case U32_TYPE:
-    case F32_TYPE:
-      g_size = 4;
-      break;
-    case B64_TYPE:
-    case BB64_TYPE:
-    case S64_TYPE:
-    case U64_TYPE:
-    case F64_TYPE:
-    case FF64_TYPE:
-      g_size = 8;
-      break;
-    case BB128_TYPE:
-      g_size = 16;
-      break;
+  case B8_TYPE:
+  case S8_TYPE:
+  case U8_TYPE:
+    g_size = 1;
+    break;
+  case B16_TYPE:
+  case S16_TYPE:
+  case U16_TYPE:
+  case F16_TYPE:
+    g_size = 2;
+    break;
+  case B32_TYPE:
+  case S32_TYPE:
+  case U32_TYPE:
+  case F32_TYPE:
+    g_size = 4;
+    break;
+  case B64_TYPE:
+  case BB64_TYPE:
+  case S64_TYPE:
+  case U64_TYPE:
+  case F64_TYPE:
+  case FF64_TYPE:
+    g_size = 8;
+    break;
+  case BB128_TYPE:
+    g_size = 16;
+    break;
   }
   PTX_PARSE_DPRINTF("add_scalar_type_spec \"%s\"",
                     g_ptx_token_decode[type_spec].c_str());
   g_scalar_type.push_back(type_spec);
   if (g_scalar_type.size() > 1) {
-    parse_assert((g_opcode == -1) || (g_opcode == CVT_OP) ||
-                     (g_opcode == SET_OP) || (g_opcode == SLCT_OP) ||
-                     (g_opcode == TEX_OP) || (g_opcode == MMA_OP) ||
-                     (g_opcode == DP4A_OP) || (g_opcode == VMIN_OP) || 
-                     (g_opcode == VMAX_OP),
-                 "only cvt, set, slct, tex, vmin, vmax and dp4a can have more than one "
-                 "type specifier.");
+    parse_assert(
+        (g_opcode == -1) || (g_opcode == CVT_OP) || (g_opcode == SET_OP) ||
+            (g_opcode == SLCT_OP) || (g_opcode == TEX_OP) ||
+            (g_opcode == MMA_OP) || (g_opcode == DP4A_OP) ||
+            (g_opcode == VMIN_OP) || (g_opcode == VMAX_OP),
+        "only cvt, set, slct, tex, vmin, vmax and dp4a can have more than one "
+        "type specifier.");
   }
   g_scalar_type_spec = type_spec;
 }
@@ -720,9 +724,12 @@ void ptx_recognizer::add_4vector_operand(const char *d1, const char *d2,
   parse_assert(s1 != NULL && s2 != NULL && s3 != NULL && s4 != NULL,
                "v4 component(s) missing declarations.");
   const symbol *null_op = g_current_symbol_table->lookup("_");
-  if (s2 == null_op) s2 = NULL;
-  if (s3 == null_op) s3 = NULL;
-  if (s4 == null_op) s4 = NULL;
+  if (s2 == null_op)
+    s2 = NULL;
+  if (s3 == null_op)
+    s3 = NULL;
+  if (s4 == null_op)
+    s4 = NULL;
   g_operands.push_back(operand_info(s1, s2, s3, s4, gpgpu_ctx));
 }
 void ptx_recognizer::add_8vector_operand(const char *d1, const char *d2,
@@ -742,13 +749,20 @@ void ptx_recognizer::add_8vector_operand(const char *d1, const char *d2,
                    s5 != NULL && s6 != NULL && s7 != NULL && s8 != NULL,
                "v4 component(s) missing declarations.");
   const symbol *null_op = g_current_symbol_table->lookup("_");
-  if (s2 == null_op) s2 = NULL;
-  if (s3 == null_op) s3 = NULL;
-  if (s4 == null_op) s4 = NULL;
-  if (s5 == null_op) s5 = NULL;
-  if (s6 == null_op) s6 = NULL;
-  if (s7 == null_op) s7 = NULL;
-  if (s8 == null_op) s8 = NULL;
+  if (s2 == null_op)
+    s2 = NULL;
+  if (s3 == null_op)
+    s3 = NULL;
+  if (s4 == null_op)
+    s4 = NULL;
+  if (s5 == null_op)
+    s5 = NULL;
+  if (s6 == null_op)
+    s6 = NULL;
+  if (s7 == null_op)
+    s7 = NULL;
+  if (s8 == null_op)
+    s8 = NULL;
   g_operands.push_back(operand_info(s1, s2, s3, s4, s5, s6, s7, s8, gpgpu_ctx));
 }
 
@@ -940,7 +954,8 @@ void ptx_recognizer::add_file(unsigned num, const char *filename) {
     char *l = b;
     char *n = b;
     while (*n != '\0') {
-      if (*n == '/') l = n + 1;
+      if (*n == '/')
+        l = n + 1;
       n++;
     }
 
@@ -973,7 +988,7 @@ void ptx_recognizer::add_pragma(const char *str) {
   printf("GPGPU-Sim PTX: Warning -- ignoring pragma '%s'\n", str);
 }
 
-void ptx_recognizer::version_header(double a) {}  // intentional dummy function
+void ptx_recognizer::version_header(double a) {} // intentional dummy function
 
 void ptx_recognizer::target_header(char *a) {
   g_global_symbol_table->set_sm_target(a, NULL, NULL);
@@ -991,9 +1006,9 @@ void ptx_recognizer::maxnt_id(int x, int y, int z) {
   g_func_info->set_maxnt_id(x * y * z);
 }
 
-void ptx_recognizer::func_header(const char *a) {}  // intentional dummy
-                                                    // function
+void ptx_recognizer::func_header(const char *a) {} // intentional dummy
+                                                   // function
 void ptx_recognizer::func_header_info(const char *a) {
-}  // intentional dummy function
+} // intentional dummy function
 void ptx_recognizer::func_header_info_int(const char *a, int b) {
-}  // intentional dummy function
+} // intentional dummy function
