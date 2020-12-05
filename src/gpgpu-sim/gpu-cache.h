@@ -29,22 +29,24 @@
 #ifndef GPU_CACHE_H
 #define GPU_CACHE_H
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "../abstract_hardware_model.h"
 #include "../tr1_hash_map.h"
 #include "../trace.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 #include "gpu-misc.h"
 #include "mem_fetch.h"
 
-#include <algorithm>
+
 #include <iostream>
+#include <algorithm>
 #include <iterator>
 
 #include "addrdec.h"
 
 #define PREDICT_THRESH 1u
+
 
 #define MAX_DEFAULT_CACHE_SIZE_MULTIBLIER 4
 
@@ -60,8 +62,8 @@ enum cache_request_status {
 };
 
 enum cache_reservation_fail_reason {
-  LINE_ALLOC_FAIL = 0, // all line are reserved
-  MISS_QUEUE_FULL,     // MISS queue (i.e. interconnect or DRAM) is full
+  LINE_ALLOC_FAIL = 0,  // all line are reserved
+  MISS_QUEUE_FULL,      // MISS queue (i.e. interconnect or DRAM) is full
   MSHR_ENRTY_FAIL,
   MSHR_MERGE_ENRTY_FAIL,
   MSHR_RW_PENDING,
@@ -90,8 +92,8 @@ struct evicted_block_info {
 
 struct cache_event {
   enum cache_event_type m_cache_event_type;
-  evicted_block_info m_evicted_block; // if it was write_back event, fill the
-                                      // the evicted block info
+  evicted_block_info m_evicted_block;  // if it was write_back event, fill the
+                                       // the evicted block info
 
   cache_event(enum cache_event_type m_cache_event) {
     m_cache_event_type = m_cache_event;
@@ -122,8 +124,8 @@ struct cache_block_t {
   virtual bool is_reserved_line() = 0;
   virtual bool is_modified_line() = 0;
 
-  virtual enum cache_block_state
-  get_status(mem_access_sector_mask_t sector_mask) = 0;
+  virtual enum cache_block_state get_status(
+      mem_access_sector_mask_t sector_mask) = 0;
   virtual void set_status(enum cache_block_state m_status,
                           mem_access_sector_mask_t sector_mask) = 0;
 
@@ -180,8 +182,8 @@ struct line_cache_block : public cache_block_t {
   virtual bool is_reserved_line() { return m_status == RESERVED; }
   virtual bool is_modified_line() { return m_status == MODIFIED; }
 
-  virtual enum cache_block_state
-  get_status(mem_access_sector_mask_t sector_mask) {
+  virtual enum cache_block_state get_status(
+      mem_access_sector_mask_t sector_mask) {
     return m_status;
   }
   virtual void set_status(enum cache_block_state status,
@@ -205,7 +207,7 @@ struct line_cache_block : public cache_block_t {
     m_set_modified_on_fill = m_modified;
   }
   virtual unsigned get_modified_size() {
-    return SECTOR_CHUNCK_SIZE * SECTOR_SIZE; // i.e. cache line size
+    return SECTOR_CHUNCK_SIZE * SECTOR_SIZE;  // i.e. cache line size
   }
   virtual void set_m_readable(bool readable,
                               mem_access_sector_mask_t sector_mask) {
@@ -218,7 +220,7 @@ struct line_cache_block : public cache_block_t {
     printf("m_block_addr is %llu, status = %u\n", m_block_addr, m_status);
   }
 
-private:
+ private:
   unsigned long long m_alloc_time;
   unsigned long long m_last_access_time;
   unsigned long long m_fill_time;
@@ -270,7 +272,7 @@ struct sector_cache_block : public cache_block_t {
     m_set_modified_on_fill[sidx] = false;
 
     // set line stats
-    m_line_alloc_time = time; // only set this for the first allocated sector
+    m_line_alloc_time = time;  // only set this for the first allocated sector
     m_line_last_access_time = time;
     m_line_fill_time = 0;
   }
@@ -284,8 +286,8 @@ struct sector_cache_block : public cache_block_t {
     m_sector_alloc_time[sidx] = time;
     m_last_sector_access_time[sidx] = time;
     m_sector_fill_time[sidx] = 0;
-    if (m_status[sidx] == MODIFIED) // this should be the case only for
-                                    // fetch-on-write policy //TO DO
+    if (m_status[sidx] == MODIFIED)  // this should be the case only for
+                                     // fetch-on-write policy //TO DO
       m_set_modified_on_fill[sidx] = true;
     else
       m_set_modified_on_fill[sidx] = false;
@@ -314,8 +316,7 @@ struct sector_cache_block : public cache_block_t {
   virtual bool is_invalid_line() {
     // all the sectors should be invalid
     for (unsigned i = 0; i < SECTOR_CHUNCK_SIZE; ++i) {
-      if (m_status[i] != INVALID)
-        return false;
+      if (m_status[i] != INVALID) return false;
     }
     return true;
   }
@@ -323,22 +324,20 @@ struct sector_cache_block : public cache_block_t {
   virtual bool is_reserved_line() {
     // if any of the sector is reserved, then the line is reserved
     for (unsigned i = 0; i < SECTOR_CHUNCK_SIZE; ++i) {
-      if (m_status[i] == RESERVED)
-        return true;
+      if (m_status[i] == RESERVED) return true;
     }
     return false;
   }
   virtual bool is_modified_line() {
     // if any of the sector is modified, then the line is modified
     for (unsigned i = 0; i < SECTOR_CHUNCK_SIZE; ++i) {
-      if (m_status[i] == MODIFIED)
-        return true;
+      if (m_status[i] == MODIFIED) return true;
     }
     return false;
   }
 
-  virtual enum cache_block_state
-  get_status(mem_access_sector_mask_t sector_mask) {
+  virtual enum cache_block_state get_status(
+      mem_access_sector_mask_t sector_mask) {
     unsigned sidx = get_sector_index(sector_mask);
 
     return m_status[sidx];
@@ -390,8 +389,7 @@ struct sector_cache_block : public cache_block_t {
   virtual unsigned get_modified_size() {
     unsigned modified = 0;
     for (unsigned i = 0; i < SECTOR_CHUNCK_SIZE; ++i) {
-      if (m_status[i] == MODIFIED)
-        modified++;
+      if (m_status[i] == MODIFIED) modified++;
     }
     return modified * SECTOR_SIZE;
   }
@@ -401,7 +399,7 @@ struct sector_cache_block : public cache_block_t {
            m_status[0], m_status[1], m_status[2], m_status[3]);
   }
 
-private:
+ private:
   unsigned m_sector_alloc_time[SECTOR_CHUNCK_SIZE];
   unsigned m_last_sector_access_time[SECTOR_CHUNCK_SIZE];
   unsigned m_sector_fill_time[SECTOR_CHUNCK_SIZE];
@@ -416,8 +414,7 @@ private:
   unsigned get_sector_index(mem_access_sector_mask_t sector_mask) {
     assert(sector_mask.count() == 1);
     for (unsigned i = 0; i < SECTOR_CHUNCK_SIZE; ++i) {
-      if (sector_mask.to_ulong() & (1 << i))
-        return i;
+      if (sector_mask.to_ulong() & (1 << i)) return i;
     }
   }
 };
@@ -442,10 +439,10 @@ enum write_allocate_policy_t {
 };
 
 enum mshr_config_t {
-  TEX_FIFO,        // Tex cache
-  ASSOC,           // normal cache
-  SECTOR_TEX_FIFO, // Tex cache sends requests to high-level sector cache
-  SECTOR_ASSOC     // normal cache sends requests to high-level sector cache
+  TEX_FIFO,         // Tex cache
+  ASSOC,            // normal cache
+  SECTOR_TEX_FIFO,  // Tex cache sends requests to high-level sector cache
+  SECTOR_ASSOC      // normal cache sends requests to high-level sector cache
 };
 
 enum set_index_function {
@@ -465,11 +462,11 @@ enum cache_type { NORMAL = 0, SECTOR };
 #define MAX_WARP_PER_SHADER 64
 
 class cache_config {
-public:
+ public:
   cache_config() {
     m_valid = false;
     m_disabled = false;
-    m_config_string = NULL; // set by option parser
+    m_config_string = NULL;  // set by option parser
     m_config_stringPrefL1 = NULL;
     m_config_stringPrefShared = NULL;
     m_data_port_width = 0;
@@ -496,66 +493,66 @@ public:
     }
 
     switch (ct) {
-    case 'N':
-      m_cache_type = NORMAL;
-      break;
-    case 'S':
-      m_cache_type = SECTOR;
-      break;
-    default:
-      exit_parse_error();
+      case 'N':
+        m_cache_type = NORMAL;
+        break;
+      case 'S':
+        m_cache_type = SECTOR;
+        break;
+      default:
+        exit_parse_error();
     }
     switch (rp) {
-    case 'L':
-      m_replacement_policy = LRU;
-      break;
-    case 'F':
-      m_replacement_policy = FIFO;
-      break;
-    default:
-      exit_parse_error();
+      case 'L':
+        m_replacement_policy = LRU;
+        break;
+      case 'F':
+        m_replacement_policy = FIFO;
+        break;
+      default:
+        exit_parse_error();
     }
     switch (rp) {
-    case 'L':
-      m_replacement_policy = LRU;
-      break;
-    case 'F':
-      m_replacement_policy = FIFO;
-      break;
-    default:
-      exit_parse_error();
+      case 'L':
+        m_replacement_policy = LRU;
+        break;
+      case 'F':
+        m_replacement_policy = FIFO;
+        break;
+      default:
+        exit_parse_error();
     }
     switch (wp) {
-    case 'R':
-      m_write_policy = READ_ONLY;
-      break;
-    case 'B':
-      m_write_policy = WRITE_BACK;
-      break;
-    case 'T':
-      m_write_policy = WRITE_THROUGH;
-      break;
-    case 'E':
-      m_write_policy = WRITE_EVICT;
-      break;
-    case 'L':
-      m_write_policy = LOCAL_WB_GLOBAL_WT;
-      break;
-    default:
-      exit_parse_error();
+      case 'R':
+        m_write_policy = READ_ONLY;
+        break;
+      case 'B':
+        m_write_policy = WRITE_BACK;
+        break;
+      case 'T':
+        m_write_policy = WRITE_THROUGH;
+        break;
+      case 'E':
+        m_write_policy = WRITE_EVICT;
+        break;
+      case 'L':
+        m_write_policy = LOCAL_WB_GLOBAL_WT;
+        break;
+      default:
+        exit_parse_error();
     }
     switch (ap) {
-    case 'm':
-      m_alloc_policy = ON_MISS;
-      break;
-    case 'f':
-      m_alloc_policy = ON_FILL;
-      break;
-    case 's':
-      m_alloc_policy = STREAMING;
-      break;
-    default:
-      exit_parse_error();
+      case 'm':
+        m_alloc_policy = ON_MISS;
+        break;
+      case 'f':
+        m_alloc_policy = ON_FILL;
+        break;
+      case 's':
+        m_alloc_policy = STREAMING;
+        break;
+      default:
+        exit_parse_error();
     }
     if (m_alloc_policy == STREAMING) {
       // For streaming cache, we set the alloc policy to be on-fill to remove
@@ -572,27 +569,26 @@ public:
       m_is_streaming = true;
       m_alloc_policy = ON_FILL;
       m_mshr_entries = m_nset * m_assoc * MAX_DEFAULT_CACHE_SIZE_MULTIBLIER;
-      if (m_cache_type == SECTOR)
-        m_mshr_entries *= SECTOR_CHUNCK_SIZE;
+      if (m_cache_type == SECTOR) m_mshr_entries *= SECTOR_CHUNCK_SIZE;
       m_mshr_max_merge = MAX_WARP_PER_SM;
     }
     switch (mshr_type) {
-    case 'F':
-      m_mshr_type = TEX_FIFO;
-      assert(ntok == 14);
-      break;
-    case 'T':
-      m_mshr_type = SECTOR_TEX_FIFO;
-      assert(ntok == 14);
-      break;
-    case 'A':
-      m_mshr_type = ASSOC;
-      break;
-    case 'S':
-      m_mshr_type = SECTOR_ASSOC;
-      break;
-    default:
-      exit_parse_error();
+      case 'F':
+        m_mshr_type = TEX_FIFO;
+        assert(ntok == 14);
+        break;
+      case 'T':
+        m_mshr_type = SECTOR_TEX_FIFO;
+        assert(ntok == 14);
+        break;
+      case 'A':
+        m_mshr_type = ASSOC;
+        break;
+      case 'S':
+        m_mshr_type = SECTOR_ASSOC;
+        break;
+      default:
+        exit_parse_error();
     }
     m_line_sz_log2 = LOGB2(m_line_sz);
     m_nset_log2 = LOGB2(m_nset);
@@ -606,20 +602,20 @@ public:
     // performance". ISCA 93. WRITE_ALLOCATE is the old write policy in
     // GPGPU-sim 3.x, that send WRITE and READ for every write request
     switch (wap) {
-    case 'N':
-      m_write_alloc_policy = NO_WRITE_ALLOCATE;
-      break;
-    case 'W':
-      m_write_alloc_policy = WRITE_ALLOCATE;
-      break;
-    case 'F':
-      m_write_alloc_policy = FETCH_ON_WRITE;
-      break;
-    case 'L':
-      m_write_alloc_policy = LAZY_FETCH_ON_READ;
-      break;
-    default:
-      exit_parse_error();
+      case 'N':
+        m_write_alloc_policy = NO_WRITE_ALLOCATE;
+        break;
+      case 'W':
+        m_write_alloc_policy = WRITE_ALLOCATE;
+        break;
+      case 'F':
+        m_write_alloc_policy = FETCH_ON_WRITE;
+        break;
+      case 'L':
+        m_write_alloc_policy = LAZY_FETCH_ON_READ;
+        break;
+      default:
+        exit_parse_error();
     }
 
     // detect invalid configuration
@@ -657,20 +653,20 @@ public:
     assert(m_line_sz % m_data_port_width == 0);
 
     switch (sif) {
-    case 'H':
-      m_set_index_function = FERMI_HASH_SET_FUNCTION;
-      break;
-    case 'P':
-      m_set_index_function = HASH_IPOLY_FUNCTION;
-      break;
-    case 'C':
-      m_set_index_function = CUSTOM_SET_FUNCTION;
-      break;
-    case 'L':
-      m_set_index_function = LINEAR_SET_FUNCTION;
-      break;
-    default:
-      exit_parse_error();
+      case 'H':
+        m_set_index_function = FERMI_HASH_SET_FUNCTION;
+        break;
+      case 'P':
+        m_set_index_function = HASH_IPOLY_FUNCTION;
+        break;
+      case 'C':
+        m_set_index_function = CUSTOM_SET_FUNCTION;
+        break;
+      case 'L':
+        m_set_index_function = LINEAR_SET_FUNCTION;
+        break;
+      default:
+        exit_parse_error();
     }
   }
   bool disabled() const { return m_disabled; }
@@ -740,7 +736,7 @@ public:
   char *m_config_stringPrefShared;
   FuncCache cache_status;
 
-protected:
+ protected:
   void exit_parse_error() {
     printf("GPGPU-Sim uArch: cache configuration parsing error (%s)\n",
            m_config_string);
@@ -759,16 +755,16 @@ protected:
   unsigned original_m_assoc;
   bool m_is_streaming;
 
-  enum replacement_policy_t m_replacement_policy; // 'L' = LRU, 'F' = FIFO
+  enum replacement_policy_t m_replacement_policy;  // 'L' = LRU, 'F' = FIFO
   enum write_policy_t
-      m_write_policy; // 'T' = write through, 'B' = write back, 'R' = read only
+      m_write_policy;  // 'T' = write through, 'B' = write back, 'R' = read only
   enum allocation_policy_t
-      m_alloc_policy; // 'm' = allocate on miss, 'f' = allocate on fill
+      m_alloc_policy;  // 'm' = allocate on miss, 'f' = allocate on fill
   enum mshr_config_t m_mshr_type;
   enum cache_type m_cache_type;
 
   write_allocate_policy_t
-      m_write_alloc_policy; // 'W' = Write allocate, 'N' = No write allocate
+      m_write_alloc_policy;  // 'W' = Write allocate, 'N' = No write allocate
 
   union {
     unsigned m_mshr_entries;
@@ -783,9 +779,9 @@ protected:
     unsigned m_rob_entries;
   };
   unsigned m_result_fifo_entries;
-  unsigned m_data_port_width; //< number of byte the cache can access per cycle
+  unsigned m_data_port_width;  //< number of byte the cache can access per cycle
   enum set_index_function
-      m_set_index_function; // Hash, linear, or custom set index function
+      m_set_index_function;  // Hash, linear, or custom set index function
 
   friend class tag_array;
   friend class baseline_cache;
@@ -798,7 +794,7 @@ protected:
 };
 
 class l1d_cache_config : public cache_config {
-public:
+ public:
   l1d_cache_config() : cache_config() {}
   unsigned set_bank(new_addr_type addr) const;
   void init(char *config, FuncCache status) {
@@ -815,17 +811,17 @@ public:
 };
 
 class l2_cache_config : public cache_config {
-public:
+ public:
   l2_cache_config() : cache_config() {}
   void init(linear_to_raw_address_translation *address_mapping);
   virtual unsigned set_index(new_addr_type addr) const;
 
-private:
+ private:
   linear_to_raw_address_translation *m_address_mapping;
 };
 
 class tag_array {
-public:
+ public:
   // Use this constructor
   tag_array(cache_config &config, int core_id, int type_id);
   ~tag_array();
@@ -849,8 +845,8 @@ public:
   unsigned size() const { return m_config.get_num_lines(); }
   cache_block_t *get_block(unsigned idx) { return m_lines[idx]; }
 
-  void flush();      // flush all written entries
-  void invalidate(); // invalidate all entries
+  void flush();       // flush all written entries
+  void invalidate();  // invalidate all entries
   void new_window();
 
   void print(FILE *stream, unsigned &total_access,
@@ -863,7 +859,7 @@ public:
   void add_pending_line(mem_fetch *mf);
   void remove_pending_line(mem_fetch *mf);
 
-protected:
+ protected:
   // This constructor is intended for use only from derived classes that wish to
   // avoid unnecessary memory allocation that takes place in the
   // other tag_array constructor
@@ -871,15 +867,15 @@ protected:
             cache_block_t **new_lines);
   void init(int core_id, int type_id);
 
-protected:
+ protected:
   cache_config &m_config;
 
   cache_block_t **m_lines; /* nbanks x nset x assoc lines in total */
 
   unsigned m_access;
   unsigned m_miss;
-  unsigned m_pending_hit; // number of cache miss that hit a line that is
-                          // allocated but not filled
+  unsigned m_pending_hit;  // number of cache miss that hit a line that is
+                           // allocated but not filled
   unsigned m_res_fail;
   unsigned m_sector_miss;
 
@@ -889,19 +885,20 @@ protected:
   unsigned m_prev_snapshot_miss;
   unsigned m_prev_snapshot_pending_hit;
 
-  int m_core_id; // which shader core is using this
-  int m_type_id; // what kind of cache is this (normal, texture, constant)
+  int m_core_id;  // which shader core is using this
+  int m_type_id;  // what kind of cache is this (normal, texture, constant)
 
-  bool is_used; // a flag if the whole cache has ever been accessed before
+  bool is_used;  // a flag if the whole cache has ever been accessed before
 
   typedef tr1_hash_map<new_addr_type, unsigned> line_table;
   line_table pending_lines;
 };
 
 class mshr_table {
-public:
+ public:
   mshr_table(unsigned num_entries, unsigned max_merged)
-      : m_num_entries(num_entries), m_max_merged(max_merged)
+      : m_num_entries(num_entries),
+        m_max_merged(max_merged)
 #if (tr1_hash_map_ismap == 0)
         ,
         m_data(2 * num_entries)
@@ -934,7 +931,7 @@ public:
            "Change of MSHR parameters between kernels is not allowed");
   }
 
-private:
+ private:
   // finite sized, fully associative table, with a finite maximum number of
   // merged requests
   const unsigned m_num_entries;
@@ -1078,7 +1075,7 @@ struct cache_sub_stats_pw {
 /// 'cache_request_status' : [mem_access_type][cache_request_status]
 ///
 class cache_stats {
-public:
+ public:
   cache_stats();
   void clear();
   // Clear AerialVision cache stats after each window
@@ -1087,9 +1084,8 @@ public:
   // Increment AerialVision cache stats
   void inc_stats_pw(int access_type, int access_outcome);
   void inc_fail_stats(int access_type, int fail_outcome);
-  enum cache_request_status
-  select_stats_status(enum cache_request_status probe,
-                      enum cache_request_status access) const;
+  enum cache_request_status select_stats_status(
+      enum cache_request_status probe, enum cache_request_status access) const;
   unsigned long long &operator()(int access_type, int access_outcome,
                                  bool fail_outcome);
   unsigned long long operator()(int access_type, int access_outcome,
@@ -1111,14 +1107,14 @@ public:
 
   void sample_cache_port_utility(bool data_port_busy, bool fill_port_busy);
 
-private:
+ private:
   bool check_valid(int type, int status) const;
   bool check_fail_valid(int type, int fail) const;
 
-  std::vector<std::vector<unsigned long long>> m_stats;
+  std::vector<std::vector<unsigned long long> > m_stats;
   // AerialVision cache stats (per-window)
-  std::vector<std::vector<unsigned long long>> m_stats_pw;
-  std::vector<std::vector<unsigned long long>> m_fail_stats;
+  std::vector<std::vector<unsigned long long> > m_stats_pw;
+  std::vector<std::vector<unsigned long long> > m_fail_stats;
 
   unsigned long long m_cache_port_available_cycles;
   unsigned long long m_cache_data_port_busy_cycles;
@@ -1126,7 +1122,7 @@ private:
 };
 
 class cache_t {
-public:
+ public:
   virtual ~cache_t() {}
   virtual enum cache_request_status access(new_addr_type addr, mem_fetch *mf,
                                            unsigned time,
@@ -1145,11 +1141,12 @@ bool was_writeallocate_sent(const std::list<cache_event> &events);
 /// Implements common functions for read_only_cache and data_cache
 /// Each subclass implements its own 'access' function
 class baseline_cache : public cache_t {
-public:
+ public:
   baseline_cache(const char *name, cache_config &config, int core_id,
                  int type_id, mem_fetch_interface *memport,
                  enum mem_fetch_status status)
-      : m_config(config), m_tag_array(new tag_array(config, core_id, type_id)),
+      : m_config(config),
+        m_tag_array(new tag_array(config, core_id, type_id)),
         m_mshrs(config.m_mshr_entries, config.m_mshr_max_merge),
         m_bandwidth_management(config) {
     init(name, config, memport, status);
@@ -1229,18 +1226,19 @@ public:
     m_tag_array->fill(addr, time, mask);
   }
 
-protected:
+ protected:
   // Constructor that can be used by derived classes with custom tag arrays
   baseline_cache(const char *name, cache_config &config, int core_id,
                  int type_id, mem_fetch_interface *memport,
                  enum mem_fetch_status status, tag_array *new_tag_array)
-      : m_config(config), m_tag_array(new_tag_array),
+      : m_config(config),
+        m_tag_array(new_tag_array),
         m_mshrs(config.m_mshr_entries, config.m_mshr_max_merge),
         m_bandwidth_management(config) {
     init(name, config, memport, status);
   }
 
-protected:
+ protected:
   std::string m_name;
   cache_config &m_config;
   tag_array *m_tag_array;
@@ -1298,7 +1296,7 @@ protected:
 
   /// Sub-class containing all metadata for port bandwidth management
   class bandwidth_management {
-  public:
+   public:
     bandwidth_management(cache_config &config);
 
     /// use the data port based on the outcome and events generated by the
@@ -1317,13 +1315,13 @@ protected:
     /// query for fill port availability
     bool fill_port_free() const;
 
-  protected:
+   protected:
     const cache_config &m_config;
 
-    int m_data_port_occupied_cycles; //< Number of cycle that the data port
-                                     // remains used
-    int m_fill_port_occupied_cycles; //< Number of cycle that the fill port
-                                     // remains used
+    int m_data_port_occupied_cycles;  //< Number of cycle that the data port
+                                      // remains used
+    int m_fill_port_occupied_cycles;  //< Number of cycle that the fill port
+                                      // remains used
   };
 
   bandwidth_management m_bandwidth_management;
@@ -1331,7 +1329,7 @@ protected:
 
 /// Read only cache
 class read_only_cache : public baseline_cache {
-public:
+ public:
   read_only_cache(const char *name, cache_config &config, int core_id,
                   int type_id, mem_fetch_interface *memport,
                   enum mem_fetch_status status)
@@ -1345,7 +1343,7 @@ public:
 
   virtual ~read_only_cache() {}
 
-protected:
+ protected:
   read_only_cache(const char *name, cache_config &config, int core_id,
                   int type_id, mem_fetch_interface *memport,
                   enum mem_fetch_status status, tag_array *new_tag_array)
@@ -1355,7 +1353,7 @@ protected:
 
 /// Data cache - Implements common functions for L1 and L2 data cache
 class data_cache : public baseline_cache {
-public:
+ public:
   data_cache(const char *name, cache_config &config, int core_id, int type_id,
              mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
              enum mem_fetch_status status, mem_access_type wr_alloc_type,
@@ -1369,7 +1367,8 @@ public:
 
   virtual ~data_cache() {}
 
-  virtual void print_level(FILE *fp) { DBPRINTF(fp, "cache : "); }
+  virtual void print_level(FILE *fp){ DBPRINTF(fp, "cache : ");  }
+
 
   virtual void init(mem_fetch_allocator *mfcreator) {
     m_memfetch_creator = mfcreator;
@@ -1382,44 +1381,44 @@ public:
 
     // Set write hit function
     switch (m_config.m_write_policy) {
-    // READ_ONLY is now a separate cache class, config is deprecated
-    case READ_ONLY:
-      assert(0 && "Error: Writable Data_cache set as READ_ONLY\n");
-      break;
-    case WRITE_BACK:
-      m_wr_hit = &data_cache::wr_hit_wb;
-      break;
-    case WRITE_THROUGH:
-      m_wr_hit = &data_cache::wr_hit_wt;
-      break;
-    case WRITE_EVICT:
-      m_wr_hit = &data_cache::wr_hit_we;
-      break;
-    case LOCAL_WB_GLOBAL_WT:
-      m_wr_hit = &data_cache::wr_hit_global_we_local_wb;
-      break;
-    default:
-      assert(0 && "Error: Must set valid cache write policy\n");
-      break; // Need to set a write hit function
+      // READ_ONLY is now a separate cache class, config is deprecated
+      case READ_ONLY:
+        assert(0 && "Error: Writable Data_cache set as READ_ONLY\n");
+        break;
+      case WRITE_BACK:
+        m_wr_hit = &data_cache::wr_hit_wb;
+        break;
+      case WRITE_THROUGH:
+        m_wr_hit = &data_cache::wr_hit_wt;
+        break;
+      case WRITE_EVICT:
+        m_wr_hit = &data_cache::wr_hit_we;
+        break;
+      case LOCAL_WB_GLOBAL_WT:
+        m_wr_hit = &data_cache::wr_hit_global_we_local_wb;
+        break;
+      default:
+        assert(0 && "Error: Must set valid cache write policy\n");
+        break;  // Need to set a write hit function
     }
 
     // Set write miss function
     switch (m_config.m_write_alloc_policy) {
-    case NO_WRITE_ALLOCATE:
-      m_wr_miss = &data_cache::wr_miss_no_wa;
-      break;
-    case WRITE_ALLOCATE:
-      m_wr_miss = &data_cache::wr_miss_wa_naive;
-      break;
-    case FETCH_ON_WRITE:
-      m_wr_miss = &data_cache::wr_miss_wa_fetch_on_write;
-      break;
-    case LAZY_FETCH_ON_READ:
-      m_wr_miss = &data_cache::wr_miss_wa_lazy_fetch_on_read;
-      break;
-    default:
-      assert(0 && "Error: Must set valid cache write miss policy\n");
-      break; // Need to set a write miss function
+      case NO_WRITE_ALLOCATE:
+        m_wr_miss = &data_cache::wr_miss_no_wa;
+        break;
+      case WRITE_ALLOCATE:
+        m_wr_miss = &data_cache::wr_miss_wa_naive;
+        break;
+      case FETCH_ON_WRITE:
+        m_wr_miss = &data_cache::wr_miss_wa_fetch_on_write;
+        break;
+      case LAZY_FETCH_ON_READ:
+        m_wr_miss = &data_cache::wr_miss_wa_lazy_fetch_on_read;
+        break;
+      default:
+        assert(0 && "Error: Must set valid cache write miss policy\n");
+        break;  // Need to set a write miss function
     }
   }
 
@@ -1427,7 +1426,7 @@ public:
                                            unsigned time,
                                            std::list<cache_event> &events);
 
-protected:
+ protected:
   data_cache(const char *name, cache_config &config, int core_id, int type_id,
              mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
              enum mem_fetch_status status, tag_array *new_tag_array,
@@ -1441,21 +1440,23 @@ protected:
     m_gpu = gpu;
   }
 
-  mem_access_type m_wr_alloc_type; // Specifies type of write allocate request
-                                   // (e.g., L1 or L2)
+  mem_access_type m_wr_alloc_type;  // Specifies type of write allocate request
+                                    // (e.g., L1 or L2)
   mem_access_type
-      m_wrbk_type; // Specifies type of writeback request (e.g., L1 or L2)
+      m_wrbk_type;  // Specifies type of writeback request (e.g., L1 or L2)
   class gpgpu_sim *m_gpu;
 
   //! A general function that takes the result of a tag_array probe
   //  and performs the correspding functions based on the cache configuration
   //  The access fucntion calls this function
-  enum cache_request_status
-  process_tag_probe(bool wr, enum cache_request_status status,
-                    new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-                    unsigned time, std::list<cache_event> &events);
+  enum cache_request_status process_tag_probe(bool wr,
+                                              enum cache_request_status status,
+                                              new_addr_type addr,
+                                              unsigned cache_index,
+                                              mem_fetch *mf, unsigned time,
+                                              std::list<cache_event> &events);
 
-protected:
+ protected:
   mem_fetch_allocator *m_memfetch_creator;
 
   // Functions for data cache access
@@ -1470,20 +1471,20 @@ protected:
       new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
       std::list<cache_event> &events, enum cache_request_status status);
   /// Marks block as MODIFIED and updates block LRU
-  enum cache_request_status
-  wr_hit_wb(new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-            unsigned time, std::list<cache_event> &events,
-            enum cache_request_status status); // write-back
-  enum cache_request_status
-  wr_hit_wt(new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-            unsigned time, std::list<cache_event> &events,
-            enum cache_request_status status); // write-through
+  enum cache_request_status wr_hit_wb(
+      new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
+      std::list<cache_event> &events,
+      enum cache_request_status status);  // write-back
+  enum cache_request_status wr_hit_wt(
+      new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
+      std::list<cache_event> &events,
+      enum cache_request_status status);  // write-through
 
   /// Marks block as INVALID and sends write request to lower level memory
-  enum cache_request_status
-  wr_hit_we(new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-            unsigned time, std::list<cache_event> &events,
-            enum cache_request_status status); // write-evict
+  enum cache_request_status wr_hit_we(
+      new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
+      std::list<cache_event> &events,
+      enum cache_request_status status);  // write-evict
   enum cache_request_status wr_hit_global_we_local_wb(
       new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
       std::list<cache_event> &events, enum cache_request_status status);
@@ -1495,29 +1496,29 @@ protected:
       std::list<cache_event> &events, enum cache_request_status status);
   /// Sends read request, and possible write-back request,
   //  to lower level memory for a write miss with write-allocate
-  enum cache_request_status
-  wr_miss_wa_naive(new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-                   unsigned time, std::list<cache_event> &events,
-                   enum cache_request_status
-                       status); // write-allocate-send-write-and-read-request
+  enum cache_request_status wr_miss_wa_naive(
+      new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
+      std::list<cache_event> &events,
+      enum cache_request_status
+          status);  // write-allocate-send-write-and-read-request
   enum cache_request_status wr_miss_wa_fetch_on_write(
       new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
       std::list<cache_event> &events,
       enum cache_request_status
-          status); // write-allocate with fetch-on-every-write
+          status);  // write-allocate with fetch-on-every-write
   enum cache_request_status wr_miss_wa_lazy_fetch_on_read(
       new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
       std::list<cache_event> &events,
-      enum cache_request_status status); // write-allocate with read-fetch-only
+      enum cache_request_status status);  // write-allocate with read-fetch-only
   enum cache_request_status wr_miss_wa_write_validate(
       new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
       std::list<cache_event> &events,
       enum cache_request_status
-          status); // write-allocate that writes with no read fetch
-  enum cache_request_status
-  wr_miss_no_wa(new_addr_type addr, unsigned cache_index, mem_fetch *mf,
-                unsigned time, std::list<cache_event> &events,
-                enum cache_request_status status); // no write-allocate
+          status);  // write-allocate that writes with no read fetch
+  enum cache_request_status wr_miss_no_wa(
+      new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
+      std::list<cache_event> &events,
+      enum cache_request_status status);  // no write-allocate
 
   // Currently no separate functions for reads
   /******* Read-hit configs *******/
@@ -1546,16 +1547,16 @@ protected:
 /// the granularity of individual blocks
 /// (the policy used in fermi according to the CUDA manual)
 class l1_cache : public data_cache {
-public:
+ public:
   l1_cache(const char *name, cache_config &config, int core_id, int type_id,
            mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
            enum mem_fetch_status status, class gpgpu_sim *gpu)
       : data_cache(name, config, core_id, type_id, memport, mfcreator, status,
                    L1_WR_ALLOC_R, L1_WRBK_ACC, gpu) {
 
-    /* Clear prediction list at initialization */
-    m_l1_prediction_list.clear();
-  }
+                    /* Clear prediction list at initialization */
+                     m_l1_prediction_list.clear();
+                    }
 
   virtual ~l1_cache() {}
 
@@ -1563,42 +1564,48 @@ public:
                                            unsigned time,
                                            std::list<cache_event> &events);
 
-  void print_level(FILE *fp) { DBPRINTF(fp, "L1 cache : "); }
+  void print_level(FILE *fp){ DBPRINTF(fp, "L1 cache : ");  }
 
-  const cache_config &get_m_config() { return m_config; }
+  const cache_config& get_m_config(){return m_config;}
 
   /* Additional logic for adaptive cache bypassing */
-  std::map<new_addr_type, int> m_l1_prediction_list;
+  std::map<new_addr_type, int > m_l1_prediction_list;
 
-  void strengthen_prediction(new_addr_type addr) {
-    std::map<new_addr_type, int>::iterator it = m_l1_prediction_list.find(addr);
-    if (it != m_l1_prediction_list.end()) {
-      if (m_l1_prediction_list[it->first] < (2 * PREDICT_THRESH) - 1) {
-        m_l1_prediction_list[it->first]++;
+  void strengthen_prediction(new_addr_type addr){
+      std::map<new_addr_type, int >::iterator it = m_l1_prediction_list.find(addr);
+      if(it != m_l1_prediction_list.end())
+      {
+          if (m_l1_prediction_list[it->first] < (2*PREDICT_THRESH)-1){
+            m_l1_prediction_list[it->first] ++;
+          }
+          DBPRINTF(stdout, "ABSO : strengthen prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
+
       }
-      DBPRINTF(stdout, "ABSO : strengthen prediction for 0x%llX : %d\n", addr,
-               m_l1_prediction_list[it->first]);
-
-    } else {
-      assert(addr && "Was not found in the prediction list");
-    }
+      else
+      {
+        assert(addr && "Was not found in the prediction list");
+      }
+      
   }
 
-  void weaken_prediction(new_addr_type addr) {
-    std::map<new_addr_type, int>::iterator it = m_l1_prediction_list.find(addr);
-    if (it != m_l1_prediction_list.end()) {
-      if (m_l1_prediction_list[it->first] > 0) {
-        m_l1_prediction_list[it->first]--;
-      }
+   void weaken_prediction(new_addr_type addr){
+      std::map<new_addr_type, int >::iterator it = m_l1_prediction_list.find(addr);
+      if(it != m_l1_prediction_list.end())
+      {
+          if (m_l1_prediction_list[it->first] > 0){
+            m_l1_prediction_list[it->first] --;
+          }
 
-      DBPRINTF(stdout, "ABSO : weaken prediction for 0x%llX : %d\n", addr,
-               m_l1_prediction_list[it->first]);
-    } else {
-      assert(addr && "Was not found in the prediction list");
-    }
+          DBPRINTF(stdout, "ABSO : weaken prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
+      }
+      else
+      {
+        assert(addr && "Was not found in the prediction list");
+      }
+      
   }
 
-protected:
+ protected:
   l1_cache(const char *name, cache_config &config, int core_id, int type_id,
            mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
            enum mem_fetch_status status, tag_array *new_tag_array,
@@ -1610,7 +1617,7 @@ protected:
 /// Models second level shared cache with global write-back
 /// and write-allocate policies
 class l2_cache : public data_cache {
-public:
+ public:
   l2_cache(const char *name, cache_config &config, int core_id, int type_id,
            mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
            enum mem_fetch_status status, class gpgpu_sim *gpu)
@@ -1622,9 +1629,11 @@ public:
   virtual enum cache_request_status access(new_addr_type addr, mem_fetch *mf,
                                            unsigned time,
                                            std::list<cache_event> &events);
-  void print_level(FILE *fp) { DBPRINTF(fp, "L2 cache : "); }
+  void print_level(FILE *fp){ DBPRINTF(fp, "L2 cache : ");  }
 
-  std::vector<new_addr_type> m_accessed_list;
+std::vector<new_addr_type> m_accessed_list;
+
+
 };
 
 /*****************************************************************************/
@@ -1635,11 +1644,12 @@ public:
 // Proceedings of the 1998 Eurographics/SIGGRAPH Workshop on Graphics Hardware
 // http://www-graphics.stanford.edu/papers/texture_prefetch/
 class tex_cache : public cache_t {
-public:
+ public:
   tex_cache(const char *name, cache_config &config, int core_id, int type_id,
             mem_fetch_interface *memport, enum mem_fetch_status request_status,
             enum mem_fetch_status rob_status)
-      : m_config(config), m_tags(config, core_id, type_id),
+      : m_config(config),
+        m_tags(config, core_id, type_id),
         m_fragment_fifo(config.m_fragment_fifo_entries),
         m_request_fifo(config.m_request_fifo_entries),
         m_rob(config.m_rob_entries),
@@ -1692,7 +1702,7 @@ public:
     m_stats.get_sub_stats(css);
   }
 
-private:
+ private:
   std::string m_name;
   const cache_config &m_config;
 
@@ -1704,9 +1714,9 @@ private:
       m_miss = m;
       m_data_size = d;
     }
-    mem_fetch *m_request;   // request information
-    unsigned m_cache_index; // where to look for data
-    bool m_miss;            // true if sent memory request
+    mem_fetch *m_request;    // request information
+    unsigned m_cache_index;  // where to look for data
+    bool m_miss;             // true if sent memory request
     unsigned m_data_size;
   };
 
@@ -1724,8 +1734,8 @@ private:
       m_block_addr = a;
     }
     bool m_ready;
-    unsigned m_time;  // which cycle did this entry become ready?
-    unsigned m_index; // where in cache should block be placed?
+    unsigned m_time;   // which cycle did this entry become ready?
+    unsigned m_index;  // where in cache should block be placed?
     mem_fetch *m_request;
     new_addr_type m_block_addr;
   };
@@ -1737,8 +1747,9 @@ private:
   };
 
   // TODO: replace fifo_pipeline with this?
-  template <class T> class fifo {
-  public:
+  template <class T>
+  class fifo {
+   public:
     fifo(unsigned size) {
       m_size = size;
       m_num = 0;
@@ -1774,7 +1785,7 @@ private:
     T &peek() const { return m_data[m_tail]; }
     unsigned next_pop_index() const { return m_tail; }
 
-  private:
+   private:
     void inc_head() {
       m_head = (m_head + 1) % m_size;
       m_num++;
@@ -1785,10 +1796,10 @@ private:
       m_num--;
     }
 
-    unsigned m_head; // next entry goes here
-    unsigned m_tail; // oldest entry found here
-    unsigned m_num;  // how many in fifo?
-    unsigned m_size; // maximum number of entries in fifo
+    unsigned m_head;  // next entry goes here
+    unsigned m_tail;  // oldest entry found here
+    unsigned m_num;   // how many in fifo?
+    unsigned m_size;  // maximum number of entries in fifo
     T *m_data;
   };
 
@@ -1797,7 +1808,7 @@ private:
   fifo<mem_fetch *> m_request_fifo;
   fifo<rob_entry> m_rob;
   data_block *m_cache;
-  fifo<mem_fetch *> m_result_fifo; // next completed texture fetch
+  fifo<mem_fetch *> m_result_fifo;  // next completed texture fetch
 
   mem_fetch_interface *m_memport;
   enum mem_fetch_status m_request_queue_status;

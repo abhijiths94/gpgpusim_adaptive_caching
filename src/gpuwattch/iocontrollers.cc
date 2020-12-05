@@ -29,6 +29,11 @@
  *
  ***************************************************************************/
 #include "iocontrollers.h"
+#include <assert.h>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <string>
 #include "XML_Parse.h"
 #include "basic_components.h"
 #include "cacti/basic_circuit.h"
@@ -36,11 +41,6 @@
 #include "io.h"
 #include "logic.h"
 #include "parameter.h"
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <iostream>
-#include <string>
 
 /*
 SUN Niagara 2 I/O power analysis:
@@ -71,8 +71,8 @@ Total energy of FBDIMM, NIC, PCIe = 11.14 - 2.17*1.5 = 7.89
  *
  */
 
-NIUController::NIUController(ParseXML *XML_interface,
-                             InputParameter *interface_ip_)
+NIUController::NIUController(ParseXML* XML_interface,
+                             InputParameter* interface_ip_)
     : XML(XML_interface), interface_ip(*interface_ip_) {
   local_result = init_interface(&interface_ip);
 
@@ -84,7 +84,7 @@ NIUController::NIUController(ParseXML *XML_interface,
 
   set_niu_param();
 
-  if (niup.type == 0) // high performance NIU
+  if (niup.type == 0)  // high performance NIU
   {
     // Area estimation based on average of die photo from Niagara 2 and Cadence
     // ChipEstimate using 65nm.
@@ -100,7 +100,7 @@ NIUController::NIUController(ParseXML *XML_interface,
     // Area estimation based on average of die photo from Niagara 2 and Cadence
     // ChipEstimate hard IP @65nm. SerDer is very hard to scale
     SerDer_area = (1.39 + 0.36) * (interface_ip.F_sz_um /
-                                   0.065); //* (interface_ip.F_sz_um/0.065);
+                                   0.065);  //* (interface_ip.F_sz_um/0.065);
     // total area
     area.set_area((mac_area + frontend_area + SerDer_area) * 1e6);
     // Power
@@ -109,17 +109,17 @@ NIUController::NIUController(ParseXML *XML_interface,
     mac_dyn = 2.19e-9 * g_tp.peri_global.Vdd / 1.1 * g_tp.peri_global.Vdd /
               1.1 *
               (interface_ip.F_sz_nm /
-               65.0); // niup.clockRate; //2.19W@1GHz fully active according to
-                      // Cadence ChipEstimate @65nm
+               65.0);  // niup.clockRate; //2.19W@1GHz fully active according to
+                       // Cadence ChipEstimate @65nm
     // Cadence ChipEstimate using 65nm soft IP;
     frontend_dyn = 0.27e-9 * g_tp.peri_global.Vdd / 1.1 * g_tp.peri_global.Vdd /
-                   1.1 * (interface_ip.F_sz_nm / 65.0); // niup.clockRate;
+                   1.1 * (interface_ip.F_sz_nm / 65.0);  // niup.clockRate;
     // according to "A 100mW 9.6Gb/s Transceiver in 90nm CMOS..." ISSCC 2006
     // SerDer_dyn is power not energy, scaling from 10mw/Gb/s @90nm
     SerDer_dyn = 0.01 * 10 * sqrt(interface_ip.F_sz_um / 0.09) *
                  g_tp.peri_global.Vdd / 1.2 * g_tp.peri_global.Vdd / 1.2;
     SerDer_dyn /=
-        niup.clockRate; // covert to energy per clock cycle of whole NIU
+        niup.clockRate;  // covert to energy per clock cycle of whole NIU
 
     // Cadence ChipEstimate using 65nm
     mac_gates = 111700;
@@ -127,15 +127,16 @@ NIUController::NIUController(ParseXML *XML_interface,
     NMOS_sizing = 5 * g_tp.min_w_nmos_;
     PMOS_sizing = 5 * g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r;
 
-  } else { // Low power implementations are mostly from Cadence ChipEstimator;
-           // Ignore the multiple IP effect
+  } else {  // Low power implementations are mostly from Cadence ChipEstimator;
+            // Ignore the multiple IP effect
     // ---When there are multiple IP (same kind or not) selected, Cadence
     // ChipEstimator results are not a simple summation of all IPs. Ignore this
     // effect
     mac_area =
         0.24 * (interface_ip.F_sz_um / 0.065) * (interface_ip.F_sz_um / 0.065);
-    frontend_area = 0.1 * (interface_ip.F_sz_um / 0.065) *
-                    (interface_ip.F_sz_um / 0.065); // Frontend is the PCS layer
+    frontend_area =
+        0.1 * (interface_ip.F_sz_um / 0.065) *
+        (interface_ip.F_sz_um / 0.065);  // Frontend is the PCS layer
     SerDer_area =
         0.35 * (interface_ip.F_sz_um / 0.065) * (interface_ip.F_sz_um / 0.065);
     // Compare 130um implementation in "A 1.2-V-Only 900-mW 10 Gb Ethernet
@@ -149,16 +150,16 @@ NIUController::NIUController(ParseXML *XML_interface,
     mac_dyn = 1.257e-9 * g_tp.peri_global.Vdd / 1.1 * g_tp.peri_global.Vdd /
               1.1 *
               (interface_ip.F_sz_nm /
-               65.0); // niup.clockRate; //2.19W@1GHz fully active according to
-                      // Cadence ChipEstimate @65nm
+               65.0);  // niup.clockRate; //2.19W@1GHz fully active according to
+                       // Cadence ChipEstimate @65nm
     // Cadence ChipEstimate using 65nm soft IP;
     frontend_dyn = 0.6e-9 * g_tp.peri_global.Vdd / 1.1 * g_tp.peri_global.Vdd /
-                   1.1 * (interface_ip.F_sz_nm / 65.0); // niup.clockRate;
+                   1.1 * (interface_ip.F_sz_nm / 65.0);  // niup.clockRate;
     // SerDer_dyn is power not energy, scaling from 216mw/10Gb/s @130nm
     SerDer_dyn = 0.0216 * 10 * (interface_ip.F_sz_um / 0.13) *
                  g_tp.peri_global.Vdd / 1.2 * g_tp.peri_global.Vdd / 1.2;
     SerDer_dyn /=
-        niup.clockRate; // covert to energy per clock cycle of whole NIU
+        niup.clockRate;  // covert to energy per clock cycle of whole NIU
 
     mac_gates = 111700;
     frontend_gates = 52000;
@@ -171,7 +172,7 @@ NIUController::NIUController(ParseXML *XML_interface,
   power_t.readOp.leakage =
       (mac_gates + frontend_gates + frontend_gates) *
       cmos_Isub_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
   double long_channel_device_reduction =
       longer_channel_device_reduction(Uncore_device);
   power_t.readOp.longer_channel_leakage =
@@ -179,7 +180,7 @@ NIUController::NIUController(ParseXML *XML_interface,
   power_t.readOp.gate_leakage =
       (mac_gates + frontend_gates + frontend_gates) *
       cmos_Ig_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
 }
 
 void NIUController::computeEnergy(bool is_tdp) {
@@ -232,8 +233,8 @@ void NIUController::set_niu_param() {
   // XML->sys.total_cycles/(XML->sys.target_core_clockrate*1e6);
 }
 
-PCIeController::PCIeController(ParseXML *XML_interface,
-                               InputParameter *interface_ip_)
+PCIeController::PCIeController(ParseXML* XML_interface,
+                               InputParameter* interface_ip_)
     : XML(XML_interface), interface_ip(*interface_ip_) {
   local_result = init_interface(&interface_ip);
   double ctrl_area, SerDer_area;
@@ -248,7 +249,7 @@ PCIeController::PCIeController(ParseXML *XML_interface,
    */
 
   set_pcie_param();
-  if (pciep.type == 0) // high performance NIU
+  if (pciep.type == 0)  // high performance NIU
   {
     // Area estimation based on average of die photo from Niagara 2 and Cadence
     // ChipEstimate @ 65nm.
@@ -259,7 +260,7 @@ PCIeController::PCIeController(ParseXML *XML_interface,
     // Niagara 2 and Cadence ChipEstimate hard IP @65nm. SerDer is very hard to
     // scale
     SerDer_area = (3.03 + 0.36) * (interface_ip.F_sz_um /
-                                   0.065); //* (interface_ip.F_sz_um/0.065);
+                                   0.065);  //* (interface_ip.F_sz_um/0.065);
     // total area
     // Power
     // Cadence ChipEstimate using 65nm the controller includes everything: the
@@ -272,8 +273,8 @@ PCIeController::PCIeController(ParseXML *XML_interface,
     // SerDer_dyn is power not energy, scaling from 10mw/Gb/s @90nm
     SerDer_dyn = 0.01 * 4 * (interface_ip.F_sz_um / 0.09) *
                  g_tp.peri_global.Vdd / 1.2 * g_tp.peri_global.Vdd /
-                 1.2;              // PCIe 2.0 max per lane speed is 4Gb/s
-    SerDer_dyn /= pciep.clockRate; // covert to energy per clock cycle
+                 1.2;               // PCIe 2.0 max per lane speed is 4Gb/s
+    SerDer_dyn /= pciep.clockRate;  // covert to energy per clock cycle
 
     // power_t.readOp.dynamic = (ctrl_dyn)*pciep.num_channels;
     // Cadence ChipEstimate using 65nm
@@ -301,8 +302,8 @@ PCIeController::PCIeController(ParseXML *XML_interface,
     // SerDer_dyn is power not energy, scaling from 10mw/Gb/s @90nm
     SerDer_dyn = 0.01 * 4 * (interface_ip.F_sz_um / 0.09) *
                  g_tp.peri_global.Vdd / 1.2 * g_tp.peri_global.Vdd /
-                 1.2;              // PCIe 2.0 max per lane speed is 4Gb/s
-    SerDer_dyn /= pciep.clockRate; // covert to energy per clock cycle
+                 1.2;               // PCIe 2.0 max per lane speed is 4Gb/s
+    SerDer_dyn /= pciep.clockRate;  // covert to energy per clock cycle
 
     // Cadence ChipEstimate using 65nm
     ctrl_gates = 200000 / 8 * pciep.num_channels;
@@ -319,7 +320,7 @@ PCIeController::PCIeController(ParseXML *XML_interface,
   power_t.readOp.leakage =
       (ctrl_gates + (pciep.withPHY ? SerDer_gates : 0)) *
       cmos_Isub_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
   double long_channel_device_reduction =
       longer_channel_device_reduction(Uncore_device);
   power_t.readOp.longer_channel_leakage =
@@ -327,7 +328,7 @@ PCIeController::PCIeController(ParseXML *XML_interface,
   power_t.readOp.gate_leakage =
       (ctrl_gates + (pciep.withPHY ? SerDer_gates : 0)) *
       cmos_Ig_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
 }
 
 void PCIeController::computeEnergy(bool is_tdp) {
@@ -382,8 +383,8 @@ void PCIeController::set_pcie_param() {
   // XML->sys.total_cycles/(XML->sys.target_core_clockrate*1e6);
 }
 
-FlashController::FlashController(ParseXML *XML_interface,
-                                 InputParameter *interface_ip_)
+FlashController::FlashController(ParseXML* XML_interface,
+                                 InputParameter* interface_ip_)
     : XML(XML_interface), interface_ip(*interface_ip_) {
   local_result = init_interface(&interface_ip);
   double ctrl_area, SerDer_area;
@@ -398,7 +399,7 @@ FlashController::FlashController(ParseXML *XML_interface,
    */
 
   set_fc_param();
-  if (fcp.type == 0) // high performance NIU
+  if (fcp.type == 0)  // high performance NIU
   {
     cout << "Current McPAT does not support high performance flash contorller "
             "since even low power designs are enough for maintain throughput"
@@ -439,7 +440,7 @@ FlashController::FlashController(ParseXML *XML_interface,
   power_t.readOp.leakage =
       ((ctrl_gates + (fcp.withPHY ? SerDer_gates : 0)) * number_channel) *
       cmos_Isub_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
   double long_channel_device_reduction =
       longer_channel_device_reduction(Uncore_device);
   power_t.readOp.longer_channel_leakage =
@@ -447,7 +448,7 @@ FlashController::FlashController(ParseXML *XML_interface,
   power_t.readOp.gate_leakage =
       ((ctrl_gates + (fcp.withPHY ? SerDer_gates : 0)) * number_channel) *
       cmos_Ig_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-      g_tp.peri_global.Vdd; // unit W
+      g_tp.peri_global.Vdd;  // unit W
 }
 
 void FlashController::computeEnergy(bool is_tdp) {
@@ -471,7 +472,7 @@ void FlashController::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
     cout << indent_str << "Area = " << area.get_area() * 1e-6 << " mm^2"
          << endl;
     cout << indent_str << "Peak Dynamic = " << power.readOp.dynamic << " W"
-         << endl; // no multiply of clock since this is power already
+         << endl;  // no multiply of clock since this is power already
     cout << indent_str << "Subthreshold Leakage = "
          << (long_channel ? power.readOp.longer_channel_leakage
                           : power.readOp.leakage)

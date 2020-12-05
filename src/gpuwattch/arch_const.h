@@ -34,7 +34,7 @@
 
 typedef struct {
   unsigned int capacity;
-  unsigned int assoc; // fully
+  unsigned int assoc;  // fully
   unsigned int blocksize;
 } array_inputs;
 
@@ -50,18 +50,18 @@ const unsigned int dev_type = 0;
 const double CLOCKRATE = 1.2 * 1e9;
 const double AF = 0.5;
 // const bool 			inorder			=	true;
-const bool embedded = false; // NEW
+const bool embedded = false;  // NEW
 
 const bool homogeneous_cores = true;
 const bool temperature = 360;
 const int number_cache_levels = 3;
-const int L1_property = 0; // private 0; coherent 1, shared 2.
+const int L1_property = 0;  // private 0; coherent 1, shared 2.
 const int L2_property = 2;
 const bool homogeneous_L2s = true;
 const bool L3_property = 2;
 const bool homogeneous_L3s = true;
 const double Max_area_deviation = 50;
-const double Max_dynamic_deviation = 50; // New
+const double Max_dynamic_deviation = 50;  // New
 const int opt_dynamic_power = 1;
 const int opt_lakage_power = 0;
 const int opt_area = 0;
@@ -69,21 +69,21 @@ const int interconnect_projection_type = 0;
 
 //******************************Core Parameters
 #if (inorder)
-const int opcode_length = 8;       // Niagara
-const int reg_length = 5;          // Niagara
-const int instruction_length = 32; // Niagara
+const int opcode_length = 8;        // Niagara
+const int reg_length = 5;           // Niagara
+const int instruction_length = 32;  // Niagara
 const int data_width = 64;
 #else
-const int opcode_length = 8;       // 16;//Niagara
-const int reg_length = 7;          // Niagara
-const int instruction_length = 32; // Niagara
+const int opcode_length = 8;        // 16;//Niagara
+const int reg_length = 7;           // Niagara
+const int instruction_length = 32;  // Niagara
 const int data_width = 64;
 #endif
 
 // Caches
 // itlb
 const int itlbsize = 512;
-const int itlbassoc = 0; // fully
+const int itlbassoc = 0;  // fully
 const int itlbblocksize = 8;
 // icache
 const int icachesize = 32768;
@@ -91,7 +91,7 @@ const int icacheassoc = 4;
 const int icacheblocksize = 32;
 // dtlb
 const int dtlbsize = 512;
-const int dtlbassoc = 0; // fully
+const int dtlbassoc = 0;  // fully
 const int dtlbblocksize = 8;
 // dcache
 const int dcachesize = 32768;
@@ -102,13 +102,13 @@ const int dcache_write_buffers = 8;
 // cache controllers
 // IB,
 const int numIBEntries = 64;
-const int IBsize = 64; // 2*4*instruction_length/8*2;
-const int IBassoc = 0; // In Niagara it is still fully associ
+const int IBsize = 64;  // 2*4*instruction_length/8*2;
+const int IBassoc = 0;  // In Niagara it is still fully associ
 const int IBblocksize = 4;
 
 // IFB and MIL should have the same parameters CAM
-const int IFBsize = 128; //
-const int IFBassoc = 0;  // In Niagara it is still fully associ
+const int IFBsize = 128;  //
+const int IFBassoc = 0;   // In Niagara it is still fully associ
 const int IFBblocksize = 4;
 
 const int icache_write_buffers = 8;
@@ -209,12 +209,12 @@ const int localHistoryBits = 11;
 const int localHistoryTableSize = 2048;
 const int localPredictorSize = 2048;
 
-const double Woutdrvnandn = 30 * 0.09;   //(24.0 * LSCALE)
-const double Woutdrvnandp = 12.5 * 0.09; //(10.0 * LSCALE)
-const double Woutdrvnorn = 7.5 * 0.09;   //(6.0 * LSCALE)
-const double Woutdrvnorp = 50 * 0.09;    //	(40.0 * LSCALE)
-const double Woutdrivern = 60 * 0.09;    //(48.0 * LSCALE)
-const double Woutdriverp = 100 * 0.09;   //(80.0 * LSCALE)
+const double Woutdrvnandn = 30 * 0.09;    //(24.0 * LSCALE)
+const double Woutdrvnandp = 12.5 * 0.09;  //(10.0 * LSCALE)
+const double Woutdrvnorn = 7.5 * 0.09;    //(6.0 * LSCALE)
+const double Woutdrvnorp = 50 * 0.09;     //	(40.0 * LSCALE)
+const double Woutdrivern = 60 * 0.09;     //(48.0 * LSCALE)
+const double Woutdriverp = 100 * 0.09;    //(80.0 * LSCALE)
 
 /*
 smtCommitPolicy=RoundRobin

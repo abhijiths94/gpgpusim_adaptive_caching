@@ -31,7 +31,7 @@
 #define SP_BASE_POWER 0
 #define SFU_BASE_POWER 0
 
-static const char *pwr_cmp_label[] = {
+static const char* pwr_cmp_label[] = {
     "IBP,", "ICP,",  "DCP,",   "TCP,",   "CCP,",        "SHRDP,",
     "RFP,", "SPP,",  "SFUP,",  "FPUP,",  "SCHEDP,",     "L2CP,",
     "MCP,", "NOCP,", "DRAMP,", "PIPEP,", "IDLE_COREP,", "CONST_DYNAMICP"};
@@ -59,7 +59,7 @@ enum pwr_cmp_t {
 };
 
 gpgpu_sim_wrapper::gpgpu_sim_wrapper(bool power_simulation_enabled,
-                                     char *xmlfile) {
+                                     char* xmlfile) {
   kernel_sample_count = 0;
   total_sample_count = 0;
 
@@ -73,8 +73,8 @@ gpgpu_sim_wrapper::gpgpu_sim_wrapper(bool power_simulation_enabled,
   kernel_cmp_pwr.resize(NUM_COMPONENTS_MODELLED, init);
   kernel_cmp_perf_counters.resize(NUM_PERFORMANCE_COUNTERS, init);
 
-  kernel_power = init;  // Per-kernel powers
-  gpu_tot_power = init; // Global powers
+  kernel_power = init;   // Per-kernel powers
+  gpu_tot_power = init;  // Global powers
 
   sample_cmp_pwr.resize(NUM_COMPONENTS_MODELLED, 0);
 
@@ -122,8 +122,8 @@ bool gpgpu_sim_wrapper::sanity_check(double a, double b) {
   return false;
 }
 void gpgpu_sim_wrapper::init_mcpat(
-    char *xmlfile, char *powerfilename, char *power_trace_filename,
-    char *metric_trace_filename, char *steady_state_filename,
+    char* xmlfile, char* powerfilename, char* power_trace_filename,
+    char* metric_trace_filename, char* steady_state_filename,
     bool power_sim_enabled, bool trace_enabled, bool steady_state_enabled,
     bool power_per_cycle_dump, double steady_power_deviation,
     double steady_min_period, int zlevel, double init_val,
@@ -136,13 +136,11 @@ void gpgpu_sim_wrapper::init_mcpat(
   // initialize file name if it is not set
   time_t curr_time;
   time(&curr_time);
-  char *date = ctime(&curr_time);
-  char *s = date;
+  char* date = ctime(&curr_time);
+  char* s = date;
   while (*s) {
-    if (*s == ' ' || *s == '\t' || *s == ':')
-      *s = '-';
-    if (*s == '\n' || *s == '\r')
-      *s = 0;
+    if (*s == ' ' || *s == '\t' || *s == ':') *s = '-';
+    if (*s == '\n' || *s == '\r') *s = 0;
     s++;
   }
 
@@ -216,7 +214,7 @@ void gpgpu_sim_wrapper::init_mcpat(
     assert(flg == 0);
   }
   sample_val = 0;
-  init_inst_val = init_val; // gpu_tot_sim_insn+gpu_sim_insn;
+  init_inst_val = init_val;  // gpu_tot_sim_insn+gpu_sim_insn;
 }
 
 void gpgpu_sim_wrapper::reset_counters() {
@@ -705,7 +703,7 @@ void gpgpu_sim_wrapper::update_components_power() {
 void gpgpu_sim_wrapper::compute() { proc->compute(); }
 void gpgpu_sim_wrapper::print_power_kernel_stats(
     double gpu_sim_cycle, double gpu_tot_sim_cycle, double init_value,
-    const std::string &kernel_info_string, bool print_trace) {
+    const std::string& kernel_info_string, bool print_trace) {
   detect_print_steady_state(1, init_value);
   if (g_power_simulation_enabled) {
     powerfile << kernel_info_string << std::endl;
@@ -762,8 +760,7 @@ void gpgpu_sim_wrapper::print_power_kernel_stats(
   }
 }
 void gpgpu_sim_wrapper::dump() {
-  if (g_power_per_cycle_dump)
-    proc->displayEnergy(2, 5);
+  if (g_power_per_cycle_dump) proc->displayEnergy(2, 5);
 }
 
 void gpgpu_sim_wrapper::print_steady_state(int position, double init_val) {
@@ -772,8 +769,8 @@ void gpgpu_sim_wrapper::print_steady_state(int position, double init_val) {
                     (double)(samples.size() * gpu_stat_sample_freq);
 
   if ((samples.size() >
-       gpu_steady_min_period)) { // If steady state occurred for some time,
-                                 // print to file
+       gpu_steady_min_period)) {  // If steady state occurred for some time,
+                                  // print to file
     has_written_avg = true;
     gzprintf(steady_state_tacking_file, "%u,%d,%f,%f,", sample_start,
              total_sample_count, temp_avg, temp_ipc);
@@ -826,7 +823,7 @@ void gpgpu_sim_wrapper::detect_print_steady_state(int position,
         double temp_avg = sample_val / (double)samples.size();
 
         if (abs(proc->rt_power.readOp.dynamic - temp_avg) <
-            gpu_steady_power_deviation) { // Value is within threshold
+            gpu_steady_power_deviation) {  // Value is within threshold
           sample_val += proc->rt_power.readOp.dynamic;
           samples.push_back(proc->rt_power.readOp.dynamic);
           for (unsigned i = 0; i < (num_perf_counters); ++i) {
@@ -837,7 +834,7 @@ void gpgpu_sim_wrapper::detect_print_steady_state(int position,
             pwr_counter.at(i) += sample_cmp_pwr[i];
           }
 
-        } else { // Value exceeds threshold, not considered steady state
+        } else {  // Value exceeds threshold, not considered steady state
           print_steady_state(position, init_val);
         }
       }

@@ -73,7 +73,7 @@ void init_tech_params(double technology, bool is_tag) {
                                        ? g_ip->tag_arr_peri_global_tech_type
                                        : g_ip->data_arr_peri_global_tech_type;
 
-  technology = technology * 1000.0; // in the unit of nm
+  technology = technology * 1000.0;  // in the unit of nm
 
   // initialize parameters
   g_tp.reset();
@@ -84,9 +84,9 @@ void init_tech_params(double technology, bool is_tag) {
       curr_Wmemcellpmos_sram, curr_Wmemcellnmos_sram, curr_area_cell_sram,
       curr_asp_ratio_cell_sram, curr_I_off_dram_cell_worst_case_length_temp;
   double curr_Wmemcella_cam, curr_Wmemcellpmos_cam, curr_Wmemcellnmos_cam,
-      curr_area_cell_cam, // Sheng: CAM data
+      curr_area_cell_cam,  // Sheng: CAM data
       curr_asp_ratio_cell_cam;
-  double SENSE_AMP_D, SENSE_AMP_P; // J
+  double SENSE_AMP_D, SENSE_AMP_P;  // J
   double area_cell_dram = 0;
   double asp_ratio_cell_dram = 0;
   double area_cell_sram = 0;
@@ -99,10 +99,10 @@ void init_tech_params(double technology, bool is_tag) {
   double width_dram_access_transistor;
 
   double curr_logic_scaling_co_eff =
-      0; // This is based on the reported numbers of Intel Merom 65nm,
-         // Penryn45nm and IBM cell 90/65/45 date
+      0;  // This is based on the reported numbers of Intel Merom 65nm,
+          // Penryn45nm and IBM cell 90/65/45 date
   double curr_core_tx_density =
-      0; // this is density per um^2; 90, ...22nm based on Intel Penryn
+      0;  // this is density per um^2; 90, ...22nm based on Intel Penryn
   double curr_chip_layout_overhead = 0;
   double curr_macro_layout_overhead = 0;
   double curr_sckt_co_eff = 0;
@@ -198,23 +198,23 @@ void init_tech_params(double technology, bool is_tag) {
     }
 
     if (tech == 90) {
-      SENSE_AMP_D = .28e-9;   // s
-      SENSE_AMP_P = 14.7e-15; // J
+      SENSE_AMP_D = .28e-9;    // s
+      SENSE_AMP_P = 14.7e-15;  // J
       // 90nm technology-node. Corresponds to year 2004 in ITRS
       // ITRS HP device type
       vdd[0] = 1.2;
-      Lphy[0] = 0.037;    // Lphy is the physical gate-length. micron
-      Lelec[0] = 0.0266;  // Lelec is the electrical gate-length. micron
-      t_ox[0] = 1.2e-3;   // micron
-      v_th[0] = 0.23707;  // V
-      c_ox[0] = 1.79e-14; // F/micron2
-      mobility_eff[0] = 342.16 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-      Vdsat[0] = 0.128;                                     // V
-      c_g_ideal[0] = 6.64e-16;                              // F/micron
-      c_fringe[0] = 0.08e-15;                               // F/micron
-      c_junc[0] = 1e-15;                                    // F/micron2
-      I_on_n[0] = 1076.9e-6;                                // A/micron
-      I_on_p[0] = 712.6e-6;                                 // A/micron
+      Lphy[0] = 0.037;     // Lphy is the physical gate-length. micron
+      Lelec[0] = 0.0266;   // Lelec is the electrical gate-length. micron
+      t_ox[0] = 1.2e-3;    // micron
+      v_th[0] = 0.23707;   // V
+      c_ox[0] = 1.79e-14;  // F/micron2
+      mobility_eff[0] = 342.16 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+      Vdsat[0] = 0.128;                                      // V
+      c_g_ideal[0] = 6.64e-16;                               // F/micron
+      c_fringe[0] = 0.08e-15;                                // F/micron
+      c_junc[0] = 1e-15;                                     // F/micron2
+      I_on_n[0] = 1076.9e-6;                                 // A/micron
+      I_on_p[0] = 712.6e-6;                                  // A/micron
       // Note that nmos_effective_resistance_multiplier,
       // n_to_p_eff_curr_drv_ratio and gmp_to_gmn_multiplier values are
       // calculated offline
@@ -222,11 +222,11 @@ void init_tech_params(double technology, bool is_tag) {
       n_to_p_eff_curr_drv_ratio[0] = 2.45;
       gmp_to_gmn_multiplier[0] = 1.22;
       Rnchannelon[0] = nmos_effective_resistance_multiplier * vdd[0] /
-                       I_on_n[0]; // ohm-micron
+                       I_on_n[0];  // ohm-micron
       Rpchannelon[0] =
-          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0];  // ohm-micron
       long_channel_leakage_reduction[0] = 1;
-      I_off_n[0][0] = 3.24e-8; // A/micron
+      I_off_n[0][0] = 3.24e-8;  // A/micron
       I_off_n[0][10] = 4.01e-8;
       I_off_n[0][20] = 4.90e-8;
       I_off_n[0][30] = 5.92e-8;
@@ -238,7 +238,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 1.43e-7;
       I_off_n[0][100] = 1.54e-7;
 
-      I_g_on_n[0][0] = 1.65e-8; // A/micron
+      I_g_on_n[0][0] = 1.65e-8;  // A/micron
       I_g_on_n[0][10] = 1.65e-8;
       I_g_on_n[0][20] = 1.65e-8;
       I_g_on_n[0][30] = 1.65e-8;
@@ -283,7 +283,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[1][90] = 1.25e-10;
       I_off_n[1][100] = 1.7e-10;
 
-      I_g_on_n[1][0] = 3.87e-11; // A/micron
+      I_g_on_n[1][0] = 3.87e-11;  // A/micron
       I_g_on_n[1][10] = 3.87e-11;
       I_g_on_n[1][20] = 3.87e-11;
       I_g_on_n[1][30] = 3.87e-11;
@@ -328,7 +328,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[2][90] = 1.52e-8;
       I_off_n[2][100] = 1.73e-8;
 
-      I_g_on_n[2][0] = 4.31e-8; // A/micron
+      I_g_on_n[2][0] = 4.31e-8;  // A/micron
       I_g_on_n[2][10] = 4.31e-8;
       I_g_on_n[2][20] = 4.31e-8;
       I_g_on_n[2][30] = 4.31e-8;
@@ -444,20 +444,20 @@ void init_tech_params(double technology, bool is_tag) {
       curr_Wmemcella_cam = 1.31 * g_ip->F_sz_um;
       curr_Wmemcellpmos_cam = 1.23 * g_ip->F_sz_um;
       curr_Wmemcellnmos_cam = 2.08 * g_ip->F_sz_um;
-      curr_area_cell_cam = 292 * g_ip->F_sz_um * g_ip->F_sz_um; // 360
-      curr_asp_ratio_cell_cam = 2.92;                           // 2.5
+      curr_area_cell_cam = 292 * g_ip->F_sz_um * g_ip->F_sz_um;  // 360
+      curr_asp_ratio_cell_cam = 2.92;                            // 2.5
       // Empirical undifferetiated core/FU coefficient
       curr_logic_scaling_co_eff = 1;
       curr_core_tx_density = 1.25 * 0.7 * 0.7;
       curr_sckt_co_eff = 1.1539;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
-    if (tech == 65) { // 65nm technology-node. Corresponds to year 2007 in ITRS
-                      // ITRS HP device type
+    if (tech == 65) {  // 65nm technology-node. Corresponds to year 2007 in ITRS
+                       // ITRS HP device type
       //      SENSE_AMP_D = .2e-9; // s
       //      SENSE_AMP_P = 5.7e-15; // J
       //      vdd[0] = 1.1;
@@ -505,8 +505,8 @@ void init_tech_params(double technology, bool is_tag) {
       //      I_g_on_n[0][90] = 4.09e-8;
       //      I_g_on_n[0][100] = 4.09e-8;
 
-      SENSE_AMP_D = .2e-9;   // s
-      SENSE_AMP_P = 5.7e-15; // J
+      SENSE_AMP_D = .2e-9;    // s
+      SENSE_AMP_P = 5.7e-15;  // J
       vdd[0] = 1.25;
       Lphy[0] = 0.025;
       Lelec[0] = 0.019;
@@ -543,7 +543,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 1.27e-6;
       I_off_n[0][100] = 1.31e-6;
 
-      I_g_on_n[0][0] = 7.02e-8; // A/micron
+      I_g_on_n[0][0] = 7.02e-8;  // A/micron
       I_g_on_n[0][10] = 7.02e-8;
       I_g_on_n[0][20] = 7.02e-8;
       I_g_on_n[0][30] = 7.02e-8;
@@ -588,7 +588,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[1][90] = 2.62e-10;
       I_off_n[1][100] = 3.21e-10;
 
-      I_g_on_n[1][0] = 1.09e-10; // A/micron
+      I_g_on_n[1][0] = 1.09e-10;  // A/micron
       I_g_on_n[1][10] = 1.09e-10;
       I_g_on_n[1][20] = 1.09e-10;
       I_g_on_n[1][30] = 1.09e-10;
@@ -633,7 +633,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[2][90] = 3.13e-8;
       I_off_n[2][100] = 3.42e-8;
 
-      I_g_on_n[2][0] = 9.61e-9; // A/micron
+      I_g_on_n[2][0] = 9.61e-9;  // A/micron
       I_g_on_n[2][10] = 9.61e-9;
       I_g_on_n[2][20] = 9.61e-9;
       I_g_on_n[2][30] = 9.61e-9;
@@ -756,15 +756,15 @@ void init_tech_params(double technology, bool is_tag) {
       curr_core_tx_density = 1.25 * 0.7;
       curr_sckt_co_eff = 1.1359;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
-    if (tech == 45) { // 45nm technology-node. Corresponds to year 2010 in ITRS
+    if (tech == 45) {  // 45nm technology-node. Corresponds to year 2010 in ITRS
       // ITRS HP device type
-      SENSE_AMP_D = .04e-9;  // s
-      SENSE_AMP_P = 2.7e-15; // J
+      SENSE_AMP_D = .04e-9;   // s
+      SENSE_AMP_P = 2.7e-15;  // J
       vdd[0] = 1.0;
       Lphy[0] = 0.018;
       Lelec[0] = 0.01345;
@@ -780,8 +780,8 @@ void init_tech_params(double technology, bool is_tag) {
       // There are certain problems with the ITRS PMOS numbers in MASTAR for
       // 45nm. So we are using 65nm values of n_to_p_eff_curr_drv_ratio and
       // gmp_to_gmn_multiplier for 45nm
-      I_on_p[0] = I_on_n[0] / 2; // This value is fixed arbitrarily but I_on_p
-                                 // is not being used in CACTI
+      I_on_p[0] = I_on_n[0] / 2;  // This value is fixed arbitrarily but I_on_p
+                                  // is not being used in CACTI
       nmos_effective_resistance_multiplier = 1.51;
       n_to_p_eff_curr_drv_ratio[0] = 2.41;
       gmp_to_gmn_multiplier[0] = 1.38;
@@ -789,8 +789,8 @@ void init_tech_params(double technology, bool is_tag) {
           nmos_effective_resistance_multiplier * vdd[0] / I_on_n[0];
       Rpchannelon[0] = n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0];
       long_channel_leakage_reduction[0] =
-          1 / 3.546; // Using MASTAR, @380K, increase Lgate until Ion reduces
-                     // to 90%, Ioff(Lgate normal)/Ioff(Lgate long)= 3.74
+          1 / 3.546;  // Using MASTAR, @380K, increase Lgate until Ion reduces
+                      // to 90%, Ioff(Lgate normal)/Ioff(Lgate long)= 3.74
       I_off_n[0][0] = 2.8e-7;
       I_off_n[0][10] = 3.28e-7;
       I_off_n[0][20] = 3.81e-7;
@@ -803,7 +803,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 8.91e-7;
       I_off_n[0][100] = 9.84e-7;
 
-      I_g_on_n[0][0] = 3.59e-8; // A/micron
+      I_g_on_n[0][0] = 3.59e-8;  // A/micron
       I_g_on_n[0][10] = 3.59e-8;
       I_g_on_n[0][20] = 3.59e-8;
       I_g_on_n[0][30] = 3.59e-8;
@@ -848,7 +848,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[1][90] = 3.29e-10;
       I_off_n[1][100] = 4.1e-10;
 
-      I_g_on_n[1][0] = 9.47e-12; // A/micron
+      I_g_on_n[1][0] = 9.47e-12;  // A/micron
       I_g_on_n[1][10] = 9.47e-12;
       I_g_on_n[1][20] = 9.47e-12;
       I_g_on_n[1][30] = 9.47e-12;
@@ -866,7 +866,7 @@ void init_tech_params(double technology, bool is_tag) {
       Lelec[2] = 0.016;
       t_ox[2] = 0.9e-3;
       v_th[2] = 0.22599;
-      c_ox[2] = 2.82e-14; // F/micron2
+      c_ox[2] = 2.82e-14;  // F/micron2
       mobility_eff[2] = 508.9 * (1e-2 * 1e6 * 1e-2 * 1e6);
       Vdsat[2] = 5.71e-2;
       c_g_ideal[2] = 6.2e-16;
@@ -893,7 +893,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[2][90] = 1.84e-8;
       I_off_n[2][100] = 2.03e-8;
 
-      I_g_on_n[2][0] = 3.24e-8; // A/micron
+      I_g_on_n[2][0] = 3.24e-8;  // A/micron
       I_g_on_n[2][10] = 4.01e-8;
       I_g_on_n[2][20] = 4.90e-8;
       I_g_on_n[2][30] = 5.92e-8;
@@ -909,11 +909,11 @@ void init_tech_params(double technology, bool is_tag) {
         // LP-DRAM cell access transistor technology parameters
         curr_vdd_dram_cell = 1.1;
         Lphy[3] = 0.078;
-        Lelec[3] = 0.0504; // Assume Lelec is 30% lesser than Lphy for DRAM
-                           // access and wordline transistors.
+        Lelec[3] = 0.0504;  // Assume Lelec is 30% lesser than Lphy for DRAM
+                            // access and wordline transistors.
         curr_v_th_dram_access_transistor = 0.44559;
         width_dram_access_transistor = 0.079;
-        curr_I_on_dram_cell = 36e-6; // A
+        curr_I_on_dram_cell = 36e-6;  // A
         curr_I_off_dram_cell_worst_case_length_temp = 19.5e-12;
         curr_Wmemcella_dram = width_dram_access_transistor;
         curr_Wmemcellpmos_dram = 0;
@@ -959,7 +959,7 @@ void init_tech_params(double technology, bool is_tag) {
         Lelec[3] = 0.0298;
         curr_v_th_dram_access_transistor = 1;
         width_dram_access_transistor = 0.045;
-        curr_I_on_dram_cell = 20e-6; // A
+        curr_I_on_dram_cell = 20e-6;  // A
         curr_I_off_dram_cell_worst_case_length_temp = 1e-15;
         curr_Wmemcella_dram = width_dram_access_transistor;
         curr_Wmemcellpmos_dram = 0;
@@ -1017,14 +1017,14 @@ void init_tech_params(double technology, bool is_tag) {
       curr_core_tx_density = 1.25;
       curr_sckt_co_eff = 1.1387;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
     if (tech == 32) {
-      SENSE_AMP_D = .03e-9;   // s
-      SENSE_AMP_P = 2.16e-15; // J
+      SENSE_AMP_D = .03e-9;    // s
+      SENSE_AMP_P = 2.16e-15;  // J
       // For 2013, MPU/ASIC stagger-contacted M1 half-pitch is 32 nm (so this is
       // 32 nm technology i.e. FEATURESIZE = 0.032). Using the SOI process
       // numbers for HP and LSTP.
@@ -1045,9 +1045,9 @@ void init_tech_params(double technology, bool is_tag) {
       n_to_p_eff_curr_drv_ratio[0] = 2.41;
       gmp_to_gmn_multiplier[0] = 1.38;
       Rnchannelon[0] = nmos_effective_resistance_multiplier * vdd[0] /
-                       I_on_n[0]; // ohm-micron
+                       I_on_n[0];  // ohm-micron
       Rpchannelon[0] =
-          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0];  // ohm-micron
       long_channel_leakage_reduction[0] = 1 / 3.706;
       // Using MASTAR, @300K (380K does not work in MASTAR), increase Lgate
       // until Ion reduces to 95% or Lgate increase by 5% (DG device can only
@@ -1064,7 +1064,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 2.73e-6;
       I_off_n[0][100] = 6.1e-6;
 
-      I_g_on_n[0][0] = 6.55e-8; // A/micron
+      I_g_on_n[0][0] = 6.55e-8;  // A/micron
       I_g_on_n[0][10] = 6.55e-8;
       I_g_on_n[0][20] = 6.55e-8;
       I_g_on_n[0][30] = 6.55e-8;
@@ -1122,7 +1122,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[1][90] = 5.96e-10;
       I_off_n[1][100] = 7.44e-10;
 
-      I_g_on_n[1][0] = 3.73e-11; // A/micron
+      I_g_on_n[1][0] = 3.73e-11;  // A/micron
       I_g_on_n[1][10] = 3.73e-11;
       I_g_on_n[1][20] = 3.73e-11;
       I_g_on_n[1][30] = 3.73e-11;
@@ -1167,7 +1167,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[2][90] = 2.39e-7;
       I_off_n[2][100] = 2.63e-7;
 
-      I_g_on_n[2][0] = 2.93e-9; // A/micron
+      I_g_on_n[2][0] = 2.93e-9;  // A/micron
       I_g_on_n[2][10] = 2.93e-9;
       I_g_on_n[2][20] = 2.93e-9;
       I_g_on_n[2][30] = 2.93e-9;
@@ -1183,8 +1183,8 @@ void init_tech_params(double technology, bool is_tag) {
         // LP-DRAM cell access transistor technology parameters
         curr_vdd_dram_cell = 1.0;
         Lphy[3] = 0.056;
-        Lelec[3] = 0.0419; // Assume Lelec is 30% lesser than Lphy for DRAM
-                           // access and wordline transistors.
+        Lelec[3] = 0.0419;  // Assume Lelec is 30% lesser than Lphy for DRAM
+                            // access and wordline transistors.
         curr_v_th_dram_access_transistor = 0.44129;
         width_dram_access_transistor = 0.056;
         curr_I_on_dram_cell = 36e-6;
@@ -1230,8 +1230,8 @@ void init_tech_params(double technology, bool is_tag) {
         // COMM-DRAM cell access transistor technology parameters
         curr_vdd_dram_cell = 1.0;
         Lphy[3] = 0.032;
-        Lelec[3] = 0.0205; // Assume Lelec is 30% lesser than Lphy for DRAM
-                           // access and wordline transistors.
+        Lelec[3] = 0.0205;  // Assume Lelec is 30% lesser than Lphy for DRAM
+                            // access and wordline transistors.
         curr_v_th_dram_access_transistor = 1;
         width_dram_access_transistor = 0.032;
         curr_I_on_dram_cell = 20e-6;
@@ -1292,9 +1292,9 @@ void init_tech_params(double technology, bool is_tag) {
       curr_core_tx_density = 1.25 / 0.7;
       curr_sckt_co_eff = 1.1111;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
     if (tech == 22) {
@@ -1302,33 +1302,33 @@ void init_tech_params(double technology, bool is_tag) {
       // 22 nm technology i.e. FEATURESIZE = 0.022). Using the DG process
       // numbers for HP. 22 nm HP
       vdd[0] = 0.8;
-      Lphy[0] = 0.009;    // Lphy is the physical gate-length.
-      Lelec[0] = 0.00468; // Lelec is the electrical gate-length.
-      t_ox[0] = 0.55e-3;  // micron
-      v_th[0] = 0.1395;   // V
-      c_ox[0] = 3.63e-14; // F/micron2
-      mobility_eff[0] = 426.07 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-      Vdsat[0] = 2.33e-2;                                   // V/micron
-      c_g_ideal[0] = 3.27e-16;                              // F/micron
-      c_fringe[0] = 0.06e-15;                               // F/micron
-      c_junc[0] = 0;                                        // F/micron2
-      I_on_n[0] = 2626.4e-6;                                // A/micron
-      I_on_p[0] =
-          I_on_n[0] / 2; // A/micron //This value for I_on_p is not really used.
+      Lphy[0] = 0.009;     // Lphy is the physical gate-length.
+      Lelec[0] = 0.00468;  // Lelec is the electrical gate-length.
+      t_ox[0] = 0.55e-3;   // micron
+      v_th[0] = 0.1395;    // V
+      c_ox[0] = 3.63e-14;  // F/micron2
+      mobility_eff[0] = 426.07 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+      Vdsat[0] = 2.33e-2;                                    // V/micron
+      c_g_ideal[0] = 3.27e-16;                               // F/micron
+      c_fringe[0] = 0.06e-15;                                // F/micron
+      c_junc[0] = 0;                                         // F/micron2
+      I_on_n[0] = 2626.4e-6;                                 // A/micron
+      I_on_p[0] = I_on_n[0] /
+                  2;  // A/micron //This value for I_on_p is not really used.
       nmos_effective_resistance_multiplier = 1.45;
       n_to_p_eff_curr_drv_ratio[0] =
-          2; // Wpmos/Wnmos = 2 in 2007 MASTAR. Look in
+          2;  // Wpmos/Wnmos = 2 in 2007 MASTAR. Look in
       //"Dynamic" tab of Device workspace.
-      gmp_to_gmn_multiplier[0] = 1.38; // Just using the 32nm SOI value.
+      gmp_to_gmn_multiplier[0] = 1.38;  // Just using the 32nm SOI value.
       Rnchannelon[0] = nmos_effective_resistance_multiplier * vdd[0] /
-                       I_on_n[0]; // ohm-micron
+                       I_on_n[0];  // ohm-micron
       Rpchannelon[0] =
-          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0];  // ohm-micron
       long_channel_leakage_reduction[0] = 1 / 3.274;
       I_off_n[0][0] =
           1.52e-7 / 1.5 *
-          1.2; // From 22nm, leakage current are directly from ITRS report
-               // rather than MASTAR, since MASTAR has serious bugs there.
+          1.2;  // From 22nm, leakage current are directly from ITRS report
+                // rather than MASTAR, since MASTAR has serious bugs there.
       I_off_n[0][10] = 1.55e-7 / 1.5 * 1.2;
       I_off_n[0][20] = 1.59e-7 / 1.5 * 1.2;
       I_off_n[0][30] = 1.68e-7 / 1.5 * 1.2;
@@ -1340,7 +1340,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 2.73e-6 / 1.5 * 1.2;
       I_off_n[0][100] = 6.1e-6 / 1.5 * 1.2;
       // for 22nm DG HP
-      I_g_on_n[0][0] = 1.81e-9; // A/micron
+      I_g_on_n[0][0] = 1.81e-9;  // A/micron
       I_g_on_n[0][10] = 1.81e-9;
       I_g_on_n[0][20] = 1.81e-9;
       I_g_on_n[0][30] = 1.81e-9;
@@ -1355,24 +1355,24 @@ void init_tech_params(double technology, bool is_tag) {
       // 22 nm LSTP DG
       vdd[1] = 0.8;
       Lphy[1] = 0.014;
-      Lelec[1] = 0.008;   // Lelec is the electrical gate-length.
-      t_ox[1] = 1.1e-3;   // micron
-      v_th[1] = 0.40126;  // V
-      c_ox[1] = 2.30e-14; // F/micron2
-      mobility_eff[1] = 738.09 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-      Vdsat[1] = 6.64e-2;                                   // V/micron
-      c_g_ideal[1] = 3.22e-16;                              // F/micron
+      Lelec[1] = 0.008;    // Lelec is the electrical gate-length.
+      t_ox[1] = 1.1e-3;    // micron
+      v_th[1] = 0.40126;   // V
+      c_ox[1] = 2.30e-14;  // F/micron2
+      mobility_eff[1] = 738.09 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+      Vdsat[1] = 6.64e-2;                                    // V/micron
+      c_g_ideal[1] = 3.22e-16;                               // F/micron
       c_fringe[1] = 0.08e-15;
-      c_junc[1] = 0;        // F/micron2
-      I_on_n[1] = 727.6e-6; // A/micron
+      c_junc[1] = 0;         // F/micron2
+      I_on_n[1] = 727.6e-6;  // A/micron
       I_on_p[1] = I_on_n[1] / 2;
       nmos_effective_resistance_multiplier = 1.99;
       n_to_p_eff_curr_drv_ratio[1] = 2;
       gmp_to_gmn_multiplier[1] = 0.99;
       Rnchannelon[1] = nmos_effective_resistance_multiplier * vdd[1] /
-                       I_on_n[1]; // ohm-micron
+                       I_on_n[1];  // ohm-micron
       Rpchannelon[1] =
-          n_to_p_eff_curr_drv_ratio[1] * Rnchannelon[1]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[1] * Rnchannelon[1];  // ohm-micron
       long_channel_leakage_reduction[1] = 1 / 1.89;
       I_off_n[1][0] = 2.43e-11;
       I_off_n[1][10] = 4.85e-11;
@@ -1386,7 +1386,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[1][90] = 1.24e-8;
       I_off_n[1][100] = 2.48e-8;
 
-      I_g_on_n[1][0] = 4.51e-10; // A/micron
+      I_g_on_n[1][0] = 4.51e-10;  // A/micron
       I_g_on_n[1][10] = 4.51e-10;
       I_g_on_n[1][20] = 4.51e-10;
       I_g_on_n[1][30] = 4.51e-10;
@@ -1401,25 +1401,25 @@ void init_tech_params(double technology, bool is_tag) {
       // 22 nm LOP
       vdd[2] = 0.6;
       Lphy[2] = 0.011;
-      Lelec[2] = 0.00604; // Lelec is the electrical gate-length.
-      t_ox[2] = 0.8e-3;   // micron
-      v_th[2] = 0.2315;   // V
-      c_ox[2] = 2.87e-14; // F/micron2
-      mobility_eff[2] = 698.37 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-      Vdsat[2] = 1.81e-2;                                   // V/micron
-      c_g_ideal[2] = 3.16e-16;                              // F/micron
+      Lelec[2] = 0.00604;  // Lelec is the electrical gate-length.
+      t_ox[2] = 0.8e-3;    // micron
+      v_th[2] = 0.2315;    // V
+      c_ox[2] = 2.87e-14;  // F/micron2
+      mobility_eff[2] = 698.37 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+      Vdsat[2] = 1.81e-2;                                    // V/micron
+      c_g_ideal[2] = 3.16e-16;                               // F/micron
       c_fringe[2] = 0.08e-15;
       c_junc[2] =
-          0; // F/micron2 This is Cj0 not Cjunc in MASTAR results->Dynamic Tab
-      I_on_n[2] = 916.1e-6; // A/micron
+          0;  // F/micron2 This is Cj0 not Cjunc in MASTAR results->Dynamic Tab
+      I_on_n[2] = 916.1e-6;  // A/micron
       I_on_p[2] = I_on_n[2] / 2;
       nmos_effective_resistance_multiplier = 1.73;
       n_to_p_eff_curr_drv_ratio[2] = 2;
       gmp_to_gmn_multiplier[2] = 1.11;
       Rnchannelon[2] = nmos_effective_resistance_multiplier * vdd[2] /
-                       I_on_n[2]; // ohm-micron
+                       I_on_n[2];  // ohm-micron
       Rpchannelon[2] =
-          n_to_p_eff_curr_drv_ratio[2] * Rnchannelon[2]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[2] * Rnchannelon[2];  // ohm-micron
       long_channel_leakage_reduction[2] = 1 / 2.38;
 
       I_off_n[2][0] = 1.31e-8;
@@ -1434,7 +1434,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[2][90] = 4.04e-6;
       I_off_n[2][100] = 4.48e-6;
 
-      I_g_on_n[2][0] = 2.74e-9; // A/micron
+      I_g_on_n[2][0] = 2.74e-9;  // A/micron
       I_g_on_n[2][10] = 2.74e-9;
       I_g_on_n[2][20] = 2.74e-9;
       I_g_on_n[2][30] = 2.74e-9;
@@ -1450,50 +1450,50 @@ void init_tech_params(double technology, bool is_tag) {
       } else if (ram_cell_tech_type == 4) {
         // 22 nm commodity DRAM cell access transistor technology parameters.
         // parameters
-        curr_vdd_dram_cell = 0.9; // 0.45;//This value has reduced greatly in
-                                  // 2007 ITRS for all technology nodes. In
+        curr_vdd_dram_cell = 0.9;  // 0.45;//This value has reduced greatly in
+                                   // 2007 ITRS for all technology nodes. In
         // 2005 ITRS, the value was about twice the value in 2007 ITRS
-        Lphy[3] = 0.022;                      // micron
-        Lelec[3] = 0.0181;                    // micron.
-        curr_v_th_dram_access_transistor = 1; // V
-        width_dram_access_transistor = 0.022; // micron
+        Lphy[3] = 0.022;                       // micron
+        Lelec[3] = 0.0181;                     // micron.
+        curr_v_th_dram_access_transistor = 1;  // V
+        width_dram_access_transistor = 0.022;  // micron
         curr_I_on_dram_cell =
-            20e-6; // This is a typical value that I have always
+            20e-6;  // This is a typical value that I have always
         // kept constant. In reality this could perhaps be lower
-        curr_I_off_dram_cell_worst_case_length_temp = 1e-15; // A
+        curr_I_off_dram_cell_worst_case_length_temp = 1e-15;  // A
         curr_Wmemcella_dram = width_dram_access_transistor;
         curr_Wmemcellpmos_dram = 0;
         curr_Wmemcellnmos_dram = 0;
-        curr_area_cell_dram = 6 * 0.022 * 0.022; // micron2.
+        curr_area_cell_dram = 6 * 0.022 * 0.022;  // micron2.
         curr_asp_ratio_cell_dram = 0.667;
-        curr_c_dram_cell = 30e-15; // This is a typical value that I have
-                                   // alwaus
+        curr_c_dram_cell = 30e-15;  // This is a typical value that I have
+                                    // alwaus
         // kept constant.
 
         // 22 nm commodity DRAM wordline transistor parameters obtained using
         // MASTAR.
-        curr_vpp = 2.3;                                       // vpp. V
-        t_ox[3] = 3.5e-3;                                     // micron
-        v_th[3] = 1.0;                                        // V
-        c_ox[3] = 9.06e-15;                                   // F/micron2
-        mobility_eff[3] = 367.29 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-        Vdsat[3] = 0.0972;                                    // V/micron
-        c_g_ideal[3] = 1.99e-16;                              // F/micron
-        c_fringe[3] = 0.053e-15;                              // F/micron
-        c_junc[3] = 1e-15;                                    // F/micron2
-        I_on_n[3] = 910.5e-6;                                 // A/micron
-        I_on_p[3] = I_on_n[3] / 2; // This value for I_on_p is not really used.
+        curr_vpp = 2.3;                                        // vpp. V
+        t_ox[3] = 3.5e-3;                                      // micron
+        v_th[3] = 1.0;                                         // V
+        c_ox[3] = 9.06e-15;                                    // F/micron2
+        mobility_eff[3] = 367.29 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+        Vdsat[3] = 0.0972;                                     // V/micron
+        c_g_ideal[3] = 1.99e-16;                               // F/micron
+        c_fringe[3] = 0.053e-15;                               // F/micron
+        c_junc[3] = 1e-15;                                     // F/micron2
+        I_on_n[3] = 910.5e-6;                                  // A/micron
+        I_on_p[3] = I_on_n[3] / 2;  // This value for I_on_p is not really used.
         nmos_effective_resistance_multiplier =
-            1.69; // Using the value from 32nm.
+            1.69;  // Using the value from 32nm.
         //
-        n_to_p_eff_curr_drv_ratio[3] = 1.95; // Using the value from 32nm
+        n_to_p_eff_curr_drv_ratio[3] = 1.95;  // Using the value from 32nm
         gmp_to_gmn_multiplier[3] = 0.90;
         Rnchannelon[3] = nmos_effective_resistance_multiplier * curr_vpp /
-                         I_on_n[3]; // ohm-micron
+                         I_on_n[3];  // ohm-micron
         Rpchannelon[3] =
-            n_to_p_eff_curr_drv_ratio[3] * Rnchannelon[3]; // ohm-micron
+            n_to_p_eff_curr_drv_ratio[3] * Rnchannelon[3];  // ohm-micron
         long_channel_leakage_reduction[3] = 1;
-        I_off_n[3][0] = 1.1e-13; // A/micron
+        I_off_n[3][0] = 1.1e-13;  // A/micron
         I_off_n[3][10] = 2.11e-13;
         I_off_n[3][20] = 3.88e-13;
         I_off_n[3][30] = 6.9e-13;
@@ -1526,9 +1526,9 @@ void init_tech_params(double technology, bool is_tag) {
       curr_core_tx_density = 1.25 / 0.7 / 0.7;
       curr_sckt_co_eff = 1.1296;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
     if (tech == 16) {
@@ -1536,31 +1536,31 @@ void init_tech_params(double technology, bool is_tag) {
       // 16 nm technology i.e. FEATURESIZE = 0.016). Using the DG process
       // numbers for HP. 16 nm HP
       vdd[0] = 0.7;
-      Lphy[0] = 0.006;    // Lphy is the physical gate-length.
-      Lelec[0] = 0.00315; // Lelec is the electrical gate-length.
-      t_ox[0] = 0.5e-3;   // micron
-      v_th[0] = 0.1489;   // V
-      c_ox[0] = 3.83e-14; // F/micron2 Cox_elec in MASTAR
-      mobility_eff[0] = 476.15 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-      Vdsat[0] = 1.42e-2;      // V/micron calculated in spreadsheet
-      c_g_ideal[0] = 2.30e-16; // F/micron
-      c_fringe[0] = 0.06e-15;  // F/micron MASTAR inputdynamic/3
-      c_junc[0] = 0;           // F/micron2 MASTAR result dynamic
-      I_on_n[0] = 2768.4e-6;   // A/micron
-      I_on_p[0] =
-          I_on_n[0] / 2; // A/micron //This value for I_on_p is not really used.
+      Lphy[0] = 0.006;     // Lphy is the physical gate-length.
+      Lelec[0] = 0.00315;  // Lelec is the electrical gate-length.
+      t_ox[0] = 0.5e-3;    // micron
+      v_th[0] = 0.1489;    // V
+      c_ox[0] = 3.83e-14;  // F/micron2 Cox_elec in MASTAR
+      mobility_eff[0] = 476.15 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+      Vdsat[0] = 1.42e-2;       // V/micron calculated in spreadsheet
+      c_g_ideal[0] = 2.30e-16;  // F/micron
+      c_fringe[0] = 0.06e-15;   // F/micron MASTAR inputdynamic/3
+      c_junc[0] = 0;            // F/micron2 MASTAR result dynamic
+      I_on_n[0] = 2768.4e-6;    // A/micron
+      I_on_p[0] = I_on_n[0] /
+                  2;  // A/micron //This value for I_on_p is not really used.
       nmos_effective_resistance_multiplier =
-          1.48; // nmos_effective_resistance_multiplier  is the ratio of Ieff
-                // to Idsat where Ieff is the effective NMOS current and Idsat
-                // is the saturation current.
+          1.48;  // nmos_effective_resistance_multiplier  is the ratio of Ieff
+                 // to Idsat where Ieff is the effective NMOS current and Idsat
+                 // is the saturation current.
       n_to_p_eff_curr_drv_ratio[0] =
-          2; // Wpmos/Wnmos = 2 in 2007 MASTAR. Look in
+          2;  // Wpmos/Wnmos = 2 in 2007 MASTAR. Look in
       //"Dynamic" tab of Device workspace.
-      gmp_to_gmn_multiplier[0] = 1.38; // Just using the 32nm SOI value.
+      gmp_to_gmn_multiplier[0] = 1.38;  // Just using the 32nm SOI value.
       Rnchannelon[0] = nmos_effective_resistance_multiplier * vdd[0] /
-                       I_on_n[0]; // ohm-micron
+                       I_on_n[0];  // ohm-micron
       Rpchannelon[0] =
-          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0]; // ohm-micron
+          n_to_p_eff_curr_drv_ratio[0] * Rnchannelon[0];  // ohm-micron
       long_channel_leakage_reduction[0] = 1 / 2.655;
       I_off_n[0][0] = 1.52e-7 / 1.5 * 1.2 * 1.07;
       I_off_n[0][10] = 1.55e-7 / 1.5 * 1.2 * 1.07;
@@ -1574,7 +1574,7 @@ void init_tech_params(double technology, bool is_tag) {
       I_off_n[0][90] = 2.73e-6 / 1.5 * 1.2 * 1.07;
       I_off_n[0][100] = 6.1e-6 / 1.5 * 1.2 * 1.07;
       // for 16nm DG HP
-      I_g_on_n[0][0] = 1.07e-9; // A/micron
+      I_g_on_n[0][0] = 1.07e-9;  // A/micron
       I_g_on_n[0][10] = 1.07e-9;
       I_g_on_n[0][20] = 1.07e-9;
       I_g_on_n[0][30] = 1.07e-9;
@@ -1633,50 +1633,50 @@ void init_tech_params(double technology, bool is_tag) {
       } else if (ram_cell_tech_type == 4) {
         // 22 nm commodity DRAM cell access transistor technology parameters.
         // parameters
-        curr_vdd_dram_cell = 0.9; // 0.45;//This value has reduced greatly in
-                                  // 2007 ITRS for all technology nodes. In
+        curr_vdd_dram_cell = 0.9;  // 0.45;//This value has reduced greatly in
+                                   // 2007 ITRS for all technology nodes. In
         // 2005 ITRS, the value was about twice the value in 2007 ITRS
-        Lphy[3] = 0.022;                      // micron
-        Lelec[3] = 0.0181;                    // micron.
-        curr_v_th_dram_access_transistor = 1; // V
-        width_dram_access_transistor = 0.022; // micron
+        Lphy[3] = 0.022;                       // micron
+        Lelec[3] = 0.0181;                     // micron.
+        curr_v_th_dram_access_transistor = 1;  // V
+        width_dram_access_transistor = 0.022;  // micron
         curr_I_on_dram_cell =
-            20e-6; // This is a typical value that I have always
+            20e-6;  // This is a typical value that I have always
         // kept constant. In reality this could perhaps be lower
-        curr_I_off_dram_cell_worst_case_length_temp = 1e-15; // A
+        curr_I_off_dram_cell_worst_case_length_temp = 1e-15;  // A
         curr_Wmemcella_dram = width_dram_access_transistor;
         curr_Wmemcellpmos_dram = 0;
         curr_Wmemcellnmos_dram = 0;
-        curr_area_cell_dram = 6 * 0.022 * 0.022; // micron2.
+        curr_area_cell_dram = 6 * 0.022 * 0.022;  // micron2.
         curr_asp_ratio_cell_dram = 0.667;
-        curr_c_dram_cell = 30e-15; // This is a typical value that I have
-                                   // alwaus
+        curr_c_dram_cell = 30e-15;  // This is a typical value that I have
+                                    // alwaus
         // kept constant.
 
         // 22 nm commodity DRAM wordline transistor parameters obtained using
         // MASTAR.
-        curr_vpp = 2.3;                                       // vpp. V
-        t_ox[3] = 3.5e-3;                                     // micron
-        v_th[3] = 1.0;                                        // V
-        c_ox[3] = 9.06e-15;                                   // F/micron2
-        mobility_eff[3] = 367.29 * (1e-2 * 1e6 * 1e-2 * 1e6); // micron2 / Vs
-        Vdsat[3] = 0.0972;                                    // V/micron
-        c_g_ideal[3] = 1.99e-16;                              // F/micron
-        c_fringe[3] = 0.053e-15;                              // F/micron
-        c_junc[3] = 1e-15;                                    // F/micron2
-        I_on_n[3] = 910.5e-6;                                 // A/micron
-        I_on_p[3] = I_on_n[3] / 2; // This value for I_on_p is not really used.
+        curr_vpp = 2.3;                                        // vpp. V
+        t_ox[3] = 3.5e-3;                                      // micron
+        v_th[3] = 1.0;                                         // V
+        c_ox[3] = 9.06e-15;                                    // F/micron2
+        mobility_eff[3] = 367.29 * (1e-2 * 1e6 * 1e-2 * 1e6);  // micron2 / Vs
+        Vdsat[3] = 0.0972;                                     // V/micron
+        c_g_ideal[3] = 1.99e-16;                               // F/micron
+        c_fringe[3] = 0.053e-15;                               // F/micron
+        c_junc[3] = 1e-15;                                     // F/micron2
+        I_on_n[3] = 910.5e-6;                                  // A/micron
+        I_on_p[3] = I_on_n[3] / 2;  // This value for I_on_p is not really used.
         nmos_effective_resistance_multiplier =
-            1.69; // Using the value from 32nm.
+            1.69;  // Using the value from 32nm.
         //
-        n_to_p_eff_curr_drv_ratio[3] = 1.95; // Using the value from 32nm
+        n_to_p_eff_curr_drv_ratio[3] = 1.95;  // Using the value from 32nm
         gmp_to_gmn_multiplier[3] = 0.90;
         Rnchannelon[3] = nmos_effective_resistance_multiplier * curr_vpp /
-                         I_on_n[3]; // ohm-micron
+                         I_on_n[3];  // ohm-micron
         Rpchannelon[3] =
-            n_to_p_eff_curr_drv_ratio[3] * Rnchannelon[3]; // ohm-micron
+            n_to_p_eff_curr_drv_ratio[3] * Rnchannelon[3];  // ohm-micron
         long_channel_leakage_reduction[3] = 1;
-        I_off_n[3][0] = 1.1e-13; // A/micron
+        I_off_n[3][0] = 1.1e-13;  // A/micron
         I_off_n[3][10] = 2.11e-13;
         I_off_n[3][20] = 3.88e-13;
         I_off_n[3][30] = 6.9e-13;
@@ -1709,9 +1709,9 @@ void init_tech_params(double technology, bool is_tag) {
       curr_core_tx_density = 1.25 / 0.7 / 0.7 / 0.7;
       curr_sckt_co_eff = 1.1296;
       curr_chip_layout_overhead =
-          1.2; // die measurement results based on Niagara 1 and 2
+          1.2;  // die measurement results based on Niagara 1 and 2
       curr_macro_layout_overhead =
-          1.1; // EDA placement and routing tool rule of thumb
+          1.1;  // EDA placement and routing tool rule of thumb
     }
 
     g_tp.peri_global.Vdd += curr_alpha * vdd[peri_global_tech_type];
@@ -1721,7 +1721,7 @@ void init_tech_params(double technology, bool is_tag) {
     g_tp.peri_global.C_g_ideal += curr_alpha * c_g_ideal[peri_global_tech_type];
     g_tp.peri_global.C_fringe += curr_alpha * c_fringe[peri_global_tech_type];
     g_tp.peri_global.C_junc += curr_alpha * c_junc[peri_global_tech_type];
-    g_tp.peri_global.C_junc_sidewall = 0.25e-15; // F/micron
+    g_tp.peri_global.C_junc_sidewall = 0.25e-15;  // F/micron
     g_tp.peri_global.l_phy += curr_alpha * Lphy[peri_global_tech_type];
     g_tp.peri_global.l_elec += curr_alpha * Lelec[peri_global_tech_type];
     g_tp.peri_global.I_on_n += curr_alpha * I_on_n[peri_global_tech_type];
@@ -1752,7 +1752,7 @@ void init_tech_params(double technology, bool is_tag) {
     g_tp.sram_cell.C_g_ideal += curr_alpha * c_g_ideal[ram_cell_tech_type];
     g_tp.sram_cell.C_fringe += curr_alpha * c_fringe[ram_cell_tech_type];
     g_tp.sram_cell.C_junc += curr_alpha * c_junc[ram_cell_tech_type];
-    g_tp.sram_cell.C_junc_sidewall = 0.25e-15; // F/micron
+    g_tp.sram_cell.C_junc_sidewall = 0.25e-15;  // F/micron
     g_tp.sram_cell.I_on_n += curr_alpha * I_on_n[ram_cell_tech_type];
     g_tp.sram_cell.R_nch_on += curr_alpha * Rnchannelon[ram_cell_tech_type];
     g_tp.sram_cell.R_pch_on += curr_alpha * Rpchannelon[ram_cell_tech_type];
@@ -1776,7 +1776,7 @@ void init_tech_params(double technology, bool is_tag) {
     g_tp.dram_acc.C_g_ideal += curr_alpha * c_g_ideal[dram_cell_tech_flavor];
     g_tp.dram_acc.C_fringe += curr_alpha * c_fringe[dram_cell_tech_flavor];
     g_tp.dram_acc.C_junc += curr_alpha * c_junc[dram_cell_tech_flavor];
-    g_tp.dram_acc.C_junc_sidewall = 0.25e-15; // F/micron
+    g_tp.dram_acc.C_junc_sidewall = 0.25e-15;  // F/micron
     g_tp.dram_cell_I_on += curr_alpha * curr_I_on_dram_cell;
     g_tp.dram_cell_I_off_worst_case_len_temp +=
         curr_alpha * curr_I_off_dram_cell_worst_case_length_temp;
@@ -1788,7 +1788,7 @@ void init_tech_params(double technology, bool is_tag) {
     g_tp.dram_wl.C_g_ideal += curr_alpha * c_g_ideal[dram_cell_tech_flavor];
     g_tp.dram_wl.C_fringe += curr_alpha * c_fringe[dram_cell_tech_flavor];
     g_tp.dram_wl.C_junc += curr_alpha * c_junc[dram_cell_tech_flavor];
-    g_tp.dram_wl.C_junc_sidewall = 0.25e-15; // F/micron
+    g_tp.dram_wl.C_junc_sidewall = 0.25e-15;  // F/micron
     g_tp.dram_wl.I_on_n += curr_alpha * I_on_n[dram_cell_tech_flavor];
     g_tp.dram_wl.R_nch_on += curr_alpha * Rnchannelon[dram_cell_tech_flavor];
     g_tp.dram_wl.R_pch_on += curr_alpha * Rpchannelon[dram_cell_tech_flavor];
@@ -1809,7 +1809,7 @@ void init_tech_params(double technology, bool is_tag) {
     g_tp.cam_cell.C_g_ideal += curr_alpha * c_g_ideal[ram_cell_tech_type];
     g_tp.cam_cell.C_fringe += curr_alpha * c_fringe[ram_cell_tech_type];
     g_tp.cam_cell.C_junc += curr_alpha * c_junc[ram_cell_tech_type];
-    g_tp.cam_cell.C_junc_sidewall = 0.25e-15; // F/micron
+    g_tp.cam_cell.C_junc_sidewall = 0.25e-15;  // F/micron
     g_tp.cam_cell.I_on_n += curr_alpha * I_on_n[ram_cell_tech_type];
     g_tp.cam_cell.R_nch_on += curr_alpha * Rnchannelon[ram_cell_tech_type];
     g_tp.cam_cell.R_pch_on += curr_alpha * Rpchannelon[ram_cell_tech_type];
@@ -1838,7 +1838,7 @@ void init_tech_params(double technology, bool is_tag) {
     area_cell_sram += curr_alpha * curr_area_cell_sram;
     asp_ratio_cell_sram += curr_alpha * curr_asp_ratio_cell_sram;
 
-    g_tp.cam.cell_a_w += curr_alpha * curr_Wmemcella_cam; // sheng
+    g_tp.cam.cell_a_w += curr_alpha * curr_Wmemcella_cam;  // sheng
     g_tp.cam.cell_pmos_w += curr_alpha * curr_Wmemcellpmos_cam;
     g_tp.cam.cell_nmos_w += curr_alpha * curr_Wmemcellnmos_cam;
     area_cell_cam += curr_alpha * curr_area_cell_cam;
@@ -1862,25 +1862,25 @@ void init_tech_params(double technology, bool is_tag) {
   // Continuous function (or date have been processed) does not need linear
   // interpolation
   g_tp.w_comp_inv_p1 =
-      12.5 * g_ip->F_sz_um; // this was 10 micron for the 0.8 micron process
+      12.5 * g_ip->F_sz_um;  // this was 10 micron for the 0.8 micron process
   g_tp.w_comp_inv_n1 =
-      7.5 * g_ip->F_sz_um; // this was  6 micron for the 0.8 micron process
+      7.5 * g_ip->F_sz_um;  // this was  6 micron for the 0.8 micron process
   g_tp.w_comp_inv_p2 =
-      25 * g_ip->F_sz_um; // this was 20 micron for the 0.8 micron process
+      25 * g_ip->F_sz_um;  // this was 20 micron for the 0.8 micron process
   g_tp.w_comp_inv_n2 =
-      15 * g_ip->F_sz_um; // this was 12 micron for the 0.8 micron process
+      15 * g_ip->F_sz_um;  // this was 12 micron for the 0.8 micron process
   g_tp.w_comp_inv_p3 =
-      50 * g_ip->F_sz_um; // this was 40 micron for the 0.8 micron process
+      50 * g_ip->F_sz_um;  // this was 40 micron for the 0.8 micron process
   g_tp.w_comp_inv_n3 =
-      30 * g_ip->F_sz_um; // this was 24 micron for the 0.8 micron process
+      30 * g_ip->F_sz_um;  // this was 24 micron for the 0.8 micron process
   g_tp.w_eval_inv_p =
-      100 * g_ip->F_sz_um; // this was 80 micron for the 0.8 micron process
+      100 * g_ip->F_sz_um;  // this was 80 micron for the 0.8 micron process
   g_tp.w_eval_inv_n =
-      50 * g_ip->F_sz_um; // this was 40 micron for the 0.8 micron process
+      50 * g_ip->F_sz_um;  // this was 40 micron for the 0.8 micron process
   g_tp.w_comp_n =
-      12.5 * g_ip->F_sz_um; // this was 10 micron for the 0.8 micron process
+      12.5 * g_ip->F_sz_um;  // this was 10 micron for the 0.8 micron process
   g_tp.w_comp_p =
-      37.5 * g_ip->F_sz_um; // this was 30 micron for the 0.8 micron process
+      37.5 * g_ip->F_sz_um;  // this was 30 micron for the 0.8 micron process
 
   g_tp.MIN_GAP_BET_P_AND_N_DIFFS = 5 * g_ip->F_sz_um;
   g_tp.MIN_GAP_BET_SAME_TYPE_DIFFS = 1.5 * g_ip->F_sz_um;
@@ -1893,24 +1893,24 @@ void init_tech_params(double technology, bool is_tag) {
 
   g_tp.min_w_nmos_ = 3 * g_ip->F_sz_um / 2;
   g_tp.max_w_nmos_ = 100 * g_ip->F_sz_um;
-  g_tp.w_iso = 12.5 * g_ip->F_sz_um;     // was 10 micron for the 0.8 micron
-                                         // process
-  g_tp.w_sense_n = 3.75 * g_ip->F_sz_um; // sense amplifier N-trans; was 3
-                                         // micron for the 0.8 micron process
-  g_tp.w_sense_p = 7.5 * g_ip->F_sz_um;  // sense amplifier P-trans; was 6
-                                         // micron for the 0.8 micron process
+  g_tp.w_iso = 12.5 * g_ip->F_sz_um;      // was 10 micron for the 0.8 micron
+                                          // process
+  g_tp.w_sense_n = 3.75 * g_ip->F_sz_um;  // sense amplifier N-trans; was 3
+                                          // micron for the 0.8 micron process
+  g_tp.w_sense_p = 7.5 * g_ip->F_sz_um;   // sense amplifier P-trans; was 6
+                                          // micron for the 0.8 micron process
   g_tp.w_sense_en =
-      5 * g_ip->F_sz_um; // Sense enable transistor of the sense amplifier; was
-                         // 4 micron for the 0.8 micron process
+      5 * g_ip->F_sz_um;  // Sense enable transistor of the sense amplifier; was
+                          // 4 micron for the 0.8 micron process
   g_tp.w_nmos_b_mux = 6 * g_tp.min_w_nmos_;
   g_tp.w_nmos_sa_mux = 6 * g_tp.min_w_nmos_;
 
   if (ram_cell_tech_type == comm_dram) {
     g_tp.max_w_nmos_dec = 8 * g_ip->F_sz_um;
-    g_tp.h_dec = 8; // in the unit of memory cell height
+    g_tp.h_dec = 8;  // in the unit of memory cell height
   } else {
     g_tp.max_w_nmos_dec = g_tp.max_w_nmos_;
-    g_tp.h_dec = 4; // in the unit of memory cell height
+    g_tp.h_dec = 4;  // in the unit of memory cell height
   }
 
   g_tp.peri_global.C_overlap = 0.2 * g_tp.peri_global.C_g_ideal;
@@ -1934,12 +1934,12 @@ void init_tech_params(double technology, bool is_tag) {
   g_tp.dram.b_h = asp_ratio_cell_dram * g_tp.dram.b_w;
   g_tp.sram.b_w = sqrt(area_cell_sram / (asp_ratio_cell_sram));
   g_tp.sram.b_h = asp_ratio_cell_sram * g_tp.sram.b_w;
-  g_tp.cam.b_w = sqrt(area_cell_cam / (asp_ratio_cell_cam)); // Sheng
+  g_tp.cam.b_w = sqrt(area_cell_cam / (asp_ratio_cell_cam));  // Sheng
   g_tp.cam.b_h = asp_ratio_cell_cam * g_tp.cam.b_w;
 
   g_tp.dram.Vbitpre = g_tp.dram_cell_Vdd;
   g_tp.sram.Vbitpre = vdd[ram_cell_tech_type];
-  g_tp.cam.Vbitpre = vdd[ram_cell_tech_type]; // Sheng
+  g_tp.cam.Vbitpre = vdd[ram_cell_tech_type];  // Sheng
   pmos_to_nmos_sizing_r = pmos_to_nmos_sz_ratio();
   g_tp.w_pmos_bl_precharge = 6 * pmos_to_nmos_sizing_r * g_tp.min_w_nmos_;
   g_tp.w_pmos_bl_eq = pmos_to_nmos_sizing_r * g_tp.min_w_nmos_;
@@ -1977,27 +1977,27 @@ void init_tech_params(double technology, bool is_tag) {
 
     if (tech == 90) {
       // Aggressive projections
-      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um; // micron
+      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um;  // micron
       aspect_ratio[0][0] = 2.4;
-      wire_width = wire_pitch[0][0] / 2;                // micron
-      wire_thickness = aspect_ratio[0][0] * wire_width; // micron
-      wire_spacing = wire_pitch[0][0] - wire_width;     // micron
-      barrier_thickness = 0.01;                         // micron
-      dishing_thickness = 0;                            // micron
+      wire_width = wire_pitch[0][0] / 2;                 // micron
+      wire_thickness = aspect_ratio[0][0] * wire_width;  // micron
+      wire_spacing = wire_pitch[0][0] - wire_width;      // micron
+      barrier_thickness = 0.01;                          // micron
+      dishing_thickness = 0;                             // micron
       alpha_scatter = 1;
       wire_r_per_micron[0][0] = wire_resistance(
           CU_RESISTIVITY, wire_width, wire_thickness, barrier_thickness,
-          dishing_thickness, alpha_scatter); // ohm/micron
-      ild_thickness[0][0] = 0.48;            // micron
+          dishing_thickness, alpha_scatter);  // ohm/micron
+      ild_thickness[0][0] = 0.48;             // micron
       miller_value[0][0] = 1.5;
       horiz_dielectric_constant[0][0] = 2.709;
       vert_dielectric_constant[0][0] = 3.9;
-      fringe_cap = 0.115e-15; // F/micron
+      fringe_cap = 0.115e-15;  // F/micron
       wire_c_per_micron[0][0] = wire_capacitance(
           wire_width, wire_thickness, wire_spacing, ild_thickness[0][0],
           miller_value[0][0], horiz_dielectric_constant[0][0],
           vert_dielectric_constant[0][0],
-          fringe_cap); // F/micron.
+          fringe_cap);  // F/micron.
 
       wire_pitch[0][1] = 4 * g_ip->F_sz_um;
       wire_width = wire_pitch[0][1] / 2;
@@ -2007,7 +2007,7 @@ void init_tech_params(double technology, bool is_tag) {
       wire_r_per_micron[0][1] =
           wire_resistance(CU_RESISTIVITY, wire_width, wire_thickness,
                           barrier_thickness, dishing_thickness, alpha_scatter);
-      ild_thickness[0][1] = 0.48; // micron
+      ild_thickness[0][1] = 0.48;  // micron
       miller_value[0][1] = 1.5;
       horiz_dielectric_constant[0][1] = 2.709;
       vert_dielectric_constant[0][1] = 3.9;
@@ -2442,12 +2442,12 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[1][2], horiz_dielectric_constant[1][2],
           vert_dielectric_constant[1][2], fringe_cap);
       // Nominal projections for commodity DRAM wordline/bitline
-      wire_pitch[1][3] = 2 * 0.032;                         // micron
-      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.032); // F/micron
-      wire_r_per_micron[1][3] = 12 / 0.032;                 // ohm/micron
+      wire_pitch[1][3] = 2 * 0.032;                          // micron
+      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.032);  // F/micron
+      wire_r_per_micron[1][3] = 12 / 0.032;                  // ohm/micron
     } else if (tech == 22) {
       // Aggressive projections.
-      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um; // local
+      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um;  // local
       aspect_ratio[0][0] = 3.0;
       wire_width = wire_pitch[0][0] / 2;
       wire_thickness = aspect_ratio[0][0] * wire_width;
@@ -2468,7 +2468,7 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[0][0], horiz_dielectric_constant[0][0],
           vert_dielectric_constant[0][0], fringe_cap);
 
-      wire_pitch[0][1] = 4 * g_ip->F_sz_um; // semi-global
+      wire_pitch[0][1] = 4 * g_ip->F_sz_um;  // semi-global
       wire_width = wire_pitch[0][1] / 2;
       aspect_ratio[0][1] = 3.0;
       wire_thickness = aspect_ratio[0][1] * wire_width;
@@ -2485,7 +2485,7 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[0][1], horiz_dielectric_constant[0][1],
           vert_dielectric_constant[0][1], fringe_cap);
 
-      wire_pitch[0][2] = 8 * g_ip->F_sz_um; // global
+      wire_pitch[0][2] = 8 * g_ip->F_sz_um;  // global
       aspect_ratio[0][2] = 3.0;
       wire_width = wire_pitch[0][2] / 2;
       wire_thickness = aspect_ratio[0][2] * wire_width;
@@ -2609,9 +2609,9 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[1][2], horiz_dielectric_constant[1][2],
           vert_dielectric_constant[1][2], fringe_cap);
       // Nominal projections for commodity DRAM wordline/bitline
-      wire_pitch[1][3] = 2 * 0.022;                         // micron
-      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.022); // F/micron
-      wire_r_per_micron[1][3] = 12 / 0.022;                 // ohm/micron
+      wire_pitch[1][3] = 2 * 0.022;                          // micron
+      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.022);  // F/micron
+      wire_r_per_micron[1][3] = 12 / 0.022;                  // ohm/micron
 
       //******************
       //            wire_pitch[1][4] = 16 * g_ip.F_sz_um;
@@ -2659,7 +2659,7 @@ void init_tech_params(double technology, bool is_tag) {
 
     else if (tech == 16) {
       // Aggressive projections.
-      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um; // local
+      wire_pitch[0][0] = 2.5 * g_ip->F_sz_um;  // local
       aspect_ratio[0][0] = 3.0;
       wire_width = wire_pitch[0][0] / 2;
       wire_thickness = aspect_ratio[0][0] * wire_width;
@@ -2680,7 +2680,7 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[0][0], horiz_dielectric_constant[0][0],
           vert_dielectric_constant[0][0], fringe_cap);
 
-      wire_pitch[0][1] = 4 * g_ip->F_sz_um; // semi-global
+      wire_pitch[0][1] = 4 * g_ip->F_sz_um;  // semi-global
       aspect_ratio[0][1] = 3.0;
       wire_width = wire_pitch[0][1] / 2;
       wire_thickness = aspect_ratio[0][1] * wire_width;
@@ -2697,7 +2697,7 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[0][1], horiz_dielectric_constant[0][1],
           vert_dielectric_constant[0][1], fringe_cap);
 
-      wire_pitch[0][2] = 8 * g_ip->F_sz_um; // global
+      wire_pitch[0][2] = 8 * g_ip->F_sz_um;  // global
       aspect_ratio[0][2] = 3.0;
       wire_width = wire_pitch[0][2] / 2;
       wire_thickness = aspect_ratio[0][2] * wire_width;
@@ -2821,9 +2821,9 @@ void init_tech_params(double technology, bool is_tag) {
           miller_value[1][2], horiz_dielectric_constant[1][2],
           vert_dielectric_constant[1][2], fringe_cap);
       // Nominal projections for commodity DRAM wordline/bitline
-      wire_pitch[1][3] = 2 * 0.016;                         // micron
-      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.016); // F/micron
-      wire_r_per_micron[1][3] = 12 / 0.016;                 // ohm/micron
+      wire_pitch[1][3] = 2 * 0.016;                          // micron
+      wire_c_per_micron[1][3] = 31e-15 / (256 * 2 * 0.016);  // F/micron
+      wire_r_per_micron[1][3] = 12 / 0.016;                  // ohm/micron
 
       //******************
       //            wire_pitch[1][4] = 16 * g_ip.F_sz_um;

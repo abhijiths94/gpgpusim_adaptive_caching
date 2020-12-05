@@ -47,7 +47,7 @@
 #include "logic.h"
 
 class NoC : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithNoC;
   InputParameter interface_ip;

@@ -30,6 +30,11 @@
  ***************************************************************************/
 
 #include "sharedcache.h"
+#include <assert.h>
+#include <string.h>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
 #include "XML_Parse.h"
 #include "array.h"
 #include "cacti/arbiter.h"
@@ -38,17 +43,15 @@
 #include "const.h"
 #include "io.h"
 #include "logic.h"
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <iostream>
-#include <string.h>
 
-SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
-                         InputParameter *interface_ip_,
+SharedCache::SharedCache(ParseXML* XML_interface, int ithCache_,
+                         InputParameter* interface_ip_,
                          enum cache_level cacheL_)
-    : XML(XML_interface), ithCache(ithCache_), interface_ip(*interface_ip_),
-      cacheL(cacheL_), dir_overhead(0) {
+    : XML(XML_interface),
+      ithCache(ithCache_),
+      interface_ip(*interface_ip_),
+      cacheL(cacheL_),
+      dir_overhead(0) {
   int idx;
   int tag, data;
   bool debug;
@@ -117,7 +120,7 @@ SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
   interface_ip.obj_func_dyn_power = 0;
   interface_ip.obj_func_leak_power = 0;
   interface_ip.obj_func_cycle_t = 1;
-  interface_ip.num_rw_ports = 1; // lower level cache usually has one port.
+  interface_ip.num_rw_ports = 1;  // lower level cache usually has one port.
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -143,7 +146,7 @@ SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
     interface_ip.specific_tag = 1;
     interface_ip.tag_w = tag;
     interface_ip.line_sz =
-        int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+        int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
     interface_ip.cache_sz = cachep.missb_size * interface_ip.line_sz;
     interface_ip.assoc = 0;
     interface_ip.is_cache = true;
@@ -152,8 +155,8 @@ SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
     interface_ip.nbanks = 1;
     interface_ip.out_w = interface_ip.line_sz * 8 / 2;
     interface_ip.access_mode = 0;
-    interface_ip.throughput = cachep.throughput; // means cycle time
-    interface_ip.latency = cachep.latency;       // means access time
+    interface_ip.throughput = cachep.throughput;  // means cycle time
+    interface_ip.latency = cachep.latency;        // means access time
     interface_ip.obj_func_dyn_energy = 0;
     interface_ip.obj_func_dyn_power = 0;
     interface_ip.obj_func_leak_power = 0;
@@ -173,7 +176,7 @@ SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
     data = unicache.caches->l_ip.line_sz;
     interface_ip.specific_tag = 1;
     interface_ip.tag_w = tag;
-    interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+    interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
     interface_ip.cache_sz = data * cachep.fu_size;
     interface_ip.assoc = 0;
     interface_ip.nbanks = 1;
@@ -196,13 +199,13 @@ SharedCache::SharedCache(ParseXML *XML_interface, int ithCache_,
     area.set_area(area.get_area() + unicache.ifb->local_result.area);
     // prefetch buffer
     tag = XML->sys.physical_address_width +
-          EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                          // merge.
+          EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                           // merge.
     data = unicache.caches->l_ip
-               .line_sz; // separate queue to prevent from cache polution.
+               .line_sz;  // separate queue to prevent from cache polution.
     interface_ip.specific_tag = 1;
     interface_ip.tag_w = tag;
-    interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+    interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
     interface_ip.cache_sz = cachep.prefetchb_size * interface_ip.line_sz;
     interface_ip.assoc = 0;
     interface_ip.nbanks = 1;
@@ -760,7 +763,7 @@ void SharedCache::computeEnergy(bool is_tdp) {
           unicache.caches->stats_t.writeAc.access -
           unicache.caches->stats_t.writeAc.miss;
       unicache.caches->rtp_stats = unicache.caches->stats_t;
-    } else if (cacheL == L2Directory) { // cout<<"L2 directory"<<endl;
+    } else if (cacheL == L2Directory) {  // cout<<"L2 directory"<<endl;
       // Copy stats from l1 to L1[0]
       // XML->sys.L2[ithCache].total_accesses=XML->sys.l2.total_accesses;
       // XML->sys.L2[ithCache].read_accesses=XML->sys.l2.read_accesses;
@@ -788,7 +791,7 @@ void SharedCache::computeEnergy(bool is_tdp) {
     if (!((cachep.dir_ty == ST && cacheL == L1Directory) ||
           (cachep.dir_ty == ST &&
            cacheL ==
-               L2Directory))) { // Assuming write back and write-allocate cache
+               L2Directory))) {  // Assuming write back and write-allocate cache
 
       unicache.missb->stats_t.readAc.access =
           unicache.caches->stats_t.writeAc.miss;
@@ -855,7 +858,7 @@ void SharedCache::computeEnergy(bool is_tdp) {
              unicache.caches->local_result.tag_array2->power.writeOp.dynamic +
          unicache.caches->stats_t.writeAc.access *
              unicache.caches->local_result.power.writeOp
-                 .dynamic); // write miss will also generate a write later
+                 .dynamic);  // write miss will also generate a write later
 
     if (cachep.dir_ty == SBT) {
       unicache.power_t.readOp.dynamic +=
@@ -874,9 +877,9 @@ void SharedCache::computeEnergy(bool is_tdp) {
                unicache.caches->local_result.tag_array2->power.readOp.dynamic +
                homenode_stats_t.writeAc.miss *
                    unicache.caches->local_result.power.writeOp
-                       .dynamic); // write miss on dynamic home node will
-                                  // generate a replacement write on whole
-                                  // cache block
+                       .dynamic);  // write miss on dynamic home node will
+                                   // generate a replacement write on whole
+                                   // cache block
     }
 
     unicache.power_t.readOp.dynamic +=
@@ -884,7 +887,7 @@ void SharedCache::computeEnergy(bool is_tdp) {
             unicache.missb->local_result.power.searchOp.dynamic +
         unicache.missb->stats_t.writeAc.access *
             unicache.missb->local_result.power.writeOp
-                .dynamic; // each access to missb involves a CAM and a write
+                .dynamic;  // each access to missb involves a CAM and a write
     unicache.power_t.readOp.dynamic +=
         unicache.ifb->stats_t.readAc.access *
             unicache.ifb->local_result.power.searchOp.dynamic +
@@ -1232,7 +1235,7 @@ void SharedCache::set_cache_param() {
     cachep.executionTime =
         XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);
     interface_ip.data_arr_ram_cell_tech_type =
-        XML->sys.L2[ithCache].device_type; // long channel device LSTP
+        XML->sys.L2[ithCache].device_type;  // long channel device LSTP
     interface_ip.data_arr_peri_global_tech_type =
         XML->sys.L2[ithCache].device_type;
     interface_ip.tag_arr_ram_cell_tech_type = XML->sys.L2[ithCache].device_type;
@@ -1262,7 +1265,7 @@ void SharedCache::set_cache_param() {
     cachep.executionTime =
         XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);
     interface_ip.data_arr_ram_cell_tech_type =
-        XML->sys.L3[ithCache].device_type; // long channel device LSTP
+        XML->sys.L3[ithCache].device_type;  // long channel device LSTP
     interface_ip.data_arr_peri_global_tech_type =
         XML->sys.L3[ithCache].device_type;
     interface_ip.tag_arr_ram_cell_tech_type = XML->sys.L3[ithCache].device_type;
@@ -1294,7 +1297,7 @@ void SharedCache::set_cache_param() {
     cachep.executionTime =
         XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);
     interface_ip.data_arr_ram_cell_tech_type =
-        XML->sys.L1Directory[ithCache].device_type; // long channel device LSTP
+        XML->sys.L1Directory[ithCache].device_type;  // long channel device LSTP
     interface_ip.data_arr_peri_global_tech_type =
         XML->sys.L1Directory[ithCache].device_type;
     interface_ip.tag_arr_ram_cell_tech_type =
@@ -1323,7 +1326,7 @@ void SharedCache::set_cache_param() {
     cachep.executionTime =
         XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);
     interface_ip.data_arr_ram_cell_tech_type =
-        XML->sys.L2Directory[ithCache].device_type; // long channel device LSTP
+        XML->sys.L2Directory[ithCache].device_type;  // long channel device LSTP
     interface_ip.data_arr_peri_global_tech_type =
         XML->sys.L2Directory[ithCache].device_type;
     interface_ip.tag_arr_ram_cell_tech_type =

@@ -38,6 +38,7 @@
 #ifndef PROCESSOR_H_
 #define PROCESSOR_H_
 
+#include <vector>
 #include "../gpgpu-sim/visualizer.h"
 #include "XML_Parse.h"
 #include "array.h"
@@ -52,10 +53,9 @@
 #include "memoryctrl.h"
 #include "noc.h"
 #include "sharedcache.h"
-#include <vector>
 
 class Processor : public Component {
-public:
+ public:
   ParseXML *XML;
   vector<Core *> cores;
   vector<SharedCache *> l2array;
@@ -174,8 +174,8 @@ public:
     if (XML->sys.number_of_L2s > 0) {
       read_coef = l2array[0]
                       ->unicache.caches->local_result.tag_array2->power.writeOp
-                      .dynamic; //*(32/4); // removed by Jingwen, the scaling
-                                // of 32/4 is not used in the mcpat
+                      .dynamic;  //*(32/4); // removed by Jingwen, the scaling
+                                 // of 32/4 is not used in the mcpat
       read_coef +=
           l2array[0]->unicache.caches->local_result.power.writeOp.dynamic;
       read_coef +=

@@ -30,10 +30,10 @@
  ***************************************************************************/
 
 #include "interconnect.h"
-#include "globalvar.h"
-#include "wire.h"
 #include <assert.h>
 #include <iostream>
+#include "globalvar.h"
+#include "wire.h"
 
 interconnect::interconnect(string name_, enum Device_ty device_ty_,
                            double base_w, double base_h, int data_w, double len,
@@ -43,19 +43,30 @@ interconnect::interconnect(string name_, enum Device_ty device_ty_,
                            enum Core_type core_ty_, enum Wire_type wire_model,
                            double width_s, double space_s,
                            TechnologyParameter::DeviceType *dt)
-    : name(name_), device_ty(device_ty_), in_rise_time(0), out_rise_time(0),
-      base_width(base_w), base_height(base_h), data_width(data_w),
-      wt(wire_model), width_scaling(width_s), space_scaling(space_s),
-      start_wiring_level(start_wiring_level_), length(len),
+    : name(name_),
+      device_ty(device_ty_),
+      in_rise_time(0),
+      out_rise_time(0),
+      base_width(base_w),
+      base_height(base_h),
+      data_width(data_w),
+      wt(wire_model),
+      width_scaling(width_s),
+      space_scaling(space_s),
+      start_wiring_level(start_wiring_level_),
+      length(len),
       // interconnect_latency(1e-12),
       // interconnect_throughput(1e-12),
-      opt_local(opt_local_), core_ty(core_ty_), pipelinable(pipelinable_),
-      route_over_perc(route_over_perc_), deviceType(dt) {
+      opt_local(opt_local_),
+      core_ty(core_ty_),
+      pipelinable(pipelinable_),
+      route_over_perc(route_over_perc_),
+      deviceType(dt) {
   wt = Global;
   l_ip = *configure_interface;
   local_result = init_interface(&l_ip);
 
-  max_unpipelined_link_delay = 0; // TODO
+  max_unpipelined_link_delay = 0;  // TODO
   min_w_nmos = g_tp.min_w_nmos_;
   min_w_pmos = deviceType->n_to_p_eff_curr_drv_ratio * min_w_nmos;
 
@@ -87,8 +98,8 @@ interconnect::interconnect(string name_, enum Device_ty device_ty_,
         latency_overflow = true;
       }
     }
-  } else // Pipelinable wires, such as bus, does not care latency but
-         // throughput
+  } else  // Pipelinable wires, such as bus, does not care latency but
+          // throughput
   {
     /*
      * TODO: Add pipe regs power, area, and timing;
@@ -138,8 +149,8 @@ interconnect::interconnect(string name_, enum Device_ty device_ty_,
   power.readOp.longer_channel_leakage =
       power.readOp.leakage * long_channel_device_reduction;
 
-  if (pipelinable) // Only global wires has the option to choose whether
-                   // routing over or not
+  if (pipelinable)  // Only global wires has the option to choose whether
+                    // routing over or not
     area.set_area(area.get_area() * route_over_perc +
                   no_device_under_wire_area.get_area() * (1 - route_over_perc));
 
@@ -158,13 +169,12 @@ void interconnect::compute() {
   no_device_under_wire_area.h = (wtemp1->wire_width + wtemp1->wire_spacing);
   no_device_under_wire_area.w = length;
 
-  if (wtemp1)
-    delete wtemp1;
+  if (wtemp1) delete wtemp1;
 }
 
 void interconnect::leakage_feedback(double temperature) {
   l_ip.temp = (unsigned int)round(temperature / 10.0) * 10;
-  uca_org_t init_result = init_interface(&l_ip); // init_result is dummy
+  uca_org_t init_result = init_interface(&l_ip);  // init_result is dummy
 
   compute();
 

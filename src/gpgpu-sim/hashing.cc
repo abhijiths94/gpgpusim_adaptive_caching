@@ -1,10 +1,10 @@
 // author: Mahmoud Khairy, (Purdue Univ)
 // email: abdallm@purdue.edu
 
-#include "../abstract_hardware_model.h"
-#include "gpu-cache.h"
 #include <math.h>
 #include <string.h>
+#include "../abstract_hardware_model.h"
+#include "gpu-cache.h"
 
 unsigned ipoly_hash_function(new_addr_type higher_bits, unsigned index,
                              unsigned bank_set_num) {
@@ -85,11 +85,12 @@ unsigned ipoly_hash_function(new_addr_type higher_bits, unsigned index,
         a[17] ^ a[16] ^ a[15] ^ a[14] ^ a[11] ^ a[9] ^ a[5] ^ a[4] ^ b[5];
     return new_index.to_ulong();
   } else { /* Else incorrect number of channels for the hashing function */
-    assert("\nmemory_partition_indexing error: The number of "
-           "channels should be "
-           "16, 32 or 64 for the hashing IPOLY index function. other banks "
-           "numbers are not supported. Generate it by yourself! \n" &&
-           0);
+    assert(
+        "\nmemory_partition_indexing error: The number of "
+        "channels should be "
+        "16, 32 or 64 for the hashing IPOLY index function. other banks "
+        "numbers are not supported. Generate it by yourself! \n" &&
+        0);
 
     return 0;
   }

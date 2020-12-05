@@ -29,10 +29,10 @@
 #ifndef STREAM_MANAGER_H_INCLUDED
 #define STREAM_MANAGER_H_INCLUDED
 
-#include "abstract_hardware_model.h"
-#include <list>
 #include <pthread.h>
 #include <time.h>
+#include <list>
+#include "abstract_hardware_model.h"
 
 // class stream_barrier {
 // public:
@@ -45,7 +45,7 @@
 //};
 
 struct CUevent_st {
-public:
+ public:
   CUevent_st(bool blocking) {
     m_uid = ++m_next_event_uid;
     m_blocking = blocking;
@@ -69,7 +69,7 @@ public:
   void issue() { m_issued++; }
   unsigned int num_issued() const { return m_issued; }
 
-private:
+ private:
   int m_uid;
   bool m_blocking;
   bool m_done;
@@ -94,7 +94,7 @@ enum stream_operation_type {
 };
 
 class stream_operation {
-public:
+ public:
   stream_operation() {
     m_kernel = NULL;
     m_type = stream_no_op;
@@ -203,7 +203,7 @@ public:
   }
   void set_stream(CUstream_st *stream) { m_stream = stream; }
 
-private:
+ private:
   struct CUstream_st *m_stream;
 
   bool m_done;
@@ -223,7 +223,7 @@ private:
   struct CUevent_st *m_event;
 };
 struct CUstream_st {
-public:
+ public:
   CUstream_st();
   bool empty();
   bool busy();
@@ -231,24 +231,24 @@ public:
   void push(const stream_operation &op);
   void record_next_done();
   stream_operation next();
-  void cancel_front(); // front operation fails, cancle the pending status
+  void cancel_front();  // front operation fails, cancle the pending status
   stream_operation &front() { return m_operations.front(); }
   void print(FILE *fp);
   unsigned get_uid() const { return m_uid; }
 
-private:
+ private:
   unsigned m_uid;
   static unsigned sm_next_stream_uid;
 
   std::list<stream_operation> m_operations;
-  bool m_pending; // front operation has started but not yet completed
+  bool m_pending;  // front operation has started but not yet completed
 
-  pthread_mutex_t m_lock; // ensure only one host or gpu manipulates stream
-                          // operation at one time
+  pthread_mutex_t m_lock;  // ensure only one host or gpu manipulates stream
+                           // operation at one time
 };
 
 class stream_manager {
-public:
+ public:
   stream_manager(gpgpu_sim *gpu, bool cuda_launch_blocking);
   bool register_finished_kernel(unsigned grid_uid);
   bool check_finished_kernel();
@@ -266,7 +266,7 @@ public:
   unsigned size() { return m_streams.size(); };
   bool is_blocking() { return m_cuda_launch_blocking; };
 
-private:
+ private:
   void print_impl(FILE *fp);
 
   bool m_cuda_launch_blocking;

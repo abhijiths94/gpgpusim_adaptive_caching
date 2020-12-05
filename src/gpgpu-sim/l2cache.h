@@ -38,7 +38,7 @@
 class mem_fetch;
 
 class partition_mf_allocator : public mem_fetch_allocator {
-public:
+ public:
   partition_mf_allocator(const memory_config *config) {
     m_memory_config = config;
   }
@@ -52,7 +52,7 @@ public:
                            unsigned size, bool wr,
                            unsigned long long cycle) const;
 
-private:
+ private:
   const memory_config *m_memory_config;
 };
 
@@ -61,7 +61,7 @@ private:
 // - It arbitrates the DRAM channel among multiple sub partitions.
 // - It does not connect directly with the interconnection network.
 class memory_partition_unit {
-public:
+ public:
   memory_partition_unit(unsigned partition_id, const memory_config *config,
                         class memory_stats_t *stats, class gpgpu_sim *gpu);
   ~memory_partition_unit();
@@ -99,7 +99,7 @@ public:
     return m_gpu;
   }
 
-private:
+ private:
   unsigned m_id;
   const memory_config *m_config;
   class memory_stats_t *m_stats;
@@ -107,7 +107,7 @@ private:
   class dram_t *m_dram;
 
   class arbitration_metadata {
-  public:
+   public:
     arbitration_metadata(const memory_config *config);
 
     // check if a subpartition still has credit
@@ -122,7 +122,7 @@ private:
 
     void print(FILE *fp) const;
 
-  private:
+   private:
     // id of the last subpartition that borrowed credit
     int m_last_borrower;
 
@@ -149,7 +149,7 @@ private:
 };
 
 class memory_sub_partition {
-public:
+ public:
   memory_sub_partition(unsigned sub_partition_id, const memory_config *config,
                        class memory_stats_t *stats, class gpgpu_sim *gpu);
   ~memory_sub_partition();
@@ -196,9 +196,9 @@ public:
     m_memcpy_cycle_offset += 1;
   }
 
-private:
+ private:
   // data
-  unsigned m_id; //< the global sub partition ID
+  unsigned m_id;  //< the global sub partition ID
   const memory_config *m_config;
   class l2_cache *m_L2cache;
   class L2interface *m_L2interface;
@@ -216,7 +216,7 @@ private:
   fifo_pipeline<mem_fetch> *m_icnt_L2_queue;
   fifo_pipeline<mem_fetch> *m_L2_dram_queue;
   fifo_pipeline<mem_fetch> *m_dram_L2_queue;
-  fifo_pipeline<mem_fetch> *m_L2_icnt_queue; // L2 cache hit response queue
+  fifo_pipeline<mem_fetch> *m_L2_icnt_queue;  // L2 cache hit response queue
 
   class mem_fetch *L2dramout;
   unsigned long long int wb_addr;
@@ -239,7 +239,7 @@ private:
 };
 
 class L2interface : public mem_fetch_interface {
-public:
+ public:
   L2interface(memory_sub_partition *unit) { m_unit = unit; }
   virtual ~L2interface() {}
   virtual bool full(unsigned size, bool write) const {
@@ -251,7 +251,7 @@ public:
     m_unit->m_L2_dram_queue->push(mf);
   }
 
-private:
+ private:
   memory_sub_partition *m_unit;
 };
 

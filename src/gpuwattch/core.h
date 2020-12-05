@@ -51,7 +51,7 @@
 #include "sharedcache.h"
 
 class BranchPredictor : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -75,7 +75,7 @@ public:
 };
 
 class InstFetchU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -101,7 +101,7 @@ public:
 };
 
 class SchedulerU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -124,7 +124,7 @@ public:
 };
 
 class RENAMINGU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -138,7 +138,7 @@ public:
   ArrayST *ffreeL;
   dep_resource_conflict_check *idcl;
   dep_resource_conflict_check *fdcl;
-  ArrayST *RAHT; // register alias history table Used to store GC
+  ArrayST *RAHT;  // register alias history table Used to store GC
   bool exist;
 
   RENAMINGU(ParseXML *XML_interface, int ithCore_,
@@ -150,7 +150,7 @@ public:
 };
 
 class LoadStoreU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -163,8 +163,8 @@ public:
   DataCache ccache;
   DataCache tcache;
   DataCache sharedmemory;
-  ArrayST *LSQ; // it is actually the store queue but for inorder processors it
-                // serves as both loadQ and StoreQ
+  ArrayST *LSQ;  // it is actually the store queue but for inorder processors it
+                 // serves as both loadQ and StoreQ
   ArrayST *LoadQ;
   vector<NoC *> nocs;
   bool exist;
@@ -176,13 +176,13 @@ public:
   void computeEnergy(bool is_tdp = true);
   void displayEnergy(uint32_t indent = 0, int plevel = 100, bool is_tdp = true);
   void displayDeviceType(int device_type_,
-                         uint32_t indent); // Added by Syed Gilani
+                         uint32_t indent);  // Added by Syed Gilani
 
   ~LoadStoreU();
 };
 
 class MemManU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -201,7 +201,7 @@ public:
 };
 
 class RegFU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -212,7 +212,7 @@ public:
   ArrayST *IRF;
   ArrayST *FRF;
   ArrayST *RFWIN;
-  ArrayST *OPC; // Operand collectors
+  ArrayST *OPC;  // Operand collectors
   bool exist;
   double exClockRate;
   // OC Modelling (Syed)
@@ -226,7 +226,7 @@ public:
 };
 
 class EXECU : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -258,7 +258,7 @@ public:
 };
 
 class Core : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;

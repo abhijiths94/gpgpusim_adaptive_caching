@@ -28,13 +28,13 @@
 #ifndef ptx_sim_h_INCLUDED
 #define ptx_sim_h_INCLUDED
 
+#include <stdlib.h>
 #include "../abstract_hardware_model.h"
 #include "../tr1_hash_map.h"
 #include "half.h"
-#include <stdlib.h>
 
-#include "opcodes.h"
 #include <assert.h>
+#include "opcodes.h"
 
 #include <list>
 #include <map>
@@ -43,7 +43,7 @@
 
 #include "memory.h"
 
-#define GCC_VERSION                                                            \
+#define GCC_VERSION \
   (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
 struct param_t {
@@ -156,7 +156,7 @@ class function_info;
 class ptx_thread_info;
 
 class ptx_cta_info {
-public:
+ public:
   ptx_cta_info(unsigned sm_idx, gpgpu_context *ctx);
   void add_thread(ptx_thread_info *thd);
   unsigned num_threads() const;
@@ -168,7 +168,7 @@ public:
   void inc_bar_threads();
   void reset_bar_threads();
 
-private:
+ private:
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
   unsigned m_bar_threads;
@@ -180,13 +180,13 @@ private:
 };
 
 class ptx_warp_info {
-public:
-  ptx_warp_info(); // add get_core or something, or threads?
+ public:
+  ptx_warp_info();  // add get_core or something, or threads?
   unsigned get_done_threads() const;
   void inc_done_threads();
   void reset_done_threads();
 
-private:
+ private:
   unsigned m_done_threads;
 };
 
@@ -227,7 +227,7 @@ struct stack_entry {
 };
 
 class ptx_version {
-public:
+ public:
   ptx_version() {
     m_valid = false;
     m_ptx_version = 0;
@@ -264,7 +264,7 @@ public:
     return m_ptx_extensions;
   }
 
-private:
+ private:
   void check_target_extension(const char *ext) {
     if (ext) {
       if (!strcmp(ext, "texmode_independent"))
@@ -289,7 +289,7 @@ private:
 };
 
 class ptx_thread_info {
-public:
+ public:
   ~ptx_thread_info();
   ptx_thread_info(kernel_info_t &kernel);
 
@@ -439,8 +439,7 @@ public:
   bool isInFunctionalSimulationMode() { return m_functionalSimulationMode; }
   void exitCore() {
     // m_core is not used in case of functional simulation mode
-    if (!m_functionalSimulationMode)
-      m_core->warp_exit(m_hw_wid);
+    if (!m_functionalSimulationMode) m_core->warp_exit(m_hw_wid);
   }
 
   void registerExit() { m_cta_info->register_thread_exit(this); }
@@ -460,7 +459,7 @@ public:
   // Jin: get corresponding kernel grid for CDP purpose
   kernel_info_t &get_kernel() { return m_kernel; }
 
-public:
+ public:
   addr_t m_last_effective_address;
   bool m_branch_taken;
   memory_space_t m_last_memory_space;
@@ -472,7 +471,7 @@ public:
   ptx_cta_info *m_cta_info;
   ptx_reg_t m_last_set_operand_value;
 
-private:
+ private:
   bool m_functionalSimulationMode;
   unsigned m_uid;
   kernel_info_t &m_kernel;
@@ -513,7 +512,7 @@ private:
   std::list<reg_map_t> m_debug_trace_regs_read;
   bool m_enable_debug_trace;
 
-  std::stack<class operand_info, std::vector<operand_info>> m_breakaddrs;
+  std::stack<class operand_info, std::vector<operand_info> > m_breakaddrs;
 };
 
 addr_t generic_to_local(unsigned smid, unsigned hwtid, addr_t addr);

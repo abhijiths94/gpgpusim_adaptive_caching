@@ -29,17 +29,17 @@
 #ifndef dram_sched_h_INCLUDED
 #define dram_sched_h_INCLUDED
 
+#include <list>
+#include <map>
 #include "dram.h"
 #include "gpu-misc.h"
 #include "gpu-sim.h"
 #include "shader.h"
-#include <list>
-#include <map>
 
 enum memory_mode { READ_MODE = 0, WRITE_MODE };
 
 class frfcfs_scheduler {
-public:
+ public:
   frfcfs_scheduler(const memory_config *config, dram_t *dm,
                    memory_stats_t *stats);
   void add_req(dram_req_t *req);
@@ -49,20 +49,20 @@ public:
   unsigned num_pending() const { return m_num_pending; }
   unsigned num_write_pending() const { return m_num_write_pending; }
 
-private:
+ private:
   const memory_config *m_config;
   dram_t *m_dram;
   unsigned m_num_pending;
   unsigned m_num_write_pending;
   std::list<dram_req_t *> *m_queue;
-  std::map<unsigned, std::list<std::list<dram_req_t *>::iterator>> *m_bins;
+  std::map<unsigned, std::list<std::list<dram_req_t *>::iterator> > *m_bins;
   std::list<std::list<dram_req_t *>::iterator> **m_last_row;
-  unsigned *curr_row_service_time; // one set of variables for each bank.
-  unsigned *row_service_timestamp; // tracks when scheduler began servicing
-                                   // current row
+  unsigned *curr_row_service_time;  // one set of variables for each bank.
+  unsigned *row_service_timestamp;  // tracks when scheduler began servicing
+                                    // current row
 
   std::list<dram_req_t *> *m_write_queue;
-  std::map<unsigned, std::list<std::list<dram_req_t *>::iterator>>
+  std::map<unsigned, std::list<std::list<dram_req_t *>::iterator> >
       *m_write_bins;
   std::list<std::list<dram_req_t *>::iterator> **m_last_write_row;
 

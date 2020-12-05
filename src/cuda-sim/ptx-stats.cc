@@ -27,13 +27,13 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "ptx-stats.h"
+#include <stdio.h>
+#include <map>
 #include "../../libcuda/gpgpu_context.h"
 #include "../option_parser.h"
 #include "../tr1_hash_map.h"
 #include "ptx_ir.h"
 #include "ptx_sim.h"
-#include <map>
-#include <stdio.h>
 
 void ptx_stats::ptx_file_line_stats_options(option_parser_t opp) {
   option_parser_register(
@@ -48,7 +48,7 @@ void ptx_stats::ptx_file_line_stats_options(option_parser_t opp) {
 
 // defining a PTX source line = filename + line number
 class ptx_file_line {
-public:
+ public:
   ptx_file_line(const char *s, int l) {
     if (s == NULL)
       st = "NULL_NAME";
@@ -78,28 +78,33 @@ public:
 
 // holds all statistics collected for a singe PTX source line
 class ptx_file_line_stats {
-public:
+ public:
   ptx_file_line_stats()
-      : exec_count(0), latency(0), dram_traffic(0),
-        smem_n_way_bank_conflict_total(0), smem_warp_count(0),
-        gmem_n_access_total(0), gmem_warp_count(0), exposed_latency(0),
+      : exec_count(0),
+        latency(0),
+        dram_traffic(0),
+        smem_n_way_bank_conflict_total(0),
+        smem_warp_count(0),
+        gmem_n_access_total(0),
+        gmem_warp_count(0),
+        exposed_latency(0),
         warp_divergence(0) {}
 
   unsigned long exec_count;
   unsigned long long latency;
   unsigned long long dram_traffic;
   unsigned long long
-      smem_n_way_bank_conflict_total; // total number of banks accessed by this
-                                      // instruction
-  unsigned long smem_warp_count;      // number of warps accessing shared memory
-  unsigned long long gmem_n_access_total; // number of uncoalesced access in
-                                          // total from this instruction
+      smem_n_way_bank_conflict_total;  // total number of banks accessed by this
+                                       // instruction
+  unsigned long smem_warp_count;  // number of warps accessing shared memory
+  unsigned long long gmem_n_access_total;  // number of uncoalesced access in
+                                           // total from this instruction
   unsigned long
-      gmem_warp_count; // number of warps causing these uncoalesced access
-  unsigned long long exposed_latency; // latency exposed as pipeline bubbles
-                                      // (attributed to this instruction)
+      gmem_warp_count;  // number of warps causing these uncoalesced access
+  unsigned long long exposed_latency;  // latency exposed as pipeline bubbles
+                                       // (attributed to this instruction)
   unsigned long long
-      warp_divergence; // number of warp divergence occured at this instruction
+      warp_divergence;  // number of warp divergence occured at this instruction
 };
 
 #if (tr1_hash_map_ismap == 1)
@@ -121,8 +126,7 @@ static ptx_file_line_stats_map_t ptx_file_line_stats_tracker;
 // output statistics to a file
 void ptx_stats::ptx_file_line_stats_write_file() {
   // check if stat collection is turned on
-  if (enable_ptx_file_line_stats == 0)
-    return;
+  if (enable_ptx_file_line_stats == 0) return;
 
   ptx_file_line_stats_map_t::iterator it;
   FILE *pfile;
@@ -215,7 +219,7 @@ void ptx_stats::ptx_file_line_stats_add_uncoalesced_gmem(unsigned pc,
 // a class that tracks the inflight memory instructions of a shader core
 // and attributes exposed latency to those instructions when signaled to do so
 class ptx_inflight_memory_insn_tracker {
-public:
+ public:
   typedef std::map<const ptx_instruction *, int> insn_count_map;
 
   void add_count(const ptx_instruction *pInsn, int count = 1) {

@@ -45,7 +45,7 @@
 // leakge power includes only part to one bank when uca_tree == true
 
 class interconnect : public Component {
-public:
+ public:
   interconnect(string name_, enum Device_ty device_ty_, double base_w = 0,
                double base_h = 0, int data_w = 0, double len = 0,
                const InputParameter *configure_interface = NULL,
@@ -72,7 +72,7 @@ public:
   powerDef power_bit;
 
   double wire_bw;
-  double init_wire_bw; // bus width at root
+  double init_wire_bw;  // bus width at root
   double base_width;
   double base_height;
   int data_width;
@@ -93,7 +93,7 @@ public:
   double route_over_perc;
   int num_pipe_stages;
 
-private:
+ private:
   TechnologyParameter::DeviceType *deviceType;
 };
 

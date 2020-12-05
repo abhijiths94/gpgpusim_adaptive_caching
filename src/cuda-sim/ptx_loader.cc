@@ -27,14 +27,14 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "ptx_loader.h"
+#include <dirent.h>
+#include <unistd.h>
+#include <fstream>
+#include <sstream>
 #include "../../libcuda/gpgpu_context.h"
 #include "cuda-sim.h"
 #include "ptx_ir.h"
 #include "ptx_parser.h"
-#include <dirent.h>
-#include <fstream>
-#include <sstream>
-#include <unistd.h>
 
 /// extern prototypes
 
@@ -89,8 +89,7 @@ void gpgpu_context::print_ptx_file(const char *p, unsigned source_num,
   unsigned n = 1;
   while (*t != '\0') {
     char *u = t;
-    while ((*u != '\n') && (*u != '\0'))
-      u++;
+    while ((*u != '\n') && (*u != '\0')) u++;
     unsigned last = (*u == '\0');
     *u = '\0';
     const ptx_instruction *pI = ptx_parser->ptx_instruction_lookup(filename, n);
@@ -100,8 +99,7 @@ void gpgpu_context::print_ptx_file(const char *p, unsigned source_num,
     else
       snprintf(pc, 64, "    ");
     printf("    _%u.ptx  %4u (pc=%s):  %s\n", source_num, n, pc, t);
-    if (last)
-      break;
+    if (last) break;
     t = u + 1;
     n++;
   }
@@ -168,9 +166,8 @@ char *ptxinfo_data::gpgpu_ptx_sim_convert_ptx_and_sass_to_ptxplus(
   return ptxplus_str;
 }
 
-symbol_table *
-gpgpu_context::gpgpu_ptx_sim_load_ptx_from_string(const char *p,
-                                                  unsigned source_num) {
+symbol_table *gpgpu_context::gpgpu_ptx_sim_load_ptx_from_string(
+    const char *p, unsigned source_num) {
   char buf[1024];
   snprintf(buf, 1024, "_%u.ptx", source_num);
   if (g_save_embedded_ptx) {
@@ -199,15 +196,14 @@ gpgpu_context::gpgpu_ptx_sim_load_ptx_from_string(const char *p,
   }
   ptx_lex_destroy(ptx_parser->scanner);
 
-  if (g_debug_execution >= 100)
-    print_ptx_file(p, source_num, buf);
+  if (g_debug_execution >= 100) print_ptx_file(p, source_num, buf);
 
   printf("GPGPU-Sim PTX: finished parsing EMBEDDED .ptx file %s\n", buf);
   return symtab;
 }
 
-symbol_table *
-gpgpu_context::gpgpu_ptx_sim_load_ptx_from_filename(const char *filename) {
+symbol_table *gpgpu_context::gpgpu_ptx_sim_load_ptx_from_filename(
+    const char *filename) {
   symbol_table *symtab = init_parser(filename);
   printf("GPGPU-Sim PTX: finished parsing EMBEDDED .ptx file %s\n", filename);
   return symtab;
@@ -268,8 +264,7 @@ void fix_duplicate_errors(char fname2[1024]) {
 
       // get the start of the previous line
       offset = 0;
-      while (*(funcptr - offset) != '\n')
-        offset++;
+      while (*(funcptr - offset) != '\n') offset++;
 
       fwrite(startptr, sizeof(char), funcptr - offset + 1 - startptr, ptxdest);
 
@@ -298,8 +293,7 @@ void fix_duplicate_errors(char fname2[1024]) {
 
       // find next location of startptr
       offset = 1;
-      while (*(lineptr + offset) != '\n')
-        offset++;
+      while (*(lineptr + offset) != '\n') offset++;
       startptr = lineptr + offset + 1;
     } else {
       printf("GPGPU-Sim PTX: ERROR ** Unsupported duplicate type: %s\n",
@@ -417,8 +411,9 @@ void gpgpu_context::gpgpu_ptxinfo_load_from_string(const char *p_for_info,
     int result = system(commandline2);
     if (result != 0) {
       printf("GPGPU-Sim PTX: ERROR ** while loading PTX (a) %d\n", result);
-      printf("               Ensure you have write access to simulation "
-             "directory\n");
+      printf(
+          "               Ensure you have write access to simulation "
+          "directory\n");
       printf("               and have \'cat\' and \'sed\' in your path.\n");
       exit(1);
     }
@@ -507,8 +502,9 @@ void gpgpu_context::gpgpu_ptxinfo_load_from_string(const char *p_for_info,
     int result = system(commandline2);
     if (result != 0) {
       printf("GPGPU-Sim PTX: ERROR ** while loading PTX (a) %d\n", result);
-      printf("               Ensure you have write access to simulation "
-             "directory\n");
+      printf(
+          "               Ensure you have write access to simulation "
+          "directory\n");
       printf("               and have \'cat\' and \'sed\' in your path.\n");
       exit(1);
     }
@@ -518,8 +514,7 @@ void gpgpu_context::gpgpu_ptxinfo_load_from_string(const char *p_for_info,
     extra_flags[0] = 0;
 
 #if CUDART_VERSION >= 3000
-    if (sm_version == 0)
-      sm_version = 20;
+    if (sm_version == 0) sm_version = 20;
     if (!device_runtime->g_cdp_enabled)
       snprintf(extra_flags, 1024, "--gpu-name=sm_%u", sm_version);
     else

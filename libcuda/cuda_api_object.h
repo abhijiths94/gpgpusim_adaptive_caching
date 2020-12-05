@@ -47,8 +47,7 @@ struct _cuda_device_id {
   struct _cuda_device_id *get_device(unsigned n) {
     assert(n < (unsigned)num_devices());
     struct _cuda_device_id *p = this;
-    for (unsigned i = 0; i < n; i++)
-      p = p->m_next;
+    for (unsigned i = 0; i < n; i++) p = p->m_next;
     return p;
   }
   const struct cudaDeviceProp *get_prop() const { return m_gpgpu->get_prop(); }
@@ -56,7 +55,7 @@ struct _cuda_device_id {
 
   gpgpu_sim *get_gpgpu() { return m_gpgpu; }
 
-private:
+ private:
   unsigned m_id;
   class gpgpu_sim *m_gpgpu;
   struct _cuda_device_id *m_next;
@@ -124,19 +123,19 @@ struct CUctx_st {
 
   int no_of_ptx;
 
-private:
-  _cuda_device_id *m_gpu; // selected gpu
+ private:
+  _cuda_device_id *m_gpu;  // selected gpu
   std::map<unsigned, symbol_table *>
-      m_code; // fat binary handle => global symbol table
+      m_code;  // fat binary handle => global symbol table
   unsigned m_last_fat_cubin_handle;
   std::map<const void *, function_info *>
-      m_kernel_lookup; // unique id (CUDA app function address) => kernel entry
-                       // point
+      m_kernel_lookup;  // unique id (CUDA app function address) => kernel entry
+                        // point
   struct gpgpu_ptx_sim_info m_binary_info;
 };
 
 class kernel_config {
-public:
+ public:
   kernel_config(dim3 GridDim, dim3 BlockDim, size_t sharedMem,
                 struct CUstream_st *stream) {
     m_GridDim = GridDim;
@@ -162,7 +161,7 @@ public:
     return m_stream;
   }
 
-private:
+ private:
   dim3 m_GridDim;
   dim3 m_BlockDim;
   size_t m_sharedMem;
@@ -171,10 +170,10 @@ private:
 };
 
 class cuda_runtime_api {
-public:
+ public:
   cuda_runtime_api(gpgpu_context *ctx) {
     g_glbmap = NULL;
-    g_active_device = 0; // active gpu that runs the code
+    g_active_device = 0;  // active gpu that runs the code
     gpgpu_ctx = ctx;
   }
   // global list
@@ -186,11 +185,11 @@ public:
   std::map<std::string, symbol_table *> name_symtab;
   std::map<unsigned long long, size_t> g_mallocPtr_Size;
   // maps sm version number to set of filenames
-  std::map<unsigned, std::set<std::string>> version_filename;
-  std::map<void *, void **> pinned_memory; // support for pinned memories added
+  std::map<unsigned, std::set<std::string> > version_filename;
+  std::map<void *, void **> pinned_memory;  // support for pinned memories added
   std::map<void *, size_t> pinned_memory_size;
   glbmap_entry_t *g_glbmap;
-  int g_active_device; // active gpu that runs the code
+  int g_active_device;  // active gpu that runs the code
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
   // member function list
@@ -202,9 +201,8 @@ public:
   std::list<cuobjdumpSection *> mergeSections();
   cuobjdumpELFSection *findELFSection(const std::string identifier);
   cuobjdumpPTXSection *findPTXSection(const std::string identifier);
-  cuobjdumpPTXSection *
-  findPTXSectionInList(std::list<cuobjdumpSection *> &sectionlist,
-                       const std::string identifier);
+  cuobjdumpPTXSection *findPTXSectionInList(
+      std::list<cuobjdumpSection *> &sectionlist, const std::string identifier);
   void cuobjdumpRegisterFatBinary(unsigned int handle, const char *filename,
                                   CUctx_st *context);
   kernel_info_t *gpgpu_cuda_ptx_sim_init_grid(const char *kernel_key,

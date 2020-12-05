@@ -36,23 +36,26 @@
  *British Columbia             *
  ********************************************************************/
 #include "processor.h"
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iostream>
 #include "XML_Parse.h"
 #include "array.h"
 #include "cacti/basic_circuit.h"
 #include "const.h"
 #include "parameter.h"
 #include "version.h"
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
 
 Processor::Processor(ParseXML *XML_interface)
-    : XML(XML_interface), // TODO: using one global copy may have problems.
-      mc(0), niu(0), pcie(0), flashcontroller(0) {
+    : XML(XML_interface),  // TODO: using one global copy may have problems.
+      mc(0),
+      niu(0),
+      pcie(0),
+      flashcontroller(0) {
   /*
    *  placement and routing overhead is 10%, core scales worse than cache 40% is
    * accumulated from 90 to 22nm There is no point to have heterogeneous memory
@@ -115,29 +118,30 @@ Processor::Processor(ParseXML *XML_interface)
       set_pppm(pppm_t, cores[i]->clockRate * procdynp.numCore, procdynp.numCore,
                procdynp.numCore, procdynp.numCore);
       // set the exClockRate
-      exClockRate = cores[0]->clockRate * 2; // TODO; get from XML file
+      exClockRate = cores[0]->clockRate * 2;  // TODO; get from XML file
       // cout<<"****EX clock rate:"<<exClockRate<<endl;
       core.power = core.power + cores[i]->power * pppm_t;
       set_pppm(pppm_t, 1 / cores[i]->executionTime, procdynp.numCore,
                procdynp.numCore, procdynp.numCore);
       core.rt_power = core.rt_power + cores[i]->rt_power * pppm_t;
-      area.set_area(area.get_area() +
-                    core.area.get_area()); // placement and routing overhead is
-                                           // 10%, core scales worse than cache
-                                           // 40% is accumulated from 90 to 22nm
+      area.set_area(
+          area.get_area() +
+          core.area.get_area());  // placement and routing overhead is
+                                  // 10%, core scales worse than cache
+                                  // 40% is accumulated from 90 to 22nm
       power = power + core.power;
       rt_power = rt_power + core.rt_power;
     } else {
       core.area.set_area(core.area.get_area() + cores[i]->area.get_area());
       area.set_area(
           area.get_area() +
-          cores[i]->area.get_area()); // placement and routing overhead is 10%,
-                                      // core scales worse than cache 40% is
-                                      // accumulated from 90 to 22nm
+          cores[i]->area.get_area());  // placement and routing overhead is 10%,
+                                       // core scales worse than cache 40% is
+                                       // accumulated from 90 to 22nm
 
       set_pppm(pppm_t, cores[i]->clockRate, 1, 1, 1);
       // set the exClockRate
-      exClockRate = cores[0]->clockRate; // TODO; get from XML file
+      exClockRate = cores[0]->clockRate;  // TODO; get from XML file
       // cout<<"****EX clock rate:"<<exClockRate<<endl;
       core.power = core.power + cores[i]->power * pppm_t;
       power = power + cores[i]->power * pppm_t;
@@ -166,9 +170,9 @@ Processor::Processor(ParseXML *XML_interface)
           l2.rt_power = l2.rt_power + l2array[i]->rt_power * pppm_t;
           area.set_area(
               area.get_area() +
-              l2.area.get_area()); // placement and routing overhead is 10%, l2
-                                   // scales worse than cache 40% is
-                                   // accumulated from 90 to 22nm
+              l2.area.get_area());  // placement and routing overhead is 10%, l2
+                                    // scales worse than cache 40% is
+                                    // accumulated from 90 to 22nm
           power = power + l2.power;
           rt_power = rt_power + l2.rt_power;
         } else {
@@ -176,9 +180,9 @@ Processor::Processor(ParseXML *XML_interface)
           area.set_area(
               area.get_area() +
               l2array[i]
-                  ->area.get_area()); // placement and routing overhead is 10%,
-                                      // l2 scales worse than cache 40% is
-                                      // accumulated from 90 to 22nm
+                  ->area.get_area());  // placement and routing overhead is 10%,
+                                       // l2 scales worse than cache 40% is
+                                       // accumulated from 90 to 22nm
 
           set_pppm(pppm_t, l2array[i]->cachep.clockRate, 1, 1, 1);
           l2.power = l2.power + l2array[i]->power * pppm_t;
@@ -205,10 +209,11 @@ Processor::Processor(ParseXML *XML_interface)
         set_pppm(pppm_t, 1 / l3array[i]->cachep.executionTime, procdynp.numL3,
                  procdynp.numL3, procdynp.numL3);
         l3.rt_power = l3.rt_power + l3array[i]->rt_power * pppm_t;
-        area.set_area(area.get_area() +
-                      l3.area.get_area()); // placement and routing overhead is
-                                           // 10%, l3 scales worse than cache
-                                           // 40% is accumulated from 90 to 22nm
+        area.set_area(
+            area.get_area() +
+            l3.area.get_area());  // placement and routing overhead is
+                                  // 10%, l3 scales worse than cache
+                                  // 40% is accumulated from 90 to 22nm
         power = power + l3.power;
         rt_power = rt_power + l3.rt_power;
 
@@ -216,9 +221,9 @@ Processor::Processor(ParseXML *XML_interface)
         l3.area.set_area(l3.area.get_area() + l3array[i]->area.get_area());
         area.set_area(
             area.get_area() +
-            l3array[i]->area.get_area()); // placement and routing overhead is
-                                          // 10%, l3 scales worse than cache
-                                          // 40% is accumulated from 90 to 22nm
+            l3array[i]->area.get_area());  // placement and routing overhead is
+                                           // 10%, l3 scales worse than cache
+                                           // 40% is accumulated from 90 to 22nm
         set_pppm(pppm_t, l3array[i]->cachep.clockRate, 1, 1, 1);
         l3.power = l3.power + l3array[i]->power * pppm_t;
         power = power + l3array[i]->power * pppm_t;
@@ -243,9 +248,9 @@ Processor::Processor(ParseXML *XML_interface)
         l1dir.rt_power = l1dir.rt_power + l1dirarray[i]->rt_power * pppm_t;
         area.set_area(
             area.get_area() +
-            l1dir.area.get_area()); // placement and routing overhead is 10%,
-                                    // l1dir scales worse than cache 40% is
-                                    // accumulated from 90 to 22nm
+            l1dir.area.get_area());  // placement and routing overhead is 10%,
+                                     // l1dir scales worse than cache 40% is
+                                     // accumulated from 90 to 22nm
         power = power + l1dir.power;
         rt_power = rt_power + l1dir.rt_power;
 
@@ -278,9 +283,9 @@ Processor::Processor(ParseXML *XML_interface)
         l2dir.rt_power = l2dir.rt_power + l2dirarray[i]->rt_power * pppm_t;
         area.set_area(
             area.get_area() +
-            l2dir.area.get_area()); // placement and routing overhead is 10%,
-                                    // l2dir scales worse than cache 40% is
-                                    // accumulated from 90 to 22nm
+            l2dir.area.get_area());  // placement and routing overhead is 10%,
+                                     // l2dir scales worse than cache 40% is
+                                     // accumulated from 90 to 22nm
         power = power + l2dir.power;
         rt_power = rt_power + l2dir.rt_power;
 
@@ -298,9 +303,9 @@ Processor::Processor(ParseXML *XML_interface)
     }
 
   if (XML->sys.mc.number_mcs > 0 && XML->sys.mc.memory_channels_per_mc > 0) {
-    if (XML->sys.architecture == 1) // 1 for fermi
+    if (XML->sys.architecture == 1)  // 1 for fermi
       mc = new MemoryController(XML, &interface_ip, MC, GDDR5);
-    else if (XML->sys.architecture == 2) // 2 for quadro
+    else if (XML->sys.architecture == 2)  // 2 for quadro
       mc = new MemoryController(XML, &interface_ip, MC, GDDR3);
     else {
       printf("Architecture %d not defined!\n", XML->sys.architecture);
@@ -324,7 +329,7 @@ Processor::Processor(ParseXML *XML_interface)
     rt_power = rt_power + mcs.rt_power;
   }
 
-  if (XML->sys.flashc.number_mcs > 0) // flash controller
+  if (XML->sys.flashc.number_mcs > 0)  // flash controller
   {
     flashcontroller = new FlashController(XML, &interface_ip);
     flashcontroller->computeEnergy();
@@ -384,8 +389,8 @@ Processor::Processor(ParseXML *XML_interface)
 
   if (numNOC > 0) {
     for (i = 0; i < numNOC; i++) {
-      if (XML->sys.NoC[i].type) { // First add up area of routers if NoC is
-                                  // used
+      if (XML->sys.NoC[i].type) {  // First add up area of routers if NoC is
+                                   // used
         nocs.push_back(new NoC(XML, i, &interface_ip, 1));
 
         if (procdynp.homoNOC) {
@@ -396,7 +401,7 @@ Processor::Processor(ParseXML *XML_interface)
           noc.area.set_area(noc.area.get_area() + nocs[i]->area.get_area());
           area.set_area(area.get_area() + nocs[i]->area.get_area());
         }
-      } else { // Bus based interconnect
+      } else {  // Bus based interconnect
         nocs.push_back(
             new NoC(XML, i, &interface_ip, 1,
                     sqrt(area.get_area() * XML->sys.NoC[i].chip_coverage)));
@@ -420,7 +425,7 @@ Processor::Processor(ParseXML *XML_interface)
       if (nocs[i]->nocdynp.has_global_link && XML->sys.NoC[i].type) {
         nocs[i]->init_link_bus(
             sqrt(area.get_area() *
-                 XML->sys.NoC[i].chip_coverage)); // compute global links
+                 XML->sys.NoC[i].chip_coverage));  // compute global links
         if (procdynp.homoNOC) {
           noc.area.set_area(noc.area.get_area() +
                             nocs[i]->link_bus_tot_per_Router.area.get_area() *
@@ -500,8 +505,7 @@ void Processor::compute() {
   }
 
   if (!XML->sys.Private_L2) {
-    if (numL2 > 0)
-      l2.rt_power.reset();
+    if (numL2 > 0) l2.rt_power.reset();
     for (i = 0; i < numL2; i++) {
       l2array[i]->rt_power.reset();
       l2array[i]->cachep.executionTime =
@@ -578,7 +582,7 @@ void Processor::compute() {
   if (XML->sys.mc.number_mcs > 0 && XML->sys.mc.memory_channels_per_mc > 0) {
     mc->rt_power.reset();
     mc->mcp.executionTime =
-        XML->sys.total_cycles / (XML->sys.core[0].clock_rate * 1e6); // Jingwen
+        XML->sys.total_cycles / (XML->sys.core[0].clock_rate * 1e6);  // Jingwen
     mc->computeEnergy(false);
     set_pppm(pppm_t, 1 / mc->mcp.executionTime, XML->sys.mc.number_mcs,
              XML->sys.mc.number_mcs, XML->sys.mc.number_mcs);
@@ -657,30 +661,30 @@ void Processor::displayDeviceType(int device_type_, uint32_t indent) {
   string indent_str(indent, ' ');
 
   switch (device_type_) {
-  case 0:
-    cout << indent_str << "Device Type= "
-         << "ITRS high performance device type" << endl;
-    break;
-  case 1:
-    cout << indent_str << "Device Type= "
-         << "ITRS low standby power device type" << endl;
-    break;
-  case 2:
-    cout << indent_str << "Device Type= "
-         << "ITRS low operating power device type" << endl;
-    break;
-  case 3:
-    cout << indent_str << "Device Type= "
-         << "LP-DRAM device type" << endl;
-    break;
-  case 4:
-    cout << indent_str << "Device Type= "
-         << "COMM-DRAM device type" << endl;
-    break;
-  default: {
-    cout << indent_str << "Unknown Device Type" << endl;
-    exit(0);
-  }
+    case 0:
+      cout << indent_str << "Device Type= "
+           << "ITRS high performance device type" << endl;
+      break;
+    case 1:
+      cout << indent_str << "Device Type= "
+           << "ITRS low standby power device type" << endl;
+      break;
+    case 2:
+      cout << indent_str << "Device Type= "
+           << "ITRS low operating power device type" << endl;
+      break;
+    case 3:
+      cout << indent_str << "Device Type= "
+           << "LP-DRAM device type" << endl;
+      break;
+    case 4:
+      cout << indent_str << "Device Type= "
+           << "COMM-DRAM device type" << endl;
+      break;
+    default: {
+      cout << indent_str << "Unknown Device Type" << endl;
+      exit(0);
+    }
   }
 }
 
@@ -689,18 +693,18 @@ void Processor::displayInterconnectType(int interconnect_type_,
   string indent_str(indent, ' ');
 
   switch (interconnect_type_) {
-  case 0:
-    cout << indent_str << "Interconnect metal projection= "
-         << "aggressive interconnect technology projection" << endl;
-    break;
-  case 1:
-    cout << indent_str << "Interconnect metal projection= "
-         << "conservative interconnect technology projection" << endl;
-    break;
-  default: {
-    cout << indent_str << "Unknown Interconnect Projection Type" << endl;
-    exit(0);
-  }
+    case 0:
+      cout << indent_str << "Interconnect metal projection= "
+           << "aggressive interconnect technology projection" << endl;
+      break;
+    case 1:
+      cout << indent_str << "Interconnect metal projection= "
+           << "conservative interconnect technology projection" << endl;
+      break;
+    default: {
+      cout << indent_str << "Unknown Interconnect Projection Type" << endl;
+      exit(0);
+    }
   }
 }
 
@@ -1093,33 +1097,33 @@ void Processor::set_proc_param() {
 
   interface_ip.ic_proj_type = debug ? 0 : XML->sys.interconnect_projection_type;
   interface_ip.delay_wt =
-      100;                  // Fixed number, make sure timing can be satisfied.
-  interface_ip.area_wt = 0; // Fixed number, This is used to exhaustive search
-                            // for individual components.
+      100;                   // Fixed number, make sure timing can be satisfied.
+  interface_ip.area_wt = 0;  // Fixed number, This is used to exhaustive search
+                             // for individual components.
   interface_ip.dynamic_power_wt =
-      100; // Fixed number, This is used to exhaustive search for individual
-           // components.
+      100;  // Fixed number, This is used to exhaustive search for individual
+            // components.
   interface_ip.leakage_power_wt = 0;
   interface_ip.cycle_time_wt = 0;
 
   interface_ip.delay_dev =
-      10000; // Fixed number, make sure timing can be satisfied.
-  interface_ip.area_dev = 10000; // Fixed number, This is used to exhaustive
-                                 // search for individual components.
+      10000;  // Fixed number, make sure timing can be satisfied.
+  interface_ip.area_dev = 10000;  // Fixed number, This is used to exhaustive
+                                  // search for individual components.
   interface_ip.dynamic_power_dev =
-      10000; // Fixed number, This is used to exhaustive search for individual
-             // components.
+      10000;  // Fixed number, This is used to exhaustive search for individual
+              // components.
   interface_ip.leakage_power_dev = 10000;
   interface_ip.cycle_time_dev = 10000;
 
   interface_ip.ed = 2;
-  interface_ip.burst_len = 1; // parameters are fixed for processor section,
-                              // since memory is processed separately
+  interface_ip.burst_len = 1;  // parameters are fixed for processor section,
+                               // since memory is processed separately
   interface_ip.int_prefetch_w = 1;
   interface_ip.page_sz_bits = 0;
   interface_ip.temp = debug ? 360 : XML->sys.temperature;
   interface_ip.F_sz_nm =
-      debug ? 90 : XML->sys.core_tech_node; // XML->sys.core_tech_node;
+      debug ? 90 : XML->sys.core_tech_node;  // XML->sys.core_tech_node;
   interface_ip.F_sz_um = interface_ip.F_sz_nm / 1000;
 
   //***********This section of code does not have real meaning, they are just to

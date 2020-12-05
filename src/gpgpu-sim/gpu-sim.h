@@ -29,16 +29,16 @@
 #ifndef GPU_SIM_H
 #define GPU_SIM_H
 
+#include <stdio.h>
+#include <fstream>
+#include <iostream>
+#include <list>
 #include "../abstract_hardware_model.h"
 #include "../option_parser.h"
 #include "../trace.h"
 #include "addrdec.h"
 #include "gpu-cache.h"
 #include "shader.h"
-#include <fstream>
-#include <iostream>
-#include <list>
-#include <stdio.h>
 
 // constants for statistics printouts
 #define GPU_RSTAT_SHD_INFO 0x1
@@ -77,10 +77,8 @@ struct power_config {
     char *date = ctime(&curr_time);
     char *s = date;
     while (*s) {
-      if (*s == ' ' || *s == '\t' || *s == ':')
-        *s = '-';
-      if (*s == '\n' || *s == '\r')
-        *s = 0;
+      if (*s == ' ' || *s == '\t' || *s == ':') *s = '-';
+      if (*s == '\n' || *s == '\r') *s = 0;
       s++;
     }
     char buf1[1024];
@@ -135,7 +133,7 @@ struct power_config {
 };
 
 class memory_config {
-public:
+ public:
   memory_config(gpgpu_context *ctx) {
     m_valid = false;
     gpgpu_dram_timing_opt = NULL;
@@ -217,8 +215,8 @@ public:
     }
     tWTP = (WL + (BL / data_command_freq_ratio) + tWR);
     dram_atom_size =
-        BL * busW * gpu_n_mem_per_ctrlr; // burst length x bus width x # chips
-                                         // per partition
+        BL * busW * gpu_n_mem_per_ctrlr;  // burst length x bus width x # chips
+                                          // per partition
 
     assert(m_n_sub_partition_per_memory_channel > 0);
     assert((nbk % m_n_sub_partition_per_memory_channel == 0) &&
@@ -260,45 +258,46 @@ public:
 
   // DRAM parameters
 
-  unsigned tCCDL; // column to column delay when bank groups are enabled
-  unsigned tRTPL; // read to precharge delay when bank groups are enabled for
-                  // GDDR5 this is identical to RTPS, if for other DRAM this is
-                  // different, you will need to split them in two
+  unsigned tCCDL;  // column to column delay when bank groups are enabled
+  unsigned tRTPL;  // read to precharge delay when bank groups are enabled for
+                   // GDDR5 this is identical to RTPS, if for other DRAM this is
+                   // different, you will need to split them in two
 
-  unsigned tCCD;   // column to column delay
-  unsigned tRRD;   // minimal time required between activation of rows in
-                   // different banks
-  unsigned tRCD;   // row to column delay - time required to activate a row
-                   // before a read
-  unsigned tRCDWR; // row to column delay for a write command
-  unsigned tRAS;   // time needed to activate row
-  unsigned tRP;    // row precharge ie. deactivate row
+  unsigned tCCD;    // column to column delay
+  unsigned tRRD;    // minimal time required between activation of rows in
+                    // different banks
+  unsigned tRCD;    // row to column delay - time required to activate a row
+                    // before a read
+  unsigned tRCDWR;  // row to column delay for a write command
+  unsigned tRAS;    // time needed to activate row
+  unsigned tRP;     // row precharge ie. deactivate row
   unsigned
-      tRC; // row cycle time ie. precharge current, then activate different row
-  unsigned tCDLR; // Last data-in to Read command (switching from write to
-                  // read)
-  unsigned tWR;   // Last data-in to Row precharge
+      tRC;  // row cycle time ie. precharge current, then activate different row
+  unsigned tCDLR;  // Last data-in to Read command (switching from write to
+                   // read)
+  unsigned tWR;    // Last data-in to Row precharge
 
-  unsigned CL;   // CAS latency
-  unsigned WL;   // WRITE latency
-  unsigned BL;   // Burst Length in bytes (4 in GDDR3, 8 in GDDR5)
-  unsigned tRTW; // time to switch from read to write
-  unsigned tWTR; // time to switch from write to read
-  unsigned tWTP; // time to switch from write to precharge in the same bank
+  unsigned CL;    // CAS latency
+  unsigned WL;    // WRITE latency
+  unsigned BL;    // Burst Length in bytes (4 in GDDR3, 8 in GDDR5)
+  unsigned tRTW;  // time to switch from read to write
+  unsigned tWTR;  // time to switch from write to read
+  unsigned tWTP;  // time to switch from write to precharge in the same bank
   unsigned busW;
 
-  unsigned nbkgrp; // number of bank groups (has to be power of 2)
+  unsigned nbkgrp;  // number of bank groups (has to be power of 2)
   unsigned
-      bk_tag_length; // number of bits that define a bank inside a bank group
+      bk_tag_length;  // number of bits that define a bank inside a bank group
 
   unsigned nbk;
 
   bool elimnate_rw_turnaround;
 
-  unsigned data_command_freq_ratio; // frequency ratio between DRAM data bus and
-                                    // command bus (2 for GDDR3, 4 for GDDR5)
   unsigned
-      dram_atom_size; // number of bytes transferred per read or write command
+      data_command_freq_ratio;  // frequency ratio between DRAM data bus and
+                                // command bus (2 for GDDR3, 4 for GDDR5)
+  unsigned
+      dram_atom_size;  // number of bytes transferred per read or write command
 
   linear_to_raw_address_translation m_address_mapping;
 
@@ -323,7 +322,7 @@ extern bool g_interactive_debugger_enabled;
 
 class gpgpu_sim_config : public power_config,
                          public gpgpu_functional_sim_config {
-public:
+ public:
   gpgpu_sim_config(gpgpu_context *ctx)
       : m_shader_config(ctx), m_memory_config(ctx) {
     m_valid = false;
@@ -348,10 +347,8 @@ public:
     char *date = ctime(&curr_time);
     char *s = date;
     while (*s) {
-      if (*s == ' ' || *s == '\t' || *s == ':')
-        *s = '-';
-      if (*s == '\n' || *s == '\r')
-        *s = 0;
+      if (*s == ' ' || *s == '\t' || *s == ':') *s = '-';
+      if (*s == '\n' || *s == '\r') *s = 0;
       s++;
     }
     char buf[1024];
@@ -375,7 +372,7 @@ public:
 
   bool flush_l1() const { return gpgpu_flush_l1_cache; }
 
-private:
+ private:
   void init_clock_domains(void);
 
   // backward pointer
@@ -434,8 +431,8 @@ struct occupancy_stats {
   occupancy_stats()
       : aggregate_warp_slot_filled(0), aggregate_theoretical_warp_slots(0) {}
   occupancy_stats(unsigned long long wsf, unsigned long long tws)
-      : aggregate_warp_slot_filled(wsf), aggregate_theoretical_warp_slots(tws) {
-  }
+      : aggregate_warp_slot_filled(wsf),
+        aggregate_theoretical_warp_slots(tws) {}
 
   unsigned long long aggregate_warp_slot_filled;
   unsigned long long aggregate_theoretical_warp_slots;
@@ -452,10 +449,10 @@ struct occupancy_stats {
   }
 
   occupancy_stats operator+(const occupancy_stats &rhs) const {
-    return occupancy_stats(aggregate_warp_slot_filled +
-                               rhs.aggregate_warp_slot_filled,
-                           aggregate_theoretical_warp_slots +
-                               rhs.aggregate_theoretical_warp_slots);
+    return occupancy_stats(
+        aggregate_warp_slot_filled + rhs.aggregate_warp_slot_filled,
+        aggregate_theoretical_warp_slots +
+            rhs.aggregate_theoretical_warp_slots);
   }
 };
 
@@ -463,7 +460,7 @@ class gpgpu_context;
 class ptx_instruction;
 
 class watchpoint_event {
-public:
+ public:
   watchpoint_event() {
     m_thread = NULL;
     m_inst = NULL;
@@ -475,13 +472,13 @@ public:
   const ptx_thread_info *thread() const { return m_thread; }
   const ptx_instruction *inst() const { return m_inst; }
 
-private:
+ private:
   const ptx_thread_info *m_thread;
   const ptx_instruction *m_inst;
 };
 
 class gpgpu_sim : public gpgpu_t {
-public:
+ public:
   gpgpu_sim(const gpgpu_sim_config &config, gpgpu_context *ctx);
 
   void set_prop(struct cudaDeviceProp *prop);
@@ -568,7 +565,7 @@ public:
   // backward pointer
   class gpgpu_context *gpgpu_ctx;
 
-private:
+ private:
   // clocks
   void reinit_clock_domains(void);
   int next_clock_domain(void);
@@ -583,7 +580,7 @@ private:
 
   void gpgpu_debug();
 
-protected:
+ protected:
   ///// data /////
   class simt_core_cluster **m_cluster;
   class memory_partition_unit **m_memory_partition_unit;
@@ -630,18 +627,18 @@ protected:
   std::map<std::string, FuncCache> m_special_cache_config;
 
   std::vector<std::string>
-      m_executed_kernel_names; //< names of kernel for stat printout
+      m_executed_kernel_names;  //< names of kernel for stat printout
   std::vector<unsigned>
-      m_executed_kernel_uids; //< uids of kernel launches for stat printout
+      m_executed_kernel_uids;  //< uids of kernel launches for stat printout
   std::map<unsigned, watchpoint_event> g_watchpoint_hits;
 
-  std::string executed_kernel_info_string(); //< format the kernel information
-                                             // into a string for stat printout
-  void clear_executed_kernel_info(); //< clear the kernel information after
-                                     // stat printout
+  std::string executed_kernel_info_string();  //< format the kernel information
+                                              // into a string for stat printout
+  void clear_executed_kernel_info();  //< clear the kernel information after
+                                      // stat printout
   virtual void createSIMTCluster() = 0;
 
-public:
+ public:
   unsigned long long gpu_sim_insn;
   unsigned long long gpu_tot_sim_insn;
   unsigned long long gpu_sim_insn_last_update;
@@ -668,12 +665,12 @@ public:
   void set_cache_config(std::string kernel_name);
 
   // Jin: functional simulation for CDP
-private:
+ private:
   // set by stream operation every time a functoinal simulation is done
   bool m_functional_sim;
   kernel_info_t *m_functional_sim_kernel;
 
-public:
+ public:
   bool is_functional_sim() { return m_functional_sim; }
   kernel_info_t *get_functional_kernel() { return m_functional_sim_kernel; }
   void functional_launch(kernel_info_t *k) {
@@ -689,7 +686,7 @@ public:
 };
 
 class exec_gpgpu_sim : public gpgpu_sim {
-public:
+ public:
   exec_gpgpu_sim(const gpgpu_sim_config &config, gpgpu_context *ctx)
       : gpgpu_sim(config, ctx) {
     createSIMTCluster();

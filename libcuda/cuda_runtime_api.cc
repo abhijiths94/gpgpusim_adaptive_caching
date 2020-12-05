@@ -103,20 +103,20 @@
  */
 
 #include <assert.h>
-#include <fstream>
-#include <iostream>
-#include <regex>
-#include <sstream>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string>
 #include <time.h>
+#include <fstream>
+#include <iostream>
+#include <regex>
+#include <sstream>
+#include <string>
 #ifdef OPENGL_SUPPORT
 #define GL_GLEXT_PROTOTYPES
 #ifdef __APPLE__
-#include <GLUT/glut.h> // Apple's version of GLUT is here
+#include <GLUT/glut.h>  // Apple's version of GLUT is here
 #else
 #include <GL/gl.h>
 #endif
@@ -158,7 +158,7 @@ struct cudaArray {
   struct cudaChannelFormatDesc desc;
   int width;
   int height;
-  int size; // in bytes
+  int size;  // in bytes
   unsigned dimensions;
 };
 
@@ -299,10 +299,10 @@ void announce_call(const char *func) {
   fflush(stdout);
 }
 
-#define gpgpusim_ptx_error(msg, ...)                                           \
+#define gpgpusim_ptx_error(msg, ...) \
   gpgpusim_ptx_error_impl(__func__, __FILE__, __LINE__, msg, ##__VA_ARGS__)
-#define gpgpusim_ptx_assert(cond, msg, ...)                                    \
-  gpgpusim_ptx_assert_impl((cond), __func__, __FILE__, __LINE__, msg,          \
+#define gpgpusim_ptx_assert(cond, msg, ...)                           \
+  gpgpusim_ptx_assert_impl((cond), __func__, __FILE__, __LINE__, msg, \
                            ##__VA_ARGS__)
 
 void gpgpusim_ptx_error_impl(const char *func, const char *file, unsigned line,
@@ -327,8 +327,7 @@ void gpgpusim_ptx_assert_impl(int test_value, const char *func,
   vsnprintf(buf, 1024, msg, ap);
   va_end(ap);
 
-  if (test_value == 0)
-    gpgpusim_ptx_error_impl(func, file, line, msg);
+  if (test_value == 0) gpgpusim_ptx_error_impl(func, file, line, msg);
 }
 
 typedef std::map<unsigned, CUevent_st *> event_tracker_t;
@@ -538,33 +537,35 @@ __host__ cudaError_t CUDARTAPI cudaDeviceGetLimitInternal(
   const struct cudaDeviceProp *prop = dev->get_prop();
   const gpgpu_sim_config &config = dev->get_gpgpu()->get_config();
   switch (limit) {
-  case 0: // cudaLimitStackSize
-    *pValue = config.stack_limit();
-    break;
-  case 2: // cudaLimitMallocHeapSize
-    *pValue = config.heap_limit();
-    break;
+    case 0:  // cudaLimitStackSize
+      *pValue = config.stack_limit();
+      break;
+    case 2:  // cudaLimitMallocHeapSize
+      *pValue = config.heap_limit();
+      break;
 #if (CUDART_VERSION > 5050)
-  case 3: // cudaLimitDevRuntimeSyncDepth
-    if (prop->major > 2) {
-      *pValue = config.sync_depth_limit();
-      break;
-    } else {
-      printf("ERROR:Limit %d is not supported on this architecture \n", limit);
-      abort();
-    }
-  case 4: // cudaLimitDevRuntimePendingLaunchCount
-    if (prop->major > 2) {
-      *pValue = config.pending_launch_count_limit();
-      break;
-    } else {
-      printf("ERROR:Limit %d is not supported on this architecture \n", limit);
-      abort();
-    }
+    case 3:  // cudaLimitDevRuntimeSyncDepth
+      if (prop->major > 2) {
+        *pValue = config.sync_depth_limit();
+        break;
+      } else {
+        printf("ERROR:Limit %d is not supported on this architecture \n",
+               limit);
+        abort();
+      }
+    case 4:  // cudaLimitDevRuntimePendingLaunchCount
+      if (prop->major > 2) {
+        *pValue = config.pending_launch_count_limit();
+        break;
+      } else {
+        printf("ERROR:Limit %d is not supported on this architecture \n",
+               limit);
+        abort();
+      }
 #endif
-  default:
-    printf("ERROR:Limit %d unimplemented \n", limit);
-    abort();
+    default:
+      printf("ERROR:Limit %d unimplemented \n", limit);
+      abort();
   }
   return g_last_cudaError = cudaSuccess;
 }
@@ -647,16 +648,16 @@ void **cudaRegisterFatBinaryInternal(void *fatCubin,
     // file name associated with each section.
     unsigned long long fat_cubin_handle = next_fat_bin_handle;
     next_fat_bin_handle++;
-    printf("GPGPU-Sim PTX: __cudaRegisterFatBinary, fat_cubin_handle = %llu, "
-           "filename=%s\n",
-           fat_cubin_handle, filename);
+    printf(
+        "GPGPU-Sim PTX: __cudaRegisterFatBinary, fat_cubin_handle = %llu, "
+        "filename=%s\n",
+        fat_cubin_handle, filename);
     /*!
      * This function extracts all data from all files in first call
      * then for next calls, only returns the appropriate number
      */
     assert(fat_cubin_handle >= 1);
-    if (fat_cubin_handle == 1)
-      ctx->api->cuobjdumpInit();
+    if (fat_cubin_handle == 1) ctx->api->cuobjdumpInit();
     ctx->api->cuobjdumpRegisterFatBinary(fat_cubin_handle, filename, context);
 
     return (void **)fat_cubin_handle;
@@ -676,18 +677,20 @@ void **cudaRegisterFatBinaryInternal(void *fatCubin,
                                          ->get_config()
                                          .get_forced_max_capability();
     if (!info->ptx) {
-      printf("ERROR: Cannot find ptx code in cubin file\n"
-             "\tIf you are using CUDA 4.0 or higher, please enable "
-             "-gpgpu_ptx_use_cuobjdump or downgrade to CUDA 3.1\n");
+      printf(
+          "ERROR: Cannot find ptx code in cubin file\n"
+          "\tIf you are using CUDA 4.0 or higher, please enable "
+          "-gpgpu_ptx_use_cuobjdump or downgrade to CUDA 3.1\n");
       exit(1);
     }
     while (info->ptx[num_ptx_versions].gpuProfileName != NULL) {
       unsigned capability = 0;
       sscanf(info->ptx[num_ptx_versions].gpuProfileName, "compute_%u",
              &capability);
-      printf("GPGPU-Sim PTX: __cudaRegisterFatBinary found PTX versions for "
-             "'%s', ",
-             info->ident);
+      printf(
+          "GPGPU-Sim PTX: __cudaRegisterFatBinary found PTX versions for "
+          "'%s', ",
+          info->ident);
       printf("capability = %s\n", info->ptx[num_ptx_versions].gpuProfileName);
       if (forced_max_capability) {
         if (capability > max_capability &&
@@ -714,10 +717,11 @@ void **cudaRegisterFatBinaryInternal(void *fatCubin,
               ->get_gpgpu()
               ->get_config()
               .convert_to_ptxplus()) {
-        printf("GPGPU-Sim PTX: ERROR ** PTXPlus is only supported through "
-               "cuobjdump\n"
-               "\tEither enable cuobjdump or disable PTXPlus in your "
-               "configuration file\n");
+        printf(
+            "GPGPU-Sim PTX: ERROR ** PTXPlus is only supported through "
+            "cuobjdump\n"
+            "\tEither enable cuobjdump or disable PTXPlus in your "
+            "configuration file\n");
         exit(1);
       } else {
         symtab = ctx->gpgpu_ptx_sim_load_ptx_from_string(ptx, source_num);
@@ -731,8 +735,9 @@ void **cudaRegisterFatBinaryInternal(void *fatCubin,
       ctx->api->load_constants(symtab, STATIC_ALLOC_LIMIT,
                                context->get_device()->get_gpgpu());
     } else {
-      printf("GPGPU-Sim PTX: warning -- did not find an appropriate PTX in "
-             "cubin\n");
+      printf(
+          "GPGPU-Sim PTX: warning -- did not find an appropriate PTX in "
+          "cubin\n");
     }
     return (void **)fat_cubin_handle;
   }
@@ -760,9 +765,10 @@ void cudaRegisterFunctionInternal(void **fatCubinHandle, const char *hostFun,
   }
   CUctx_st *context = GPGPUSim_Context(ctx);
   unsigned fat_cubin_handle = (unsigned)(unsigned long long)fatCubinHandle;
-  printf("GPGPU-Sim PTX: __cudaRegisterFunction %s : hostFun 0x%p, "
-         "fat_cubin_handle = %u\n",
-         deviceFun, hostFun, fat_cubin_handle);
+  printf(
+      "GPGPU-Sim PTX: __cudaRegisterFunction %s : hostFun 0x%p, "
+      "fat_cubin_handle = %u\n",
+      deviceFun, hostFun, fat_cubin_handle);
   if (context->get_device()->get_gpgpu()->get_config().use_cuobjdump())
     ctx->cuobjdumpParseBinary(fat_cubin_handle);
   context->register_function(fat_cubin_handle, hostFun, deviceFun);
@@ -770,9 +776,9 @@ void cudaRegisterFunctionInternal(void **fatCubinHandle, const char *hostFun,
 
 void cudaRegisterVarInternal(
     void **fatCubinHandle,
-    char *hostVar,          // pointer to...something
-    char *deviceAddress,    // name of variable
-    const char *deviceName, // name of variable (same as above)
+    char *hostVar,           // pointer to...something
+    char *deviceAddress,     // name of variable
+    const char *deviceName,  // name of variable (same as above)
     int ext, int size, int constant, int global,
     gpgpu_context *gpgpu_ctx = NULL) {
   gpgpu_context *ctx;
@@ -784,9 +790,10 @@ void cudaRegisterVarInternal(
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  printf("GPGPU-Sim PTX: __cudaRegisterVar: hostVar = %p; deviceAddress = %s; "
-         "deviceName = %s\n",
-         hostVar, deviceAddress, deviceName);
+  printf(
+      "GPGPU-Sim PTX: __cudaRegisterVar: hostVar = %p; deviceAddress = %s; "
+      "deviceName = %s\n",
+      hostVar, deviceAddress, deviceName);
   printf(
       "GPGPU-Sim PTX: __cudaRegisterVar: Registering const memory space of %d "
       "bytes\n",
@@ -895,9 +902,10 @@ cudaError_t cudaSetupArgumentInternal(const void *arg, size_t size,
                       "empty launch stack");
   kernel_config &config = ctx->api->g_cuda_launch_stack.back();
   config.set_arg(arg, size, offset);
-  printf("GPGPU-Sim PTX: Setting up arguments for %zu bytes starting at "
-         "0x%llx..\n",
-         size, (unsigned long long)arg);
+  printf(
+      "GPGPU-Sim PTX: Setting up arguments for %zu bytes starting at "
+      "0x%llx..\n",
+      size, (unsigned long long)arg);
 
   return g_last_cudaError = cudaSuccess;
 }
@@ -915,8 +923,7 @@ cudaError_t cudaLaunchInternal(const char *hostFun,
   }
   CUctx_st *context = GPGPUSim_Context(ctx);
   char *mode = getenv("PTX_SIM_MODE_FUNC");
-  if (mode)
-    sscanf(mode, "%u", &(ctx->func_sim->g_ptx_sim_mode));
+  if (mode) sscanf(mode, "%u", &(ctx->func_sim->g_ptx_sim_mode));
   gpgpusim_ptx_assert(!ctx->api->g_cuda_launch_stack.empty(),
                       "empty launch stack");
   kernel_config config = ctx->api->g_cuda_launch_stack.back();
@@ -968,8 +975,7 @@ cudaError_t cudaLaunchInternal(const char *hostFun,
              grid->get_uid());
 
     g_checkpoint->load_global_mem(global_mem, f1name);
-    for (int i = 0; i < gpu->resume_CTA; i++)
-      grid->increment_cta_id();
+    for (int i = 0; i < gpu->resume_CTA; i++) grid->increment_cta_id();
   }
   if (gpu->resume_option == 1 && (grid->get_uid() < gpu->resume_kernel)) {
     char f1name[2048];
@@ -1176,10 +1182,10 @@ cudaMemcpyInternal(void *dst, const void *src, size_t count,
     if ((size_t)src >= GLOBAL_HEAP_START) {
       if ((size_t)dst >= GLOBAL_HEAP_START)
         ctx->the_gpgpusim->g_stream_manager->push(stream_operation(
-            (size_t)src, (size_t)dst, count, 0)); // device to device
+            (size_t)src, (size_t)dst, count, 0));  // device to device
       else
         ctx->the_gpgpusim->g_stream_manager->push(
-            stream_operation((size_t)src, dst, count, 0)); // device to host
+            stream_operation((size_t)src, dst, count, 0));  // device to host
     } else {
       if ((size_t)dst >= GLOBAL_HEAP_START)
         ctx->the_gpgpusim->g_stream_manager->push(
@@ -1221,8 +1227,9 @@ __host__ cudaError_t CUDARTAPI cudaMemcpyToArrayInternal(
   else if (kind == cudaMemcpyDeviceToDevice)
     gpu->memcpy_gpu_to_gpu((size_t)(dst->devPtr), (size_t)src, size);
   else {
-    printf("GPGPU-Sim PTX: cudaMemcpyToArray - ERROR : unsupported "
-           "cudaMemcpyKind\n");
+    printf(
+        "GPGPU-Sim PTX: cudaMemcpyToArray - ERROR : unsupported "
+        "cudaMemcpyKind\n");
     abort();
   }
   dst->devPtr32 = (unsigned)(size_t)(dst->devPtr);
@@ -1366,20 +1373,20 @@ __host__ cudaError_t CUDARTAPI cudaMemcpyAsyncInternal(
   }
   struct CUstream_st *s = (struct CUstream_st *)stream;
   switch (kind) {
-  case cudaMemcpyHostToDevice:
-    ctx->the_gpgpusim->g_stream_manager->push(
-        stream_operation(src, (size_t)dst, count, s));
-    break;
-  case cudaMemcpyDeviceToHost:
-    ctx->the_gpgpusim->g_stream_manager->push(
-        stream_operation((size_t)src, dst, count, s));
-    break;
-  case cudaMemcpyDeviceToDevice:
-    ctx->the_gpgpusim->g_stream_manager->push(
-        stream_operation((size_t)src, (size_t)dst, count, s));
-    break;
-  default:
-    abort();
+    case cudaMemcpyHostToDevice:
+      ctx->the_gpgpusim->g_stream_manager->push(
+          stream_operation(src, (size_t)dst, count, s));
+      break;
+    case cudaMemcpyDeviceToHost:
+      ctx->the_gpgpusim->g_stream_manager->push(
+          stream_operation((size_t)src, dst, count, s));
+      break;
+    case cudaMemcpyDeviceToDevice:
+      ctx->the_gpgpusim->g_stream_manager->push(
+          stream_operation((size_t)src, (size_t)dst, count, s));
+      break;
+    default:
+      abort();
   }
   return g_last_cudaError = cudaSuccess;
 }
@@ -1401,9 +1408,10 @@ cudaOccupancyMaxActiveBlocksPerMultiprocessorWithFlagsInternal(
       hostFunc);
   CUctx_st *context = GPGPUSim_Context(ctx);
   function_info *entry = context->get_kernel(hostFunc);
-  printf("Calculate Maxium Active Block with function ptr=%p, blockSize=%d, "
-         "SMemSize=%d\n",
-         hostFunc, blockSize, dynamicSMemSize);
+  printf(
+      "Calculate Maxium Active Block with function ptr=%p, blockSize=%d, "
+      "SMemSize=%d\n",
+      hostFunc, blockSize, dynamicSMemSize);
   if (flags == cudaOccupancyDefault) {
     // create kernel_info based on entry
     dim3 gridDim(context->get_device()->get_gpgpu()->max_cta_per_core() *
@@ -1480,8 +1488,7 @@ cudaError_t cudaGLMapBufferObjectInternal(void **devPtr, GLuint bufferObj,
   CUctx_st *context = GPGPUSim_Context(ctx);
 
   glbmap_entry_t *p = ctx->api->g_glbmap;
-  while (p && p->m_bufferObj != bufferObj)
-    p = p->m_next;
+  while (p && p->m_bufferObj != bufferObj) p = p->m_next;
   if (p == NULL) {
     glBindBuffer(GL_ARRAY_BUFFER, bufferObj);
     glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &buffer_size);
@@ -1521,8 +1528,9 @@ cudaError_t cudaGLMapBufferObjectInternal(void **devPtr, GLuint bufferObj,
 #else
   fflush(stdout);
   fflush(stderr);
-  printf("GPGPU-Sim PTX: GPGPU-Sim support for OpenGL integration disabled -- "
-         "exiting\n");
+  printf(
+      "GPGPU-Sim PTX: GPGPU-Sim support for OpenGL integration disabled -- "
+      "exiting\n");
   fflush(stdout);
   exit(50);
 #endif
@@ -1544,8 +1552,9 @@ CUresult cuLinkAddFileInternal(CUlinkState state, CUjitInputType type,
   }
   static bool addedFile = false;
   if (addedFile) {
-    printf("GPGPU-Sim PTX: ERROR: cuLinkAddFile does not support multiple "
-           "files\n");
+    printf(
+        "GPGPU-Sim PTX: ERROR: cuLinkAddFile does not support multiple "
+        "files\n");
     abort();
   }
 
@@ -1671,180 +1680,180 @@ cudaDeviceGetAttributeInternal(int *value, enum cudaDeviceAttr attr, int device,
   if (device <= dev->num_devices()) {
     prop = dev->get_prop();
     switch (attr) {
-    case 1:
-      *value = prop->maxThreadsPerBlock;
-      break;
-    case 2:
-      *value = prop->maxThreadsDim[0];
-      break;
-    case 3:
-      *value = prop->maxThreadsDim[1];
-      break;
-    case 4:
-      *value = prop->maxThreadsDim[2];
-      break;
-    case 5:
-      *value = prop->maxGridSize[0];
-      break;
-    case 6:
-      *value = prop->maxGridSize[1];
-      break;
-    case 7:
-      *value = prop->maxGridSize[2];
-      break;
-    case 8:
-      *value = prop->sharedMemPerBlock;
-      break;
-    case 9:
-      *value = prop->totalConstMem;
-      break;
-    case 10:
-      *value = prop->warpSize;
-      break;
-    case 11:
-      *value = 16; // dummy value
-      break;
-    case 12:
-      *value = prop->regsPerBlock;
-      break;
-    case 13:
-      *value = 1480000; // for 1080ti
-      break;
-    case 14:
-      *value = prop->textureAlignment;
-      break;
-    case 15:
-      *value = 0;
-      break;
-    case 16:
-      *value = prop->multiProcessorCount;
-      break;
-    case 17:
-    case 18:
-    case 19:
-      *value = 0;
-      break;
-    case 21:
-    case 22:
-    case 23:
-    case 24:
-    case 25:
-    case 26:
-    case 27:
-    case 28:
-    case 42:
-    case 45:
-    case 46:
-    case 47:
-    case 48:
-    case 49:
-    case 52:
-    case 53:
-    case 55:
-    case 56:
-    case 57:
-    case 58:
-    case 59:
-    case 60:
-    case 61:
-    case 62:
-    case 63:
-    case 64:
-    case 66:
-    case 67:
-    case 69:
-    case 70:
-    case 71:
-    case 73:
-    case 74:
-    case 77:
-      *value = 1000; // dummy value
-      break;
-    case 29:
-    case 43:
-    case 54:
-    case 65:
-    case 68:
-    case 72:
-      *value = 10; // dummy value
-      break;
-    case 30:
-    case 51:
-      *value = 128; // dummy value
-      break;
-    case 31:
-      *value = 1;
-      break;
-    case 32:
-      *value = 0;
-      break;
-    case 33:
-    case 50:
-      *value = 0; // dummy value
-      break;
-    case 34:
-      *value = 0;
-      break;
-    case 35:
-      *value = 0;
-      break;
-    case 36:
-      *value = 1250000; // CK value for 1080ti
-      break;
-    case 37:
-      *value = 352; // value for 1080ti
-      break;
-    case 38:
-      *value = 3000000; // value for 1080ti
-      break;
-    case 39:
-      *value = dev->get_gpgpu()->threads_per_core();
-      break;
-    case 40:
-      *value = 0;
-      break;
-    case 41:
-      *value = 0;
-      break;
-    case 75: // cudaDevAttrComputeCapabilityMajor
-      *value = prop->major;
-      break;
-    case 76: // cudaDevAttrComputeCapabilityMinor
-      *value = prop->minor;
-      break;
-    case 78:
-      *value = 0; // TODO: as of now, we dont support stream priorities.
-      break;
-    case 79:
-      *value = 0;
-      break;
-    case 80:
-      *value = 0;
-      break;
+      case 1:
+        *value = prop->maxThreadsPerBlock;
+        break;
+      case 2:
+        *value = prop->maxThreadsDim[0];
+        break;
+      case 3:
+        *value = prop->maxThreadsDim[1];
+        break;
+      case 4:
+        *value = prop->maxThreadsDim[2];
+        break;
+      case 5:
+        *value = prop->maxGridSize[0];
+        break;
+      case 6:
+        *value = prop->maxGridSize[1];
+        break;
+      case 7:
+        *value = prop->maxGridSize[2];
+        break;
+      case 8:
+        *value = prop->sharedMemPerBlock;
+        break;
+      case 9:
+        *value = prop->totalConstMem;
+        break;
+      case 10:
+        *value = prop->warpSize;
+        break;
+      case 11:
+        *value = 16;  // dummy value
+        break;
+      case 12:
+        *value = prop->regsPerBlock;
+        break;
+      case 13:
+        *value = 1480000;  // for 1080ti
+        break;
+      case 14:
+        *value = prop->textureAlignment;
+        break;
+      case 15:
+        *value = 0;
+        break;
+      case 16:
+        *value = prop->multiProcessorCount;
+        break;
+      case 17:
+      case 18:
+      case 19:
+        *value = 0;
+        break;
+      case 21:
+      case 22:
+      case 23:
+      case 24:
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+      case 42:
+      case 45:
+      case 46:
+      case 47:
+      case 48:
+      case 49:
+      case 52:
+      case 53:
+      case 55:
+      case 56:
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+      case 64:
+      case 66:
+      case 67:
+      case 69:
+      case 70:
+      case 71:
+      case 73:
+      case 74:
+      case 77:
+        *value = 1000;  // dummy value
+        break;
+      case 29:
+      case 43:
+      case 54:
+      case 65:
+      case 68:
+      case 72:
+        *value = 10;  // dummy value
+        break;
+      case 30:
+      case 51:
+        *value = 128;  // dummy value
+        break;
+      case 31:
+        *value = 1;
+        break;
+      case 32:
+        *value = 0;
+        break;
+      case 33:
+      case 50:
+        *value = 0;  // dummy value
+        break;
+      case 34:
+        *value = 0;
+        break;
+      case 35:
+        *value = 0;
+        break;
+      case 36:
+        *value = 1250000;  // CK value for 1080ti
+        break;
+      case 37:
+        *value = 352;  // value for 1080ti
+        break;
+      case 38:
+        *value = 3000000;  // value for 1080ti
+        break;
+      case 39:
+        *value = dev->get_gpgpu()->threads_per_core();
+        break;
+      case 40:
+        *value = 0;
+        break;
+      case 41:
+        *value = 0;
+        break;
+      case 75:  // cudaDevAttrComputeCapabilityMajor
+        *value = prop->major;
+        break;
+      case 76:  // cudaDevAttrComputeCapabilityMinor
+        *value = prop->minor;
+        break;
+      case 78:
+        *value = 0;  // TODO: as of now, we dont support stream priorities.
+        break;
+      case 79:
+        *value = 0;
+        break;
+      case 80:
+        *value = 0;
+        break;
 #if (CUDART_VERSION > 5050)
-    case 81:
-      *value = prop->sharedMemPerMultiprocessor;
-      break;
-    case 82:
-      *value = prop->regsPerMultiprocessor;
-      break;
+      case 81:
+        *value = prop->sharedMemPerMultiprocessor;
+        break;
+      case 82:
+        *value = prop->regsPerMultiprocessor;
+        break;
 #endif
-    case 83:
-    case 84:
-    case 85:
-    case 86:
-      *value = 0;
-      break;
-    case 87:
-      *value = 4; // dummy value
-      break;
-    case 88:
-    case 89:
-      *value = 0;
-      break;
-    default:
-      printf("ERROR: Attribute number %d unimplemented \n", attr);
-      abort();
+      case 83:
+      case 84:
+      case 85:
+      case 86:
+        *value = 0;
+        break;
+      case 87:
+        *value = 4;  // dummy value
+        break;
+      case 88:
+      case 89:
+        *value = 0;
+        break;
+      default:
+        printf("ERROR: Attribute number %d unimplemented \n", attr);
+        abort();
     }
     return g_last_cudaError = cudaSuccess;
   } else {
@@ -1868,9 +1877,10 @@ __host__ cudaError_t CUDARTAPI cudaBindTextureInternal(
   }
   CUctx_st *context = GPGPUSim_Context(ctx);
   gpgpu_t *gpu = context->get_device()->get_gpgpu();
-  printf("GPGPU-Sim PTX: in cudaBindTexture: sizeof(struct textureReference) = "
-         "%zu\n",
-         sizeof(struct textureReference));
+  printf(
+      "GPGPU-Sim PTX: in cudaBindTexture: sizeof(struct textureReference) = "
+      "%zu\n",
+      sizeof(struct textureReference));
   struct cudaArray *array;
   array = (struct cudaArray *)malloc(sizeof(struct cudaArray));
   array->desc = *desc;
@@ -1986,9 +1996,10 @@ __host__ cudaError_t CUDARTAPI cudaStreamCreateInternal(
   ctx->the_gpgpusim->g_stream_manager->add_stream(*stream);
 #else
   *stream = 0;
-  printf("GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
-         "(%s)\n",
-         __my_func__);
+  printf(
+      "GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
+      "(%s)\n",
+      __my_func__);
 #endif
   return g_last_cudaError = cudaSuccess;
 }
@@ -2027,14 +2038,14 @@ __host__ cudaError_t CUDARTAPI cudaStreamSynchronizeInternal(
     announce_call(__my_func__);
   }
 #if (CUDART_VERSION >= 3000)
-  if (stream == NULL)
-    ctx->synchronize();
+  if (stream == NULL) ctx->synchronize();
   return g_last_cudaError = cudaSuccess;
   stream->synchronize();
 #else
-  printf("GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
-         "(%s)\n",
-         __my_func__);
+  printf(
+      "GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
+      "(%s)\n",
+      __my_func__);
 #endif
   return g_last_cudaError = cudaSuccess;
 }
@@ -2044,7 +2055,7 @@ void __cudaRegisterTextureInternal(
     const void **deviceAddress, const char *deviceName, int dim, int norm,
     int ext,
     gpgpu_context *gpgpu_ctx =
-        NULL) // passes in a newly created textureReference
+        NULL)  // passes in a newly created textureReference
 {
   gpgpu_context *ctx;
   if (gpgpu_ctx) {
@@ -2086,10 +2097,8 @@ cudaError_t cudaGLUnmapBufferObjectInternal(GLuint bufferObj,
   }
   CUctx_st *ctx = GPGPUSim_Context(ctx);
   glbmap_entry_t *p = ctx->api->g_glbmap;
-  while (p && p->m_bufferObj != bufferObj)
-    p = p->m_next;
-  if (p == NULL)
-    return g_last_cudaError = cudaErrorUnknown;
+  while (p && p->m_bufferObj != bufferObj) p = p->m_next;
+  if (p == NULL) return g_last_cudaError = cudaErrorUnknown;
 
   char *data = (char *)calloc(p->m_size, 1);
   memcpy_from_gpu(data, (size_t)p->m_devPtr, p->m_size);
@@ -2144,8 +2153,9 @@ CUresult CUDAAPI cuLaunchKernelInternal(
     announce_call(__my_func__);
   }
   if (extra != NULL) {
-    printf("GPGPU-Sim CUDA DRIVER API: ERROR: Currently do not support void** "
-           "extra.\n");
+    printf(
+        "GPGPU-Sim CUDA DRIVER API: ERROR: Currently do not support void** "
+        "extra.\n");
     abort();
   }
   const char *hostFun = (const char *)f;
@@ -2171,8 +2181,7 @@ CUevent_st *get_event(cudaEvent_t event) {
   event_uid = event;
 #endif
   event_tracker_t::iterator e = g_timer_events.find(event_uid);
-  if (e == g_timer_events.end())
-    return NULL;
+  if (e == g_timer_events.end()) return NULL;
   return e->second;
 }
 
@@ -2188,8 +2197,7 @@ __host__ cudaError_t CUDARTAPI cudaEventRecordInternal(
     announce_call(__my_func__);
   }
   CUevent_st *e = get_event(event);
-  if (!e)
-    return g_last_cudaError = cudaErrorUnknown;
+  if (!e) return g_last_cudaError = cudaErrorUnknown;
   struct CUstream_st *s = (struct CUstream_st *)stream;
   stream_operation op(e, s);
   e->issue();
@@ -2213,8 +2221,9 @@ __host__ cudaError_t CUDARTAPI cudaStreamWaitEventInternal(
   // https://www.cs.cmu.edu/afs/cs/academic/class/15668-s11/www/cuda-doc/html/group__CUDART__STREAM_gfe68d207dc965685d92d3f03d77b0876.html
   CUevent_st *e = get_event(event);
   if (!e) {
-    printf("GPGPU-Sim API: Error at cudaStreamWaitEvent. Event is not created "
-           ".\n");
+    printf(
+        "GPGPU-Sim API: Error at cudaStreamWaitEvent. Event is not created "
+        ".\n");
     return g_last_cudaError = cudaErrorInvalidResourceHandle;
   } else if (e->num_issued() == 0) {
     printf(
@@ -2324,7 +2333,7 @@ __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr) {
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  free(ptr); // this will crash the system if called twice
+  free(ptr);  // this will crash the system if called twice
   return g_last_cudaError = cudaSuccess;
 }
 
@@ -2732,8 +2741,7 @@ __host__ const char *CUDARTAPI cudaGetErrorString(cudaError_t error) {
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  if (g_last_cudaError == cudaSuccess)
-    return "no error";
+  if (g_last_cudaError == cudaSuccess) return "no error";
   char buf[1024];
   snprintf(buf, 1024, "<<GPGPU-Sim PTX: there was an error (code = %d)>>",
            g_last_cudaError);
@@ -2806,15 +2814,15 @@ __host__ cudaError_t CUDARTAPI cudaStreamQuery(cudaStream_t stream) {
     announce_call(__my_func__);
   }
 #if (CUDART_VERSION >= 3000)
-  if (stream == NULL)
-    return g_last_cudaError = cudaErrorInvalidResourceHandle;
+  if (stream == NULL) return g_last_cudaError = cudaErrorInvalidResourceHandle;
   return g_last_cudaError = stream->empty() ? cudaSuccess : cudaErrorNotReady;
 #else
-  printf("GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
-         "(%s)\n",
-         __my_func__);
-  return g_last_cudaError = cudaSuccess; // it is always success because all
-                                         // cuda calls are synchronous
+  printf(
+      "GPGPU-Sim PTX: WARNING: Asynchronous kernel execution not supported "
+      "(%s)\n",
+      __my_func__);
+  return g_last_cudaError = cudaSuccess;  // it is always success because all
+                                          // cuda calls are synchronous
 #endif
 }
 
@@ -2899,8 +2907,7 @@ __host__ cudaError_t CUDARTAPI cudaEventElapsedTime(float *ms,
   time_t elapsed_time;
   CUevent_st *s = get_event(start);
   CUevent_st *e = get_event(end);
-  if (s == NULL || e == NULL)
-    return g_last_cudaError = cudaErrorUnknown;
+  if (s == NULL || e == NULL) return g_last_cudaError = cudaErrorUnknown;
   elapsed_time = e->clock() - s->clock();
   *ms = 1000 * elapsed_time;
   return g_last_cudaError = cudaSuccess;
@@ -3023,8 +3030,9 @@ void cuda_runtime_api::extract_ptx_files_using_cuobjdump(CUctx_st *context) {
   }
 
   if (!context->no_of_ptx) {
-    printf("WARNING: Number of ptx in the executable file are 0. One of the "
-           "reasons might be\n");
+    printf(
+        "WARNING: Number of ptx in the executable file are 0. One of the "
+        "reasons might be\n");
     printf("\t1. CDP is enabled\n");
     printf("\t2. When using PyTorch, PYTORCH_BIN is not set correctly\n");
   }
@@ -3167,7 +3175,7 @@ void cuda_runtime_api::extract_code_using_cuobjdump() {
       while (libsf.good()) {
         std::stringstream libcodfn;
         libcodfn << "_cuobjdump_complete_lib_" << cnt << "_";
-        cmd.str(""); // resetting
+        cmd.str("");  // resetting
         cmd << "$CUDA_INSTALL_PATH/bin/cuobjdump -ptx -elf -sass ";
         cmd << line;
         cmd << " > ";
@@ -3241,8 +3249,8 @@ void printSectionList(std::list<cuobjdumpSection *> sl) {
 }
 
 //! Remove unecessary sm versions from the section list
-std::list<cuobjdumpSection *>
-cuda_runtime_api::pruneSectionList(CUctx_st *context) {
+std::list<cuobjdumpSection *> cuda_runtime_api::pruneSectionList(
+    CUctx_st *context) {
   unsigned forced_max_capability = context->get_device()
                                        ->get_gpgpu()
                                        ->get_config()
@@ -3252,8 +3260,9 @@ cuda_runtime_api::pruneSectionList(CUctx_st *context) {
   // unspecified(0)
   if (context->get_device()->get_gpgpu()->get_config().convert_to_ptxplus()) {
     if ((forced_max_capability == 0) || (forced_max_capability >= 20)) {
-      printf("GPGPU-Sim: WARNING: Capability >= 20 are not supported in "
-             "PTXPlus\n\tSetting forced_max_capability to 19\n");
+      printf(
+          "GPGPU-Sim: WARNING: Capability >= 20 are not supported in "
+          "PTXPlus\n\tSetting forced_max_capability to 19\n");
       forced_max_capability = 19;
     }
   }
@@ -3308,8 +3317,8 @@ cuda_runtime_api::pruneSectionList(CUctx_st *context) {
 }
 
 //! Merge all PTX sections that have a specific identifier into one file
-std::list<cuobjdumpSection *>
-cuda_runtime_api::mergeMatchingSections(std::string identifier) {
+std::list<cuobjdumpSection *> cuda_runtime_api::mergeMatchingSections(
+    std::string identifier) {
   const char *ptxcode = "";
   std::list<cuobjdumpSection *>::iterator old_iter;
   cuobjdumpPTXSection *old_ptxsection = NULL;
@@ -3383,30 +3392,26 @@ std::list<cuobjdumpSection *> cuda_runtime_api::mergeSections() {
 
 //! Within the section list, find the ELF section corresponding to a given
 //! identifier
-cuobjdumpELFSection *
-findELFSectionInList(std::list<cuobjdumpSection *> sectionlist,
-                     const std::string identifier) {
+cuobjdumpELFSection *findELFSectionInList(
+    std::list<cuobjdumpSection *> sectionlist, const std::string identifier) {
   std::list<cuobjdumpSection *>::iterator iter;
   for (iter = sectionlist.begin(); iter != sectionlist.end(); iter++) {
     cuobjdumpELFSection *elfsection;
     if ((elfsection = dynamic_cast<cuobjdumpELFSection *>(*iter)) != NULL) {
-      if (elfsection->getIdentifier() == identifier)
-        return elfsection;
+      if (elfsection->getIdentifier() == identifier) return elfsection;
     }
   }
   return NULL;
 }
 
 //! Find an ELF section in all the known lists
-cuobjdumpELFSection *
-cuda_runtime_api::findELFSection(const std::string identifier) {
+cuobjdumpELFSection *cuda_runtime_api::findELFSection(
+    const std::string identifier) {
   cuobjdumpELFSection *sec =
       findELFSectionInList(cuobjdumpSectionList, identifier);
-  if (sec != NULL)
-    return sec;
+  if (sec != NULL) return sec;
   sec = findELFSectionInList(libSectionList, identifier);
-  if (sec != NULL)
-    return sec;
+  if (sec != NULL) return sec;
   std::cout << "Could not find " << identifier << std::endl;
   assert(0 && "Could not find the required ELF section");
   return NULL;
@@ -3437,15 +3442,13 @@ cuobjdumpPTXSection *cuda_runtime_api::findPTXSectionInList(
 }
 
 //! Find an PTX section in all the known lists
-cuobjdumpPTXSection *
-cuda_runtime_api::findPTXSection(const std::string identifier) {
+cuobjdumpPTXSection *cuda_runtime_api::findPTXSection(
+    const std::string identifier) {
   cuobjdumpPTXSection *sec =
       findPTXSectionInList(cuobjdumpSectionList, identifier);
-  if (sec != NULL)
-    return sec;
+  if (sec != NULL) return sec;
   sec = findPTXSectionInList(libSectionList, identifier);
-  if (sec != NULL)
-    return sec;
+  if (sec != NULL) return sec;
   std::cout << "Could not find " << identifier << std::endl;
   assert(0 && "Could not find the required PTX section");
   return NULL;
@@ -3454,8 +3457,8 @@ cuda_runtime_api::findPTXSection(const std::string identifier) {
 //! Extract the code using cuobjdump and remove unnecessary sections
 void cuda_runtime_api::cuobjdumpInit() {
   CUctx_st *context = GPGPUSim_Context(gpgpu_ctx);
-  extract_code_using_cuobjdump(); // extract all the output of cuobjdump to
-                                  // _cuobjdump_*.*
+  extract_code_using_cuobjdump();  // extract all the output of cuobjdump to
+                                   // _cuobjdump_*.*
   const char *pre_load = getenv("CUOBJDUMP_SIM_FILE");
   if (pre_load == NULL || strlen(pre_load) == 0) {
     cuobjdumpSectionList = pruneSectionList(context);
@@ -3466,8 +3469,7 @@ void cuda_runtime_api::cuobjdumpInit() {
 //! Either submit PTX for simulation or convert SASS to PTXPlus and submit it
 void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
   CUctx_st *context = GPGPUSim_Context(this);
-  if (api->fatbin_registered[handle])
-    return;
+  if (api->fatbin_registered[handle]) return;
   api->fatbin_registered[handle] = true;
   std::string fname = api->fatbinmap[handle];
 
@@ -3480,7 +3482,7 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
 
 #if (CUDART_VERSION >= 6000)
   // loops through all ptx files from smallest sm version to largest
-  std::map<unsigned, std::set<std::string>>::iterator itr_m;
+  std::map<unsigned, std::set<std::string> >::iterator itr_m;
   for (itr_m = api->version_filename.begin();
        itr_m != api->version_filename.end(); itr_m++) {
     std::set<std::string>::iterator itr_s;
@@ -3513,8 +3515,7 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
            api->cuobjdumpSectionList.begin();
        iter != api->cuobjdumpSectionList.end(); iter++) {
     unsigned capability = (*iter)->getArch();
-    if (capability > max_capability)
-      max_capability = capability;
+    if (capability > max_capability) max_capability = capability;
   }
   if (max_capability > 20)
     printf("WARNING: No guarantee that PTX will be parsed for SM version %u\n",
@@ -3535,9 +3536,10 @@ void gpgpu_context::cuobjdumpParseBinary(unsigned int handle) {
       strlen(getenv("PTX_SIM_USE_PTX_FILE")) == 0) {
     ptxcode = readfile(ptx->getPTXfilename());
   } else {
-    printf("GPGPU-Sim PTX: overriding embedded ptx with '%s' "
-           "(PTX_SIM_USE_PTX_FILE is set)\n",
-           override_ptx_name);
+    printf(
+        "GPGPU-Sim PTX: overriding embedded ptx with '%s' "
+        "(PTX_SIM_USE_PTX_FILE is set)\n",
+        override_ptx_name);
     ptxcode = readfile(override_ptx_name);
   }
   if (context->get_device()->get_gpgpu()->get_config().convert_to_ptxplus()) {
@@ -3614,12 +3616,12 @@ void CUDARTAPI __cudaRegisterFunction(void **fatCubinHandle,
                                thread_limit, tid, bid, bDim, gDim);
 }
 
-extern void
-__cudaRegisterVar(void **fatCubinHandle,
-                  char *hostVar,          // pointer to...something
-                  char *deviceAddress,    // name of variable
-                  const char *deviceName, // name of variable (same as above)
-                  int ext, int size, int constant, int global) {
+extern void __cudaRegisterVar(
+    void **fatCubinHandle,
+    char *hostVar,           // pointer to...something
+    char *deviceAddress,     // name of variable
+    const char *deviceName,  // name of variable (same as above)
+    int ext, int size, int constant, int global) {
   cudaRegisterVarInternal(fatCubinHandle, hostVar, deviceAddress, deviceName,
                           ext, size, constant, global);
 }
@@ -3669,7 +3671,7 @@ void CUDARTAPI __cudaRegisterSharedVar(void **fatCubinHandle, void **devicePtr,
 void __cudaRegisterTexture(
     void **fatCubinHandle, const struct textureReference *hostVar,
     const void **deviceAddress, const char *deviceName, int dim, int norm,
-    int ext) // passes in a newly created textureReference
+    int ext)  // passes in a newly created textureReference
 {
   __cudaRegisterTextureInternal(fatCubinHandle, hostVar, deviceAddress,
                                 deviceName, dim, norm, ext);
@@ -3876,9 +3878,10 @@ cudaError_t CUDARTAPI cudaFuncSetAttribute(const void *func,
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  printf("GPGPU-Sim PTX: Execution warning: ignoring call to \"%s ( func=%p, "
-         "attr=%d, value=%d )\"\n",
-         __my_func__, func, attr, value);
+  printf(
+      "GPGPU-Sim PTX: Execution warning: ignoring call to \"%s ( func=%p, "
+      "attr=%d, value=%d )\"\n",
+      __my_func__, func, attr, value);
   return g_last_cudaError = cudaSuccess;
 }
 #endif
@@ -3943,7 +3946,7 @@ int CUDARTAPI __cudaSynchronizeThreads(void **, void *) {
   return g_last_cudaError = cudaSuccess;
 }
 
-} // namespace cuda_math
+}  // namespace cuda_math
 
 ////////
 
@@ -3979,9 +3982,9 @@ int cuda_runtime_api::load_static_globals(symbol_table *symtab,
         operand_info op = *i;
         ptx_reg_t value = op.get_literal_value();
         assert((addr + offset + nbytes) <
-               min_gaddr); // min_gaddr is start of "heap" for cudaMalloc
+               min_gaddr);  // min_gaddr is start of "heap" for cudaMalloc
         gpu->get_global_memory()->write(addr + offset, nbytes, &value, NULL,
-                                        NULL); // assuming little endian here
+                                        NULL);  // assuming little endian here
         offset += nbytes;
         ng_bytes += nbytes;
       }
@@ -4020,24 +4023,24 @@ int cuda_runtime_api::load_constants(symbol_table *symtab, addr_t min_gaddr,
         ptx_reg_t value = op.get_literal_value();
         int nbytes = num_bits / 8;
         switch (op.get_type()) {
-        case int_t:
-          assert(nbytes >= 1);
-          break;
-        case float_op_t:
-          assert(nbytes == 4);
-          break;
-        case double_op_t:
-          assert(nbytes >= 4);
-          break; // account for double DEMOTING
-        default:
-          abort();
+          case int_t:
+            assert(nbytes >= 1);
+            break;
+          case float_op_t:
+            assert(nbytes == 4);
+            break;
+          case double_op_t:
+            assert(nbytes >= 4);
+            break;  // account for double DEMOTING
+          default:
+            abort();
         }
         unsigned addr = constant->get_address() + nbytes_written;
         assert(addr + nbytes < min_gaddr);
 
         gpu->get_global_memory()->write(
             addr, nbytes, &value, NULL,
-            NULL); // assume little endian (so u8 is the first byte in u32)
+            NULL);  // assume little endian (so u8 is the first byte in u32)
         nc_bytes += nbytes;
         nbytes_written += nbytes;
       }
@@ -4166,7 +4169,7 @@ CUresult CUDAAPI cuDeviceTotalMem(size_t *bytes, CUdevice dev) {
   if (g_debug_execution >= 3) {
     announce_call(__my_func__);
   }
-  *bytes = 20000000000; // dummy value
+  *bytes = 20000000000;  // dummy value
   return CUDA_SUCCESS;
 }
 #endif /* CUDART_VERSION >= 3020 */
@@ -6063,7 +6066,7 @@ CUresult CUDAAPI cuGetExportTable(const void **ppExportTable,
   return CUDA_SUCCESS;
 }
 
-#if defined(CUDART_VERSION_INTERNAL) ||                                        \
+#if defined(CUDART_VERSION_INTERNAL) || \
     (CUDART_VERSION >= 4000 && CUDART_VERSION < 6050)
 CUresult CUDAAPI cuMemHostRegister(void *p, size_t bytesize,
                                    unsigned int Flags) {
@@ -6073,10 +6076,10 @@ CUresult CUDAAPI cuMemHostRegister(void *p, size_t bytesize,
   printf("WARNING: this function has not been implemented yet.");
   return CUDA_SUCCESS;
 }
-#endif /* defined(CUDART_VERSION_INTERNAL) || (CUDART_VERSION >= 4000 &&       \
+#endif /* defined(CUDART_VERSION_INTERNAL) || (CUDART_VERSION >= 4000 && \
           CUDART_VERSION < 6050) */
 
-#if defined(CUDART_VERSION_INTERNAL) ||                                        \
+#if defined(CUDART_VERSION_INTERNAL) || \
     (CUDART_VERSION >= 5050 && CUDART_VERSION < 6050)
 CUresult CUDAAPI cuLinkCreate(unsigned int numOptions, CUjit_option *options,
                               void **optionValues, CUlinkState *stateOut) {
@@ -6108,7 +6111,7 @@ CUresult CUDAAPI cuLinkAddFile(CUlinkState state, CUjitInputType type,
 #endif /* CUDART_VERSION_INTERNAL || (CUDART_VERSION >= 5050 && CUDART_VERSION \
           < 6050) */
 
-#if defined(CUDART_VERSION_INTERNAL) ||                                        \
+#if defined(CUDART_VERSION_INTERNAL) || \
     (CUDART_VERSION >= 3020 && CUDART_VERSION < 4010)
 CUresult CUDAAPI cuTexRefSetAddress2D_v2(CUtexref hTexRef,
                                          const CUDA_ARRAY_DESCRIPTOR *desc,

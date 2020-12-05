@@ -16,7 +16,7 @@ struct cuobjdump_parser {
 };
 
 class cuobjdumpSection {
-public:
+ public:
   // Constructor
   cuobjdumpSection() {
     arch = 0;
@@ -31,13 +31,13 @@ public:
     std::cout << "cuobjdump Section: unknown type" << std::endl;
   }
 
-private:
+ private:
   unsigned arch;
   std::string identifier;
 };
 
 class cuobjdumpELFSection : public cuobjdumpSection {
-public:
+ public:
   cuobjdumpELFSection() {}
   virtual ~cuobjdumpELFSection() {
     elffilename = "";
@@ -56,13 +56,13 @@ public:
     std::cout << std::endl;
   }
 
-private:
+ private:
   std::string elffilename;
   std::string sassfilename;
 };
 
 class cuobjdumpPTXSection : public cuobjdumpSection {
-public:
+ public:
   cuobjdumpPTXSection() { ptxfilename = ""; }
   std::string getPTXfilename() { return ptxfilename; }
   void setPTXfilename(std::string f) { ptxfilename = f; }
@@ -74,7 +74,7 @@ public:
     std::cout << std::endl;
   }
 
-private:
+ private:
   std::string ptxfilename;
 };
 

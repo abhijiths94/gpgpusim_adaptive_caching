@@ -27,8 +27,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "ptx_sim.h"
-#include "ptx_ir.h"
 #include <string>
+#include "ptx_ir.h"
 class ptx_recognizer;
 typedef void *yyscan_t;
 #include "../../libcuda/gpgpu_context.h"
@@ -59,8 +59,9 @@ void ptx_cta_info::check_cta_thread_status_and_reset() {
   bool fail = false;
   if (m_threads_that_have_exited.size() != m_threads_in_cta.size()) {
     printf("\n\n");
-    printf("Execution error: Some threads still running in CTA during CTA "
-           "reallocation! (1)\n");
+    printf(
+        "Execution error: Some threads still running in CTA during CTA "
+        "reallocation! (1)\n");
     printf("   CTA uid = %Lu (sm_idx = %u) : %lu running out of %zu total\n",
            m_uid, m_sm_idx,
            (m_threads_in_cta.size() - m_threads_that_have_exited.size()),
@@ -198,119 +199,107 @@ void ptx_thread_info::set_done() {
 unsigned ptx_thread_info::get_builtin(int builtin_id, unsigned dim_mod) {
   assert(m_valid);
   switch ((builtin_id & 0xFFFF)) {
-  case CLOCK_REG:
-    return (unsigned)(m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle);
-  case CLOCK64_REG:
-    abort(); // change return value to unsigned long long?
-             // GPGPUSim clock is 4 times slower - multiply by 4
-    return (m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) * 4;
-  case HALFCLOCK_ID:
-    // GPGPUSim clock is 4 times slower - multiply by 4
-    // Hardware clock counter is incremented at half the shader clock
-    // frequency - divide by 2 (Henry '10)
-    return (m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) * 2;
-  case CTAID_REG:
-    assert(dim_mod < 3);
-    if (dim_mod == 0)
-      return m_ctaid.x;
-    if (dim_mod == 1)
-      return m_ctaid.y;
-    if (dim_mod == 2)
-      return m_ctaid.z;
-    abort();
-    break;
-  case ENVREG_REG: {
-    int index = builtin_id >> 16;
-    dim3 gdim = this->get_core()->get_kernel_info()->get_grid_dim();
-    switch (index) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-      return 0;
+    case CLOCK_REG:
+      return (unsigned)(m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle);
+    case CLOCK64_REG:
+      abort();  // change return value to unsigned long long?
+                // GPGPUSim clock is 4 times slower - multiply by 4
+      return (m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) * 4;
+    case HALFCLOCK_ID:
+      // GPGPUSim clock is 4 times slower - multiply by 4
+      // Hardware clock counter is incremented at half the shader clock
+      // frequency - divide by 2 (Henry '10)
+      return (m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle) * 2;
+    case CTAID_REG:
+      assert(dim_mod < 3);
+      if (dim_mod == 0) return m_ctaid.x;
+      if (dim_mod == 1) return m_ctaid.y;
+      if (dim_mod == 2) return m_ctaid.z;
+      abort();
       break;
-    case 6:
-      return gdim.x;
-    case 7:
-      return gdim.y;
-    case 8:
-      return gdim.z;
-    case 9:
-      if (gdim.z == 1 && gdim.y == 1)
-        return 1;
-      else if (gdim.z == 1)
-        return 2;
-      else
-        return 3;
-      break;
-    default:
-      break;
+    case ENVREG_REG: {
+      int index = builtin_id >> 16;
+      dim3 gdim = this->get_core()->get_kernel_info()->get_grid_dim();
+      switch (index) {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+          return 0;
+          break;
+        case 6:
+          return gdim.x;
+        case 7:
+          return gdim.y;
+        case 8:
+          return gdim.z;
+        case 9:
+          if (gdim.z == 1 && gdim.y == 1)
+            return 1;
+          else if (gdim.z == 1)
+            return 2;
+          else
+            return 3;
+          break;
+        default:
+          break;
+      }
     }
-  }
-  case GRIDID_REG:
-    return m_gridid;
-  case LANEID_REG:
-    return get_hw_tid() % m_core->get_warp_size();
-  case LANEMASK_EQ_REG:
-    feature_not_implemented("%lanemask_eq");
-    return 0;
-  case LANEMASK_LE_REG:
-    feature_not_implemented("%lanemask_le");
-    return 0;
-  case LANEMASK_LT_REG:
-    feature_not_implemented("%lanemask_lt");
-    return 0;
-  case LANEMASK_GE_REG:
-    feature_not_implemented("%lanemask_ge");
-    return 0;
-  case LANEMASK_GT_REG:
-    feature_not_implemented("%lanemask_gt");
-    return 0;
-  case NCTAID_REG:
-    assert(dim_mod < 3);
-    if (dim_mod == 0)
-      return m_nctaid.x;
-    if (dim_mod == 1)
-      return m_nctaid.y;
-    if (dim_mod == 2)
-      return m_nctaid.z;
-    abort();
-    break;
-  case NTID_REG:
-    assert(dim_mod < 3);
-    if (dim_mod == 0)
-      return m_ntid.x;
-    if (dim_mod == 1)
-      return m_ntid.y;
-    if (dim_mod == 2)
-      return m_ntid.z;
-    abort();
-    break;
-  case NWARPID_REG:
-    feature_not_implemented("%nwarpid");
-    return 0;
-  case PM_REG:
-    feature_not_implemented("%pm");
-    return 0;
-  case SMID_REG:
-    feature_not_implemented("%smid");
-    return 0;
-  case TID_REG:
-    assert(dim_mod < 3);
-    if (dim_mod == 0)
-      return m_tid.x;
-    if (dim_mod == 1)
-      return m_tid.y;
-    if (dim_mod == 2)
-      return m_tid.z;
-    abort();
-    break;
-  case WARPSZ_REG:
-    return m_core->get_warp_size();
-  default:
-    assert(0);
+    case GRIDID_REG:
+      return m_gridid;
+    case LANEID_REG:
+      return get_hw_tid() % m_core->get_warp_size();
+    case LANEMASK_EQ_REG:
+      feature_not_implemented("%lanemask_eq");
+      return 0;
+    case LANEMASK_LE_REG:
+      feature_not_implemented("%lanemask_le");
+      return 0;
+    case LANEMASK_LT_REG:
+      feature_not_implemented("%lanemask_lt");
+      return 0;
+    case LANEMASK_GE_REG:
+      feature_not_implemented("%lanemask_ge");
+      return 0;
+    case LANEMASK_GT_REG:
+      feature_not_implemented("%lanemask_gt");
+      return 0;
+    case NCTAID_REG:
+      assert(dim_mod < 3);
+      if (dim_mod == 0) return m_nctaid.x;
+      if (dim_mod == 1) return m_nctaid.y;
+      if (dim_mod == 2) return m_nctaid.z;
+      abort();
+      break;
+    case NTID_REG:
+      assert(dim_mod < 3);
+      if (dim_mod == 0) return m_ntid.x;
+      if (dim_mod == 1) return m_ntid.y;
+      if (dim_mod == 2) return m_ntid.z;
+      abort();
+      break;
+    case NWARPID_REG:
+      feature_not_implemented("%nwarpid");
+      return 0;
+    case PM_REG:
+      feature_not_implemented("%pm");
+      return 0;
+    case SMID_REG:
+      feature_not_implemented("%smid");
+      return 0;
+    case TID_REG:
+      assert(dim_mod < 3);
+      if (dim_mod == 0) return m_tid.x;
+      if (dim_mod == 1) return m_tid.y;
+      if (dim_mod == 2) return m_tid.z;
+      abort();
+      break;
+    case WARPSZ_REG:
+      return m_core->get_warp_size();
+    default:
+      assert(0);
   }
   return 0;
 }
@@ -355,57 +344,57 @@ static void print_reg(FILE *fp, std::string name, ptx_reg_t value,
   type_info_key ti = t->get_key();
 
   switch (ti.scalar_type()) {
-  case S8_TYPE:
-    fprintf(fp, ".s8  %d\n", value.s8);
-    break;
-  case S16_TYPE:
-    fprintf(fp, ".s16 %d\n", value.s16);
-    break;
-  case S32_TYPE:
-    fprintf(fp, ".s32 %d\n", value.s32);
-    break;
-  case S64_TYPE:
-    fprintf(fp, ".s64 %Ld\n", value.s64);
-    break;
-  case U8_TYPE:
-    fprintf(fp, ".u8  %u [0x%02x]\n", value.u8, (unsigned)value.u8);
-    break;
-  case U16_TYPE:
-    fprintf(fp, ".u16 %u [0x%04x]\n", value.u16, (unsigned)value.u16);
-    break;
-  case U32_TYPE:
-    fprintf(fp, ".u32 %u [0x%08x]\n", value.u32, (unsigned)value.u32);
-    break;
-  case U64_TYPE:
-    fprintf(fp, ".u64 %llu [0x%llx]\n", value.u64, value.u64);
-    break;
-  case F16_TYPE:
-    fprintf(fp, ".f16 %f [0x%04x]\n", value.f16, (unsigned)value.u16);
-    break;
-  case F32_TYPE:
-    fprintf(fp, ".f32 %.15lf [0x%08x]\n", value.f32, value.u32);
-    break;
-  case F64_TYPE:
-    fprintf(fp, ".f64 %.15le [0x%016llx]\n", value.f64, value.u64);
-    break;
-  case B8_TYPE:
-    fprintf(fp, ".b8  0x%02x\n", (unsigned)value.u8);
-    break;
-  case B16_TYPE:
-    fprintf(fp, ".b16 0x%04x\n", (unsigned)value.u16);
-    break;
-  case B32_TYPE:
-    fprintf(fp, ".b32 0x%08x\n", (unsigned)value.u32);
-    break;
-  case B64_TYPE:
-    fprintf(fp, ".b64 0x%llx\n", (unsigned long long)value.u64);
-    break;
-  case PRED_TYPE:
-    fprintf(fp, ".pred %u\n", (unsigned)value.pred);
-    break;
-  default:
-    fprintf(fp, "non-scalar type\n");
-    break;
+    case S8_TYPE:
+      fprintf(fp, ".s8  %d\n", value.s8);
+      break;
+    case S16_TYPE:
+      fprintf(fp, ".s16 %d\n", value.s16);
+      break;
+    case S32_TYPE:
+      fprintf(fp, ".s32 %d\n", value.s32);
+      break;
+    case S64_TYPE:
+      fprintf(fp, ".s64 %Ld\n", value.s64);
+      break;
+    case U8_TYPE:
+      fprintf(fp, ".u8  %u [0x%02x]\n", value.u8, (unsigned)value.u8);
+      break;
+    case U16_TYPE:
+      fprintf(fp, ".u16 %u [0x%04x]\n", value.u16, (unsigned)value.u16);
+      break;
+    case U32_TYPE:
+      fprintf(fp, ".u32 %u [0x%08x]\n", value.u32, (unsigned)value.u32);
+      break;
+    case U64_TYPE:
+      fprintf(fp, ".u64 %llu [0x%llx]\n", value.u64, value.u64);
+      break;
+    case F16_TYPE:
+      fprintf(fp, ".f16 %f [0x%04x]\n", value.f16, (unsigned)value.u16);
+      break;
+    case F32_TYPE:
+      fprintf(fp, ".f32 %.15lf [0x%08x]\n", value.f32, value.u32);
+      break;
+    case F64_TYPE:
+      fprintf(fp, ".f64 %.15le [0x%016llx]\n", value.f64, value.u64);
+      break;
+    case B8_TYPE:
+      fprintf(fp, ".b8  0x%02x\n", (unsigned)value.u8);
+      break;
+    case B16_TYPE:
+      fprintf(fp, ".b16 0x%04x\n", (unsigned)value.u16);
+      break;
+    case B32_TYPE:
+      fprintf(fp, ".b32 0x%08x\n", (unsigned)value.u32);
+      break;
+    case B64_TYPE:
+      fprintf(fp, ".b64 0x%llx\n", (unsigned long long)value.u64);
+      break;
+    case PRED_TYPE:
+      fprintf(fp, ".pred %u\n", (unsigned)value.pred);
+      break;
+    default:
+      fprintf(fp, "non-scalar type\n");
+      break;
   }
   fflush(fp);
 }
@@ -451,8 +440,8 @@ bool ptx_thread_info::callstack_pop() {
   const symbol *rv_src = m_callstack.back().m_return_var_src;
   const symbol *rv_dst = m_callstack.back().m_return_var_dst;
   assert(!((rv_src != NULL) ^
-           (rv_dst != NULL))); // ensure caller and callee agree on whether
-                               // there is a return value
+           (rv_dst != NULL)));  // ensure caller and callee agree on whether
+                                // there is a return value
 
   // read return value from callee frame
   arg_buffer_t buffer(m_gpu->gpgpu_ctx);
@@ -476,8 +465,7 @@ bool ptx_thread_info::callstack_pop() {
   m_debug_trace_regs_read.pop_back();
 
   // write return value into caller frame
-  if (rv_dst != NULL)
-    copy_buffer_to_frame(this, buffer);
+  if (rv_dst != NULL) copy_buffer_to_frame(this, buffer);
 
   return m_callstack.empty();
 }
@@ -487,8 +475,8 @@ bool ptx_thread_info::callstack_pop_plus() {
   const symbol *rv_src = m_callstack.back().m_return_var_src;
   const symbol *rv_dst = m_callstack.back().m_return_var_dst;
   assert(!((rv_src != NULL) ^
-           (rv_dst != NULL))); // ensure caller and callee agree on whether
-                               // there is a return value
+           (rv_dst != NULL)));  // ensure caller and callee agree on whether
+                                // there is a return value
 
   // read return value from callee frame
   arg_buffer_t buffer(m_gpu->gpgpu_ctx);
@@ -512,8 +500,7 @@ bool ptx_thread_info::callstack_pop_plus() {
   // m_debug_trace_regs_read.pop_back();
 
   // write return value into caller frame
-  if (rv_dst != NULL)
-    copy_buffer_to_frame(this, buffer);
+  if (rv_dst != NULL) copy_buffer_to_frame(this, buffer);
 
   return m_callstack.empty();
 }
@@ -562,10 +549,8 @@ const ptx_instruction *ptx_thread_info::get_inst(addr_t pc) const {
 }
 
 void ptx_thread_info::dump_regs(FILE *fp) {
-  if (m_regs.empty())
-    return;
-  if (m_regs.back().empty())
-    return;
+  if (m_regs.empty()) return;
+  if (m_regs.back().empty()) return;
   fprintf(fp, "Register File Contents:\n");
   fflush(fp);
   reg_map_t::const_iterator r;

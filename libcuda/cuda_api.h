@@ -63,7 +63,7 @@ typedef uint64_t cuuint64_t;
 /**
  * CUDA API versioning support
  */
-#if defined(__CUDA_API_VERSION_INTERNAL) || defined(__DOXYGEN_ONLY__) ||       \
+#if defined(__CUDA_API_VERSION_INTERNAL) || defined(__DOXYGEN_ONLY__) || \
     defined(CUDA_ENABLE_DEPRECATED)
 #define __CUDA_DEPRECATED
 #elif defined(_MSC_VER)
@@ -84,7 +84,7 @@ typedef uint64_t cuuint64_t;
 #define __CUDA_API_VERSION 10010
 #endif /* CUDA_FORCE_API_VERSION */
 
-#if defined(__CUDA_API_VERSION_INTERNAL) ||                                    \
+#if defined(__CUDA_API_VERSION_INTERNAL) || \
     defined(CUDA_API_PER_THREAD_DEFAULT_STREAM)
 #define __CUDA_API_PER_THREAD_DEFAULT_STREAM
 #define __CUDA_API_PTDS(api) api##_ptds
@@ -163,10 +163,10 @@ typedef uint64_t cuuint64_t;
 #endif /* __CUDA_API_VERSION_INTERNAL || __CUDA_API_VERSION >= 10010 */
 
 #if !defined(__CUDA_API_VERSION_INTERNAL)
-#if defined(__CUDA_API_VERSION) && __CUDA_API_VERSION >= 3020 &&               \
+#if defined(__CUDA_API_VERSION) && __CUDA_API_VERSION >= 3020 && \
     __CUDA_API_VERSION < 4010
 #define cuTexRefSetAddress2D cuTexRefSetAddress2D_v2
-#endif /* __CUDA_API_VERSION && __CUDA_API_VERSION >= 3020 &&                  \
+#endif /* __CUDA_API_VERSION && __CUDA_API_VERSION >= 3020 && \
           __CUDA_API_VERSION < 4010 */
 #endif /* __CUDA_API_VERSION_INTERNAL */
 
@@ -211,9 +211,9 @@ typedef uint64_t cuuint64_t;
 
 #define cuLaunchCooperativeKernel __CUDA_API_PTSZ(cuLaunchCooperativeKernel)
 
-#define cuSignalExternalSemaphoresAsync                                        \
+#define cuSignalExternalSemaphoresAsync \
   __CUDA_API_PTSZ(cuSignalExternalSemaphoresAsync)
-#define cuWaitExternalSemaphoresAsync                                          \
+#define cuWaitExternalSemaphoresAsync \
   __CUDA_API_PTSZ(cuWaitExternalSemaphoresAsync)
 
 #define cuGraphLaunch __CUDA_API_PTSZ(cuGraphLaunch)
@@ -11101,7 +11101,7 @@ CUresult CUDAAPI cuFuncGetAttribute(int *pi, CUfunction_attribute attrib,
  */
 CUresult CUDAAPI cuFuncSetAttribute(CUfunction hfunc,
                                     CUfunction_attribute attrib, int value);
-#endif // __CUDA_API_VERSION >= 9000
+#endif  // __CUDA_API_VERSION >= 9000
 
 /**
  * \brief Sets the preferred cache configuration for a device function
@@ -15324,11 +15324,11 @@ CUresult CUDAAPI cuGetExportTable(const void **ppExportTable,
 #undef cuGraphLaunch
 #endif /* __CUDA_API_VERSION_INTERNAL */
 
-#if defined(__CUDA_API_VERSION_INTERNAL) ||                                    \
+#if defined(__CUDA_API_VERSION_INTERNAL) || \
     (__CUDA_API_VERSION >= 4000 && __CUDA_API_VERSION < 6050)
 CUresult CUDAAPI cuMemHostRegister(void *p, size_t bytesize,
                                    unsigned int Flags);
-#endif /* defined(__CUDA_API_VERSION_INTERNAL) || (__CUDA_API_VERSION >= 4000  \
+#endif /* defined(__CUDA_API_VERSION_INTERNAL) || (__CUDA_API_VERSION >= 4000 \
           && __CUDA_API_VERSION < 6050) */
 
 #if defined(__CUDA_API_VERSION_INTERNAL) || __CUDA_API_VERSION < 6050
@@ -15336,7 +15336,7 @@ CUresult CUDAAPI cuGraphicsResourceSetMapFlags(CUgraphicsResource resource,
                                                unsigned int flags);
 #endif /* defined(__CUDA_API_VERSION_INTERNAL) || __CUDA_API_VERSION < 6050 */
 
-#if defined(__CUDA_API_VERSION_INTERNAL) ||                                    \
+#if defined(__CUDA_API_VERSION_INTERNAL) || \
     (__CUDA_API_VERSION >= 5050 && __CUDA_API_VERSION < 6050)
 CUresult CUDAAPI cuLinkCreate(unsigned int numOptions, CUjit_option *options,
                               void **optionValues, CUlinkState *stateOut);
@@ -15347,15 +15347,15 @@ CUresult CUDAAPI cuLinkAddData(CUlinkState state, CUjitInputType type,
 CUresult CUDAAPI cuLinkAddFile(CUlinkState state, CUjitInputType type,
                                const char *path, unsigned int numOptions,
                                CUjit_option *options, void **optionValues);
-#endif /* __CUDA_API_VERSION_INTERNAL || (__CUDA_API_VERSION >= 5050 &&        \
+#endif /* __CUDA_API_VERSION_INTERNAL || (__CUDA_API_VERSION >= 5050 && \
           __CUDA_API_VERSION < 6050) */
 
-#if defined(__CUDA_API_VERSION_INTERNAL) ||                                    \
+#if defined(__CUDA_API_VERSION_INTERNAL) || \
     (__CUDA_API_VERSION >= 3020 && __CUDA_API_VERSION < 4010)
 CUresult CUDAAPI cuTexRefSetAddress2D_v2(CUtexref hTexRef,
                                          const CUDA_ARRAY_DESCRIPTOR *desc,
                                          CUdeviceptr dptr, size_t Pitch);
-#endif /* __CUDA_API_VERSION_INTERNAL || (__CUDA_API_VERSION >= 3020 &&        \
+#endif /* __CUDA_API_VERSION_INTERNAL || (__CUDA_API_VERSION >= 3020 && \
           __CUDA_API_VERSION < 4010) */
 
 /**

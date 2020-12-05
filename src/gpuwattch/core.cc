@@ -37,16 +37,16 @@
  ********************************************************************/
 
 #include "core.h"
+#include <assert.h>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <string>
 #include "XML_Parse.h"
 #include "cacti/basic_circuit.h"
 #include "const.h"
 #include "io.h"
 #include "parameter.h"
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <iostream>
-#include <string>
 //#include "globalvar.h"
 // double exClockRate;
 //*********************
@@ -83,14 +83,20 @@
 // The total number of collector units and their input ports, and the number of
 // register file banks determine the crossbar size.
 
-InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
-                       InputParameter *interface_ip_,
-                       const CoreDynParam &dyn_p_, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), IB(0), BTB(0), ID_inst(0), ID_operand(0), ID_misc(0),
+InstFetchU::InstFetchU(ParseXML* XML_interface, int ithCore_,
+                       InputParameter* interface_ip_,
+                       const CoreDynParam& dyn_p_, bool exist_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      IB(0),
+      BTB(0),
+      ID_inst(0),
+      ID_operand(0),
+      ID_misc(0),
       exist(exist_) {
-  if (!exist)
-    return;
+  if (!exist) return;
   int idx, tag, data, size, line, assoc, banks;
   bool debug = false, is_default = true;
 
@@ -121,7 +127,7 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
       debug ? 1 : (int)XML->sys.core[ithCore].icache.icache_config[3];
   interface_ip.out_w = interface_ip.line_sz * 8;
   interface_ip.access_mode =
-      0; // debug?0:XML->sys.core[ithCore].icache.icache_config[5];
+      0;  // debug?0:XML->sys.core[ithCore].icache.icache_config[5];
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].icache.icache_config[4] / clockRate;
@@ -167,7 +173,7 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].icache.buffer_sizes[0] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -177,11 +183,11 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].icache.icache_config[4] /
-                  clockRate; // means cycle time
+                  clockRate;  // means cycle time
   interface_ip.latency = debug
                              ? 1.0 / clockRate
                              : XML->sys.core[ithCore].icache.icache_config[5] /
-                                   clockRate; // means access time
+                                   clockRate;  // means access time
   interface_ip.obj_func_dyn_energy = 0;
   interface_ip.obj_func_dyn_power = 0;
   interface_ip.obj_func_leak_power = 0;
@@ -205,7 +211,7 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
   data = icache.caches->l_ip.line_sz;
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz = data * XML->sys.core[ithCore].icache.buffer_sizes[1];
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
@@ -236,13 +242,13 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
 
   // prefetch buffer
   tag = XML->sys.physical_address_width +
-        EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                        // merge.
+        EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                         // merge.
   data = icache.caches->l_ip
-             .line_sz; // separate queue to prevent from cache polution.
+             .line_sz;  // separate queue to prevent from cache polution.
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].icache.buffer_sizes[2] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -278,8 +284,8 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
   data =
       XML->sys.core[ithCore].instruction_length *
       XML->sys.core[ithCore]
-          .peak_issue_width; // icache.caches.l_ip.line_sz; //multiple threads
-                             // timing sharing the instruction buffer.
+          .peak_issue_width;  // icache.caches.l_ip.line_sz; //multiple threads
+                              // timing sharing the instruction buffer.
   interface_ip.is_cache = false;
   interface_ip.pure_ram = true;
   interface_ip.pure_cam = false;
@@ -309,7 +315,7 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
       debug
           ? 1
           : XML->sys.core[ithCore]
-                .number_instruction_fetch_ports; // XML->sys.core[ithCore].fetch_width;
+                .number_instruction_fetch_ports;  // XML->sys.core[ithCore].fetch_width;
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -362,7 +368,7 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
     interface_ip.nbanks = debug ? 1 : banks;
     interface_ip.out_w = interface_ip.line_sz * 8;
     interface_ip.access_mode =
-        0; // debug?0:XML->sys.core[ithCore].dcache.dcache_config[5];
+        0;  // debug?0:XML->sys.core[ithCore].dcache.dcache_config[5];
     interface_ip.throughput =
         debug ? 1.0 / clockRate
               : XML->sys.core[ithCore].BTB.BTB_config[4] / clockRate;
@@ -406,12 +412,20 @@ InstFetchU::InstFetchU(ParseXML *XML_interface, int ithCore_,
                     coredynp.decodeW);
 }
 
-BranchPredictor::BranchPredictor(ParseXML *XML_interface, int ithCore_,
-                                 InputParameter *interface_ip_,
-                                 const CoreDynParam &dyn_p_, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), globalBPT(0), localBPT(0), L1_localBPT(0),
-      L2_localBPT(0), chooser(0), RAS(0), exist(exist_) {
+BranchPredictor::BranchPredictor(ParseXML* XML_interface, int ithCore_,
+                                 InputParameter* interface_ip_,
+                                 const CoreDynParam& dyn_p_, bool exist_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      globalBPT(0),
+      localBPT(0),
+      L1_localBPT(0),
+      L2_localBPT(0),
+      chooser(0),
+      RAS(0),
+      exist(exist_) {
   /*
    * Branch Predictor, accessed during ID stage.
    * McPAT's branch predictor model is the tournament branch predictor used in
@@ -422,8 +436,7 @@ BranchPredictor::BranchPredictor(ParseXML *XML_interface, int ithCore_,
    * each thread.
    * TODO:Data Width need to be computed more precisely	 *
    */
-  if (!exist)
-    return;
+  if (!exist) return;
   int tag, data;
 
   clockRate = coredynp.clockRate;
@@ -568,14 +581,19 @@ BranchPredictor::BranchPredictor(ParseXML *XML_interface, int ithCore_,
                 RAS->local_result.area * coredynp.num_hthreads);
 }
 
-SchedulerU::SchedulerU(ParseXML *XML_interface, int ithCore_,
-                       InputParameter *interface_ip_,
-                       const CoreDynParam &dyn_p_, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), int_inst_window(0), fp_inst_window(0), ROB(0),
-      instruction_selection(0), exist(exist_) {
-  if (!exist)
-    return;
+SchedulerU::SchedulerU(ParseXML* XML_interface, int ithCore_,
+                       InputParameter* interface_ip_,
+                       const CoreDynParam& dyn_p_, bool exist_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      int_inst_window(0),
+      fp_inst_window(0),
+      ROB(0),
+      instruction_selection(0),
+      exist(exist_) {
+  if (!exist) return;
   int tag, data;
   bool is_default = true;
   string tmp_name;
@@ -586,8 +604,8 @@ SchedulerU::SchedulerU(ParseXML *XML_interface, int ithCore_,
     // Instruction issue queue, in-order multi-issue or multithreaded processor
     // also has this structure. Unified window for Inorder processors
     tag = int(log2(XML->sys.core[ithCore].number_hardware_threads) *
-              coredynp.perThreadState); // This is the normal thread state bits
-                                        // based on Niagara Design
+              coredynp.perThreadState);  // This is the normal thread state bits
+                                         // based on Niagara Design
     data = XML->sys.core[ithCore].instruction_length;
     // NOTE: x86 inst can be very lengthy, up to 15B. Source: Intel® 64 and
     // IA-32 Architectures Software Developer’s Manual
@@ -714,8 +732,8 @@ SchedulerU::SchedulerU(ParseXML *XML_interface, int ithCore_,
     Iw_height = int_inst_window->local_result.cache_ht;
     // FU inst window
     if (coredynp.scheu_ty == PhysicalRegFile) {
-      tag = 2 * coredynp.phy_freg_width; // TODO: each time only half of the
-                                         // tag is compared
+      tag = 2 * coredynp.phy_freg_width;  // TODO: each time only half of the
+                                          // tag is compared
       data =
           int(ceil((coredynp.instruction_length +
                     2 * (coredynp.phy_freg_width - coredynp.arch_freg_width)) /
@@ -806,7 +824,7 @@ SchedulerU::SchedulerU(ParseXML *XML_interface, int ithCore_,
       interface_ip.line_sz = data;
       interface_ip.cache_sz =
           data * XML->sys.core[ithCore]
-                     .ROB_size; // The XML ROB size is for all threads
+                     .ROB_size;  // The XML ROB size is for all threads
       interface_ip.assoc = 1;
       interface_ip.nbanks = 1;
       interface_ip.out_w = interface_ip.line_sz * 8;
@@ -837,16 +855,19 @@ SchedulerU::SchedulerU(ParseXML *XML_interface, int ithCore_,
   }
 }
 
-LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
-                       InputParameter *interface_ip_,
-                       const CoreDynParam &dyn_p_, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), LSQ(0), exist(exist_) {
-  if (!exist)
-    return;
+LoadStoreU::LoadStoreU(ParseXML* XML_interface, int ithCore_,
+                       InputParameter* interface_ip_,
+                       const CoreDynParam& dyn_p_, bool exist_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      LSQ(0),
+      exist(exist_) {
+  if (!exist) return;
   int idx, tag, data, size, line, assoc;
   bool debug = false;
-  int ldst_opcode = XML->sys.core[ithCore].opcode_width; // 16;
+  int ldst_opcode = XML->sys.core[ithCore].opcode_width;  // 16;
 
   clockRate = coredynp.clockRate;
   executionTime = coredynp.executionTime;
@@ -863,11 +884,11 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   if (XML->sys.architecture == 1) {
     xbar_shared = new Crossbar(
         coredynp.num_fpus, coredynp.num_fpus, 32,
-        &(g_tp.peri_global)); // Syed: coredynp.num_fpus is used as simd_width
+        &(g_tp.peri_global));  // Syed: coredynp.num_fpus is used as simd_width
   } else {
     xbar_shared = new Crossbar(
         coredynp.num_fpus, coredynp.num_fpus, 32,
-        &(g_tp.peri_global)); // Syed: coredynp.num_fpus is used as simd_width
+        &(g_tp.peri_global));  // Syed: coredynp.num_fpus is used as simd_width
   }
 
   // TODO: Check if this line should be changed to
@@ -894,7 +915,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
       debug ? 1 : (int)XML->sys.core[ithCore].sharedmemory.dcache_config[3];
   interface_ip.out_w = interface_ip.line_sz * 8;
   interface_ip.access_mode =
-      0; // debug?0:XML->sys.core[ithCore].sharedmemory.dcache_config[5];
+      0;  // debug?0:XML->sys.core[ithCore].sharedmemory.dcache_config[5];
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].sharedmemory.dcache_config[4] / clockRate;
@@ -908,8 +929,8 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
       debug ? 1
-            : XML->sys.core[ithCore].memory_ports; // usually In-order has 1
-                                                   // and OOO has 2 at least.
+            : XML->sys.core[ithCore].memory_ports;  // usually In-order has 1
+                                                    // and OOO has 2 at least.
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -928,7 +949,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = 1;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz = XML->sys.core[ithCore].sharedmemory.buffer_sizes[0] *
                           interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -962,7 +983,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   data = sharedmemory.caches->l_ip.line_sz;
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = 1;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz =
       data * XML->sys.core[ithCore].sharedmemory.buffer_sizes[1];
   interface_ip.assoc = 0;
@@ -993,13 +1014,13 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
 
   // sharedmemory prefetch buffer
   tag = XML->sys.physical_address_width +
-        EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                        // merge.
+        EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                         // merge.
   data = sharedmemory.caches->l_ip
-             .line_sz; // separate queue to prevent from cache polution.
+             .line_sz;  // separate queue to prevent from cache polution.
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = 1;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz = XML->sys.core[ithCore].sharedmemory.buffer_sizes[2] *
                           interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1089,7 +1110,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
       debug ? 1 : (int)XML->sys.core[ithCore].ccache.dcache_config[3];
   interface_ip.out_w = interface_ip.line_sz * 8;
   interface_ip.access_mode =
-      0; // debug?0:XML->sys.core[ithCore].ccache.dcache_config[5];
+      0;  // debug?0:XML->sys.core[ithCore].ccache.dcache_config[5];
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].ccache.dcache_config[4] / clockRate;
@@ -1103,8 +1124,8 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
       debug ? 1
-            : XML->sys.core[ithCore].memory_ports; // usually In-order has 1
-                                                   // and OOO has 2 at least.
+            : XML->sys.core[ithCore].memory_ports;  // usually In-order has 1
+                                                    // and OOO has 2 at least.
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -1123,7 +1144,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].ccache.buffer_sizes[0] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1157,7 +1178,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   data = ccache.caches->l_ip.line_sz;
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz = data * XML->sys.core[ithCore].ccache.buffer_sizes[1];
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
@@ -1186,13 +1207,13 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
 
   // prefetch buffer
   tag = XML->sys.physical_address_width +
-        EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                        // merge.
+        EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                         // merge.
   data = ccache.caches->l_ip
-             .line_sz; // separate queue to prevent from cache polution.
+             .line_sz;  // separate queue to prevent from cache polution.
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].ccache.buffer_sizes[2] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1280,7 +1301,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
       debug ? 1 : (int)XML->sys.core[ithCore].tcache.dcache_config[3];
   interface_ip.out_w = interface_ip.line_sz * 8;
   interface_ip.access_mode =
-      0; // debug?0:XML->sys.core[ithCore].tcache.dcache_config[5];
+      0;  // debug?0:XML->sys.core[ithCore].tcache.dcache_config[5];
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].tcache.dcache_config[4] / clockRate;
@@ -1294,8 +1315,8 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
       debug ? 1
-            : XML->sys.core[ithCore].memory_ports; // usually In-order has 1
-                                                   // and OOO has 2 at least.
+            : XML->sys.core[ithCore].memory_ports;  // usually In-order has 1
+                                                    // and OOO has 2 at least.
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -1314,7 +1335,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].tcache.buffer_sizes[0] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1348,7 +1369,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   data = tcache.caches->l_ip.line_sz;
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz = data * XML->sys.core[ithCore].tcache.buffer_sizes[1];
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
@@ -1377,13 +1398,13 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
 
   // prefetch buffer
   tag = XML->sys.physical_address_width +
-        EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                        // merge.
+        EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                         // merge.
   data = tcache.caches->l_ip
-             .line_sz; // separate queue to prevent from cache polution.
+             .line_sz;  // separate queue to prevent from cache polution.
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].tcache.buffer_sizes[2] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1471,7 +1492,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
       debug ? 1 : (int)XML->sys.core[ithCore].dcache.dcache_config[3];
   interface_ip.out_w = interface_ip.line_sz * 8;
   interface_ip.access_mode =
-      0; // debug?0:XML->sys.core[ithCore].dcache.dcache_config[5];
+      0;  // debug?0:XML->sys.core[ithCore].dcache.dcache_config[5];
   interface_ip.throughput =
       debug ? 1.0 / clockRate
             : XML->sys.core[ithCore].dcache.dcache_config[4] / clockRate;
@@ -1485,8 +1506,8 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
       debug ? 1
-            : XML->sys.core[ithCore].memory_ports; // usually In-order has 1
-                                                   // and OOO has 2 at least.
+            : XML->sys.core[ithCore].memory_ports;  // usually In-order has 1
+                                                    // and OOO has 2 at least.
   interface_ip.num_rd_ports = 0;
   interface_ip.num_wr_ports = 0;
   interface_ip.num_se_rd_ports = 0;
@@ -1505,7 +1526,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].dcache.buffer_sizes[0] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1539,7 +1560,7 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   data = dcache.caches->l_ip.line_sz;
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz = data * XML->sys.core[ithCore].dcache.buffer_sizes[1];
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
@@ -1568,13 +1589,13 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
 
   // prefetch buffer
   tag = XML->sys.physical_address_width +
-        EXTRA_TAG_BITS; // check with previous entries to decide wthether to
-                        // merge.
+        EXTRA_TAG_BITS;  // check with previous entries to decide wthether to
+                         // merge.
   data = dcache.caches->l_ip
-             .line_sz; // separate queue to prevent from cache polution.
+             .line_sz;  // separate queue to prevent from cache polution.
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
-  interface_ip.line_sz = data; // int(pow(2.0,ceil(log2(data))));
+  interface_ip.line_sz = data;  // int(pow(2.0,ceil(log2(data))));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].dcache.buffer_sizes[2] * interface_ip.line_sz;
   interface_ip.assoc = 0;
@@ -1716,13 +1737,17 @@ LoadStoreU::LoadStoreU(ParseXML *XML_interface, int ithCore_,
   }
 }
 
-MemManU::MemManU(ParseXML *XML_interface, int ithCore_,
-                 InputParameter *interface_ip_, const CoreDynParam &dyn_p_,
+MemManU::MemManU(ParseXML* XML_interface, int ithCore_,
+                 InputParameter* interface_ip_, const CoreDynParam& dyn_p_,
                  bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), itlb(0), dtlb(0), exist(exist_) {
-  if (!exist)
-    return;
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      itlb(0),
+      dtlb(0),
+      exist(exist_) {
+  if (!exist) return;
   int tag, data;
   bool debug = false;
 
@@ -1742,10 +1767,10 @@ MemManU::MemManU(ParseXML *XML_interface, int ithCore_,
          int(floor(log2(XML->sys.virtual_memory_page_size)));
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].itlb.number_entries *
-      interface_ip.line_sz; //*XML->sys.core[ithCore].number_hardware_threads;
+      interface_ip.line_sz;  //*XML->sys.core[ithCore].number_hardware_threads;
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
   interface_ip.out_w = interface_ip.line_sz * 8;
@@ -1783,10 +1808,10 @@ MemManU::MemManU(ParseXML *XML_interface, int ithCore_,
   interface_ip.specific_tag = 1;
   interface_ip.tag_w = tag;
   interface_ip.line_sz =
-      int(ceil(data / 8.0)); // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
+      int(ceil(data / 8.0));  // int(ceil(pow(2.0,ceil(log2(data)))/8.0));
   interface_ip.cache_sz =
       XML->sys.core[ithCore].dtlb.number_entries *
-      interface_ip.line_sz; //*XML->sys.core[ithCore].number_hardware_threads;
+      interface_ip.line_sz;  //*XML->sys.core[ithCore].number_hardware_threads;
   interface_ip.assoc = 0;
   interface_ip.nbanks = 1;
   interface_ip.out_w = interface_ip.line_sz * 8;
@@ -1814,19 +1839,24 @@ MemManU::MemManU(ParseXML *XML_interface, int ithCore_,
 }
 //#define FERMI
 
-RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
-             InputParameter *interface_ip_, const CoreDynParam &dyn_p_,
+RegFU::RegFU(ParseXML* XML_interface, int ithCore_,
+             InputParameter* interface_ip_, const CoreDynParam& dyn_p_,
              double exClockRate, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), IRF(0), FRF(0), RFWIN(0), exist(exist_) {
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      IRF(0),
+      FRF(0),
+      RFWIN(0),
+      exist(exist_) {
   /*
    * processors have separate architectural register files for each thread.
    * therefore, the bypass buses need to travel across all the register files.
    */
-  if (!exist)
-    return;
+  if (!exist) return;
   int data;
-  clockRate = exClockRate; // coredynp.clockRate;
+  clockRate = exClockRate;  // coredynp.clockRate;
   executionTime = coredynp.executionTime;
   /*********************************************************************************
    * OC stage modelling (Syed Gilani)
@@ -1862,12 +1892,12 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   interface_ip.pure_ram = true;
 
   interface_ip.line_sz =
-      16; // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/4 ;//2
-          // for Tesla as RF width half of SIMD width
+      16;  // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/4 ;//2
+           // for Tesla as RF width half of SIMD width
 
   interface_ip.line_sz =
-      16; // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/2 ;//2
-          // for Tesla as RF width half of SIMD width
+      16;  // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/2 ;//2
+           // for Tesla as RF width half of SIMD width
 
   interface_ip.cache_sz = coredynp.num_IRF_entry * 4;
   interface_ip.assoc = 1;
@@ -1875,13 +1905,13 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
 
   interface_ip.out_w =
       interface_ip.line_sz *
-      8; // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/4;
-         // //2 for Tesla and 4 for Fermi
+      8;  // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/4;
+          // //2 for Tesla and 4 for Fermi
 
   interface_ip.out_w =
       interface_ip.line_sz *
-      8; // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/2;
-         // //2 for Tesla and 4 for Fermi
+      8;  // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/2;
+          // //2 for Tesla and 4 for Fermi
 
   interface_ip.access_mode = 1;
   interface_ip.throughput = 1 / (clockRate);
@@ -1891,10 +1921,10 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_leak_power = 1;
   interface_ip.obj_func_cycle_t = 0;
   interface_ip.num_rw_ports =
-      0; // this is the transfer port for saving/restoring states when
-         // exceptions happen.
-  interface_ip.num_rd_ports = 1; // 2*coredynp.peak_issueW;
-  interface_ip.num_wr_ports = 1; // coredynp.peak_issueW;
+      0;  // this is the transfer port for saving/restoring states when
+          // exceptions happen.
+  interface_ip.num_rd_ports = 1;  // 2*coredynp.peak_issueW;
+  interface_ip.num_wr_ports = 1;  // coredynp.peak_issueW;
   interface_ip.num_se_rd_ports = 0;
   IRF = new ArrayST(&interface_ip, "Integer Register File", Core_device,
                     coredynp.opt_local, coredynp.core_ty);
@@ -1923,12 +1953,12 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   interface_ip.pure_ram = true;
 
   interface_ip.line_sz =
-      4; // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/4 ;//2
-         // for Tesla as RF width half of SIMD width
+      4;  // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/4 ;//2
+          // for Tesla as RF width half of SIMD width
 
   interface_ip.line_sz =
-      4; // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/2 ;//2
-         // for Tesla as RF width half of SIMD width
+      4;  // int(ceil(data/32.0))*4 * XML->sys.core[ithCore].simd_width/2 ;//2
+          // for Tesla as RF width half of SIMD width
 
   interface_ip.cache_sz = 8 * 4;
   interface_ip.assoc = 1;
@@ -1936,13 +1966,13 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
 
   interface_ip.out_w =
       interface_ip
-          .line_sz; // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/4;
-                    // //2 for Tesla and 4 for Fermi
+          .line_sz;  // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/4;
+                     // //2 for Tesla and 4 for Fermi
 
   interface_ip.out_w =
       interface_ip
-          .line_sz; // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/2;
-                    // //2 for Tesla and 4 for Fermi
+          .line_sz;  // interface_ip.line_sz*XML->sys.core[ithCore].simd_width/2;
+                     // //2 for Tesla and 4 for Fermi
 
   interface_ip.access_mode = 1;
   interface_ip.throughput = 1.0 / (clockRate);
@@ -1952,10 +1982,10 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_leak_power = 1;
   interface_ip.obj_func_cycle_t = 0;
   interface_ip.num_rw_ports =
-      0; // this is the transfer port for saving/restoring states when
-         // exceptions happen.
-  interface_ip.num_rd_ports = 1; // 2*coredynp.peak_issueW;
-  interface_ip.num_wr_ports = 1; // coredynp.peak_issueW;
+      0;  // this is the transfer port for saving/restoring states when
+          // exceptions happen.
+  interface_ip.num_rd_ports = 1;  // 2*coredynp.peak_issueW;
+  interface_ip.num_wr_ports = 1;  // coredynp.peak_issueW;
   interface_ip.num_se_rd_ports = 0;
   OPC = new ArrayST(&interface_ip, "Operand collectors", Core_device,
                     coredynp.opt_local, coredynp.core_ty);
@@ -1990,8 +2020,8 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   interface_ip.obj_func_leak_power = 0;
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
-      1; // this is the transfer port for saving/restoring states when
-         // exceptions happen.
+      1;  // this is the transfer port for saving/restoring states when
+          // exceptions happen.
   interface_ip.num_rd_ports = 2 * XML->sys.core[ithCore].issue_width;
   // interface_ip.num_rd_ports    = 1;
   interface_ip.num_wr_ports = XML->sys.core[ithCore].issue_width;
@@ -2017,8 +2047,8 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
     //*********************************REG_WIN************************************
     data =
         coredynp
-            .int_data_width; // ECC, and usually 2 regs are transfered together
-                             // during window shifting.Niagara Mega cell
+            .int_data_width;  // ECC, and usually 2 regs are transfered together
+                              // during window shifting.Niagara Mega cell
     interface_ip.is_cache = false;
     interface_ip.pure_cam = false;
     interface_ip.pure_ram = true;
@@ -2037,8 +2067,8 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
     interface_ip.obj_func_leak_power = 0;
     interface_ip.obj_func_cycle_t = 1;
     interface_ip.num_rw_ports =
-        1; // this is the transfer port for saving/restoring states when
-           // exceptions happen.
+        1;  // this is the transfer port for saving/restoring states when
+            // exceptions happen.
     interface_ip.num_rd_ports = 0;
     interface_ip.num_wr_ports = 0;
     interface_ip.num_se_rd_ports = 0;
@@ -2052,16 +2082,28 @@ RegFU::RegFU(ParseXML *XML_interface, int ithCore_,
   }
 }
 
-EXECU::EXECU(ParseXML *XML_interface, int ithCore_,
-             InputParameter *interface_ip_, double lsq_height_,
-             const CoreDynParam &dyn_p_, double exClockRate, bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      lsq_height(lsq_height_), coredynp(dyn_p_), rfu(0), scheu(0), fp_u(0),
-      exeu(0), mul(0), int_bypass(0), intTagBypass(0), int_mul_bypass(0),
-      intTag_mul_Bypass(0), fp_bypass(0), fpTagBypass(0), exist(exist_),
+EXECU::EXECU(ParseXML* XML_interface, int ithCore_,
+             InputParameter* interface_ip_, double lsq_height_,
+             const CoreDynParam& dyn_p_, double exClockRate, bool exist_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      lsq_height(lsq_height_),
+      coredynp(dyn_p_),
+      rfu(0),
+      scheu(0),
+      fp_u(0),
+      exeu(0),
+      mul(0),
+      int_bypass(0),
+      intTagBypass(0),
+      int_mul_bypass(0),
+      intTag_mul_Bypass(0),
+      fp_bypass(0),
+      fpTagBypass(0),
+      exist(exist_),
       rf_fu_clockRate(exClockRate) {
-  if (!exist)
-    return;
+  if (!exist) return;
   double fu_height = 0.0;
   clockRate = coredynp.clockRate;
   // cout <<"EXECU exClockRate: "<<exClockRate<<endl;
@@ -2099,13 +2141,13 @@ EXECU::EXECU(ParseXML *XML_interface, int ithCore_,
   } else {
     interface_ip.wt = Global;
     interface_ip.wire_is_mat_type =
-        2; // start from semi-global since local wires are already used
+        2;  // start from semi-global since local wires are already used
     interface_ip.wire_os_mat_type = 2;
-    interface_ip.throughput = 10.0 / clockRate; // Do not care
+    interface_ip.throughput = 10.0 / clockRate;  // Do not care
     interface_ip.latency = 10.0 / clockRate;
   }
 
-  if (coredynp.core_ty == Inorder) { //
+  if (coredynp.core_ty == Inorder) {  //
     int_bypass = new interconnect(
         "Int Bypass Data", Core_device, 1, 1,
         int(ceil(XML->sys.machine_bits / 32.0) * 32),
@@ -2152,8 +2194,8 @@ EXECU::EXECU(ParseXML *XML_interface, int ithCore_,
             bypass.area.set_area(bypass.area.get_area()
     +fpTagBypass->area.get_area());
     }*/
-  }      /* if (coredynp.core_ty==Inorder) */
-  else { // OOO
+  }       /* if (coredynp.core_ty==Inorder) */
+  else {  // OOO
     if (coredynp.scheu_ty == PhysicalRegFile) {
       /* For physical register based OOO,
        * data broadcast interconnects cover across functional units, lsq, inst
@@ -2268,12 +2310,23 @@ EXECU::EXECU(ParseXML *XML_interface, int ithCore_,
   area.set_area(area.get_area() /*+ bypass.area.get_area()*/);
 }
 
-RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
-                     InputParameter *interface_ip_, const CoreDynParam &dyn_p_,
+RENAMINGU::RENAMINGU(ParseXML* XML_interface, int ithCore_,
+                     InputParameter* interface_ip_, const CoreDynParam& dyn_p_,
                      bool exist_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      coredynp(dyn_p_), iFRAT(0), fFRAT(0), iRRAT(0), fRRAT(0), ifreeL(0),
-      ffreeL(0), idcl(0), fdcl(0), RAHT(0), exist(exist_) {
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      coredynp(dyn_p_),
+      iFRAT(0),
+      fFRAT(0),
+      iRRAT(0),
+      fRRAT(0),
+      ifreeL(0),
+      ffreeL(0),
+      idcl(0),
+      fdcl(0),
+      RAHT(0),
+      exist(exist_) {
   /*
    * Although renaming logic maybe be used in in-order processors,
    * McPAT assumes no renaming logic is used since the performance gain is very
@@ -2296,8 +2349,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
    *
    * Both RAM and CAM have same DCL
    */
-  if (!exist)
-    return;
+  if (!exist) return;
   int tag, data, out_w;
   //	interface_ip.wire_is_mat_type = 0;
   //	interface_ip.wire_os_mat_type = 0;
@@ -2308,13 +2360,13 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
     // integer pipeline
     if (coredynp.scheu_ty == PhysicalRegFile) {
       if (coredynp.rm_ty ==
-          RAMbased) { // FRAT with global checkpointing (GCs) please see paper
-                      // tech report for detailed explaintions
+          RAMbased) {  // FRAT with global checkpointing (GCs) please see paper
+                       // tech report for detailed explaintions
         data =
-            33; // int(ceil(coredynp.phy_ireg_width*(1+coredynp.globalCheckpoint)/8.0));
+            33;  // int(ceil(coredynp.phy_ireg_width*(1+coredynp.globalCheckpoint)/8.0));
         //			data
         //= int(ceil(coredynp.phy_ireg_width/8.0));
-        out_w = 1; // int(ceil(coredynp.phy_ireg_width/8.0));
+        out_w = 1;  // int(ceil(coredynp.phy_ireg_width/8.0));
         interface_ip.is_cache = false;
         interface_ip.pure_cam = false;
         interface_ip.pure_ram = true;
@@ -2331,7 +2383,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // the extra one port is for GCs
+        interface_ip.num_rw_ports = 1;  // the extra one port is for GCs
         interface_ip.num_rd_ports = 2 * coredynp.decodeW;
         interface_ip.num_wr_ports = coredynp.decodeW;
         interface_ip.num_se_rd_ports = 0;
@@ -2392,7 +2444,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // the extra one port is for GCs
+        interface_ip.num_rw_ports = 1;  // the extra one port is for GCs
         interface_ip.num_rd_ports = 2 * coredynp.fp_decodeW;
         interface_ip.num_wr_ports = coredynp.fp_decodeW;
         interface_ip.num_se_rd_ports = 0;
@@ -2409,7 +2461,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         tag = coredynp.arch_ireg_width;
         data = int(
             ceil((coredynp.arch_ireg_width + 1 * coredynp.globalCheckpoint) /
-                 8.0)); // the address of CAM needed to be sent out
+                 8.0));  // the address of CAM needed to be sent out
         out_w = int(ceil(coredynp.arch_ireg_width / 8.0));
         interface_ip.is_cache = true;
         interface_ip.pure_cam = false;
@@ -2428,7 +2480,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // for GCs
+        interface_ip.num_rw_ports = 1;  // for GCs
         interface_ip.num_rd_ports = coredynp.decodeW;
         interface_ip.num_wr_ports = coredynp.decodeW;
         interface_ip.num_se_rd_ports = 0;
@@ -2445,7 +2497,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         tag = coredynp.arch_freg_width;
         data = int(
             ceil((coredynp.arch_freg_width + 1 * coredynp.globalCheckpoint) /
-                 8.0)); // the address of CAM needed to be sent out
+                 8.0));  // the address of CAM needed to be sent out
         out_w = int(ceil(coredynp.arch_freg_width / 8.0));
         interface_ip.is_cache = true;
         interface_ip.pure_cam = false;
@@ -2464,7 +2516,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // for GCs
+        interface_ip.num_rw_ports = 1;  // for GCs
         interface_ip.num_rd_ports = coredynp.fp_decodeW;
         interface_ip.num_wr_ports = coredynp.fp_decodeW;
         interface_ip.num_se_rd_ports = 0;
@@ -2487,7 +2539,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
       interface_ip.line_sz = data;
       interface_ip.cache_sz = data *
                               XML->sys.core[ithCore].archi_Regs_IRF_size *
-                              2; // HACK to make it as least 64B
+                              2;  // HACK to make it as least 64B
       interface_ip.assoc = 1;
       interface_ip.nbanks = 1;
       interface_ip.out_w = interface_ip.line_sz * 8;
@@ -2517,7 +2569,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
       interface_ip.line_sz = data;
       interface_ip.cache_sz = data *
                               XML->sys.core[ithCore].archi_Regs_FRF_size *
-                              2; // HACK to make it as least 64B
+                              2;  // HACK to make it as least 64B
       interface_ip.assoc = 1;
       interface_ip.nbanks = 1;
       interface_ip.out_w = interface_ip.line_sz * 8;
@@ -2561,7 +2613,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
       interface_ip.obj_func_dyn_power = 0;
       interface_ip.obj_func_leak_power = 0;
       interface_ip.obj_func_cycle_t = 1;
-      interface_ip.num_rw_ports = 1; // TODO
+      interface_ip.num_rw_ports = 1;  // TODO
       interface_ip.num_rd_ports = coredynp.decodeW;
       interface_ip.num_wr_ports =
           coredynp.decodeW - 1 + XML->sys.core[ithCore].commit_width;
@@ -2606,7 +2658,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
 
       idcl = new dep_resource_conflict_check(
           &interface_ip, coredynp,
-          coredynp.phy_ireg_width); // TODO:Separate 2 sections See TR
+          coredynp.phy_ireg_width);  // TODO:Separate 2 sections See TR
       fdcl = new dep_resource_conflict_check(&interface_ip, coredynp,
                                              coredynp.phy_freg_width);
 
@@ -2640,11 +2692,11 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // the extra one port is for GCs
+        interface_ip.num_rw_ports = 1;  // the extra one port is for GCs
         interface_ip.num_rd_ports = 2 * coredynp.decodeW;
         interface_ip.num_wr_ports = coredynp.decodeW;
         interface_ip.num_se_rd_ports = 0;
-        interface_ip.num_search_ports = coredynp.commitW; // TODO
+        interface_ip.num_search_ports = coredynp.commitW;  // TODO
         iFRAT = new ArrayST(&interface_ip, "Int FrontRAT", Core_device,
                             coredynp.opt_local, coredynp.core_ty);
         iFRAT->local_result.adjust_area();
@@ -2675,12 +2727,12 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // the extra one port is for GCs
+        interface_ip.num_rw_ports = 1;  // the extra one port is for GCs
         interface_ip.num_rd_ports = 2 * coredynp.fp_decodeW;
         interface_ip.num_wr_ports = coredynp.fp_decodeW;
         interface_ip.num_se_rd_ports = 0;
         interface_ip.num_search_ports =
-            coredynp.fp_decodeW; // actually is fp commit width
+            coredynp.fp_decodeW;  // actually is fp commit width
         fFRAT = new ArrayST(&interface_ip, "Int FrontRAT", Core_device,
                             coredynp.opt_local, coredynp.core_ty);
         fFRAT->local_result.adjust_area();
@@ -2695,7 +2747,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         tag = coredynp.arch_ireg_width;
         data = int(ceil(coredynp.arch_ireg_width +
                         1 * coredynp.globalCheckpoint /
-                            8.0)); // the address of CAM needed to be sent out
+                            8.0));  // the address of CAM needed to be sent out
         out_w = int(ceil(coredynp.arch_ireg_width / 8.0));
         interface_ip.is_cache = true;
         interface_ip.pure_cam = false;
@@ -2714,9 +2766,9 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // for GCs
+        interface_ip.num_rw_ports = 1;  // for GCs
         interface_ip.num_rd_ports =
-            XML->sys.core[ithCore].decode_width; // 0;TODO
+            XML->sys.core[ithCore].decode_width;  // 0;TODO
         interface_ip.num_wr_ports = XML->sys.core[ithCore].decode_width;
         interface_ip.num_se_rd_ports = 0;
         interface_ip.num_search_ports = 2 * XML->sys.core[ithCore].decode_width;
@@ -2732,7 +2784,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         tag = coredynp.arch_freg_width;
         data = int(ceil(coredynp.arch_freg_width +
                         1 * coredynp.globalCheckpoint /
-                            8.0)); // the address of CAM needed to be sent out
+                            8.0));  // the address of CAM needed to be sent out
         out_w = int(ceil(coredynp.arch_freg_width / 8.0));
         interface_ip.is_cache = true;
         interface_ip.pure_cam = false;
@@ -2751,9 +2803,9 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
         interface_ip.obj_func_dyn_power = 0;
         interface_ip.obj_func_leak_power = 0;
         interface_ip.obj_func_cycle_t = 1;
-        interface_ip.num_rw_ports = 1; // for GCs
+        interface_ip.num_rw_ports = 1;  // for GCs
         interface_ip.num_rd_ports =
-            XML->sys.core[ithCore].decode_width; // 0;TODO;
+            XML->sys.core[ithCore].decode_width;  // 0;TODO;
         interface_ip.num_wr_ports = coredynp.fp_decodeW;
         interface_ip.num_se_rd_ports = 0;
         interface_ip.num_search_ports = 2 * coredynp.fp_decodeW;
@@ -2784,7 +2836,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
       interface_ip.obj_func_dyn_power = 0;
       interface_ip.obj_func_leak_power = 0;
       interface_ip.obj_func_cycle_t = 1;
-      interface_ip.num_rw_ports = 1; // TODO
+      interface_ip.num_rw_ports = 1;  // TODO
       interface_ip.num_rd_ports = XML->sys.core[ithCore].decode_width;
       interface_ip.num_wr_ports = XML->sys.core[ithCore].decode_width - 1 +
                                   XML->sys.core[ithCore].commit_width;
@@ -2798,7 +2850,7 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
 
       idcl = new dep_resource_conflict_check(
           &interface_ip, coredynp,
-          coredynp.phy_ireg_width); // TODO:Separate 2 sections See TR
+          coredynp.phy_ireg_width);  // TODO:Separate 2 sections See TR
       fdcl = new dep_resource_conflict_check(&interface_ip, coredynp,
                                              coredynp.phy_freg_width);
     }
@@ -2810,15 +2862,23 @@ RENAMINGU::RENAMINGU(ParseXML *XML_interface, int ithCore_,
      */
     idcl = new dep_resource_conflict_check(
         &interface_ip, coredynp,
-        coredynp.phy_ireg_width); // TODO:Separate 2 sections See TR
+        coredynp.phy_ireg_width);  // TODO:Separate 2 sections See TR
     fdcl = new dep_resource_conflict_check(&interface_ip, coredynp,
                                            coredynp.phy_freg_width);
   }
 }
 
-Core::Core(ParseXML *XML_interface, int ithCore_, InputParameter *interface_ip_)
-    : XML(XML_interface), ithCore(ithCore_), interface_ip(*interface_ip_),
-      ifu(0), lsu(0), mmu(0), exu(0), rnu(0), corepipe(0), undiffCore(0),
+Core::Core(ParseXML* XML_interface, int ithCore_, InputParameter* interface_ip_)
+    : XML(XML_interface),
+      ithCore(ithCore_),
+      interface_ip(*interface_ip_),
+      ifu(0),
+      lsu(0),
+      mmu(0),
+      exu(0),
+      rnu(0),
+      corepipe(0),
+      undiffCore(0),
       l2cache(0) {
   /**
    * Testing: (to be removed) added by syed
@@ -2910,8 +2970,7 @@ Core::Core(ParseXML *XML_interface, int ithCore_, InputParameter *interface_ip_)
 }
 
 void BranchPredictor::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   double r_access;
   double w_access;
   if (is_tdp) {
@@ -2943,7 +3002,7 @@ void BranchPredictor::computeEnergy(bool is_tdp) {
     w_access =
         XML->sys.core[ithCore].branch_mispredictions +
         0.1 * XML->sys.core[ithCore]
-                  .branch_instructions; // 10% of BR will flip internal bits//0
+                  .branch_instructions;  // 10% of BR will flip internal bits//0
     globalBPT->stats_t.readAc.access = r_access;
     globalBPT->stats_t.writeAc.access = w_access;
     globalBPT->rtp_stats = globalBPT->stats_t;
@@ -3027,8 +3086,7 @@ void BranchPredictor::computeEnergy(bool is_tdp) {
 }
 
 void BranchPredictor::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -3154,12 +3212,11 @@ void BranchPredictor::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 
 void InstFetchU::computeEnergy(bool is_tdp) {
   executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Syed
+      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);  // Syed
   // cout <<"IFU: execution time:
   // "<<XML->sys.total_cycles/(XML->sys.target_core_clockrate*1e6)<<endl; cout
   // <<"IFU: total cycles"<<XML->sys.total_cycles<<endl;
-  if (!exist)
-    return;
+  if (!exist) return;
   if (is_tdp) {
     // init stats for Peak
     icache.caches->stats_t.readAc.access =
@@ -3194,9 +3251,9 @@ void InstFetchU::computeEnergy(bool is_tdp) {
 
     if (coredynp.predictionW > 0) {
       BTB->stats_t.readAc.access =
-          coredynp.predictionW; // XML->sys.core[ithCore].BTB.read_accesses;
+          coredynp.predictionW;  // XML->sys.core[ithCore].BTB.read_accesses;
       BTB->stats_t.writeAc.access =
-          0; // XML->sys.core[ithCore].BTB.write_accesses;
+          0;  // XML->sys.core[ithCore].BTB.write_accesses;
     }
 
     ID_inst->stats_t.readAc.access = coredynp.decodeW;
@@ -3209,7 +3266,7 @@ void InstFetchU::computeEnergy(bool is_tdp) {
   } /* if (is_tdp) */
   else {
     rt_power.reset();
-    icache.rt_power.reset(); // Jingwen
+    icache.rt_power.reset();  // Jingwen
     // init stats for Runtime Dynamic (RTP)
     // cout<< "****>>>>Icache stats:"<<endl;
     // cout<<"Read accesses: "<< XML->sys.core[ithCore].icache.read_accesses <<
@@ -3248,11 +3305,12 @@ void InstFetchU::computeEnergy(bool is_tdp) {
     if (coredynp.predictionW > 0) {
       BTB->stats_t.readAc.access =
           XML->sys.core[ithCore]
-              .BTB.read_accesses; // XML->sys.core[ithCore].branch_instructions;
+              .BTB
+              .read_accesses;  // XML->sys.core[ithCore].branch_instructions;
       BTB->stats_t.writeAc.access =
           XML->sys.core[ithCore]
               .BTB
-              .write_accesses; // XML->sys.core[ithCore].branch_mispredictions;
+              .write_accesses;  // XML->sys.core[ithCore].branch_mispredictions;
       BTB->rtp_stats = BTB->stats_t;
     }
     // cout<<"ID: total instructions: "<<
@@ -3281,16 +3339,16 @@ void InstFetchU::computeEnergy(bool is_tdp) {
        // icache.caches->stats_t.readAc.miss*icache.caches->local_result.tag_array2->power.readOp.dynamic+
        icache.caches->stats_t.readAc.miss *
            icache.caches->local_result.power.readOp
-               .dynamic + // assume tag data accessed in parallel
+               .dynamic +  // assume tag data accessed in parallel
        icache.caches->stats_t.readAc.miss *
            icache.caches->local_result.power.writeOp
-               .dynamic); // read miss in Icache cause a write to Icache
+               .dynamic);  // read miss in Icache cause a write to Icache
   icache.power_t.readOp.dynamic +=
       icache.missb->stats_t.readAc.access *
           icache.missb->local_result.power.searchOp.dynamic +
       icache.missb->stats_t.writeAc.access *
           icache.missb->local_result.power.writeOp
-              .dynamic; // each access to missb involves a CAM and a write
+              .dynamic;  // each access to missb involves a CAM and a write
   icache.power_t.readOp.dynamic +=
       icache.ifb->stats_t.readAc.access *
           icache.ifb->local_result.power.searchOp.dynamic +
@@ -3383,8 +3441,7 @@ void InstFetchU::computeEnergy(bool is_tdp) {
 }
 
 void InstFetchU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -3527,10 +3584,9 @@ void InstFetchU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 }
 
 void RENAMINGU::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   double pppm_t[4] = {1, 1, 1, 1};
-  if (is_tdp) { // init stats for Peak
+  if (is_tdp) {  // init stats for Peak
     if (coredynp.core_ty == OOO) {
       if (coredynp.scheu_ty == PhysicalRegFile) {
         if (coredynp.rm_ty == RAMbased) {
@@ -3561,15 +3617,15 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
         fRRAT->tdp_stats = fRRAT->stats_t;
 
         ifreeL->stats_t.readAc.access =
-            coredynp.decodeW; // ifreeL->l_ip.num_rd_ports;;
+            coredynp.decodeW;  // ifreeL->l_ip.num_rd_ports;;
         ifreeL->stats_t.writeAc.access =
-            coredynp.decodeW; // ifreeL->l_ip.num_wr_ports;
+            coredynp.decodeW;  // ifreeL->l_ip.num_wr_ports;
         ifreeL->tdp_stats = ifreeL->stats_t;
 
         ffreeL->stats_t.readAc.access =
-            coredynp.decodeW; // ffreeL->l_ip.num_rd_ports;
+            coredynp.decodeW;  // ffreeL->l_ip.num_rd_ports;
         ffreeL->stats_t.writeAc.access =
-            coredynp.decodeW; // ffreeL->l_ip.num_wr_ports;
+            coredynp.decodeW;  // ffreeL->l_ip.num_wr_ports;
         ffreeL->tdp_stats = ffreeL->stats_t;
       } else if (coredynp.scheu_ty == ReservationStation) {
         if (coredynp.rm_ty == RAMbased) {
@@ -3594,9 +3650,9 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
         }
         // Unified free list for both int and fp
         ifreeL->stats_t.readAc.access =
-            coredynp.decodeW; // ifreeL->l_ip.num_rd_ports;
+            coredynp.decodeW;  // ifreeL->l_ip.num_rd_ports;
         ifreeL->stats_t.writeAc.access =
-            coredynp.decodeW; // ifreeL->l_ip.num_wr_ports;
+            coredynp.decodeW;  // ifreeL->l_ip.num_wr_ports;
         ifreeL->tdp_stats = ifreeL->stats_t;
       }
       idcl->stats_t.readAc.access = coredynp.decodeW;
@@ -3612,7 +3668,7 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
       }
     }
 
-  } else { // init stats for Runtime Dynamic (RTP)
+  } else {  // init stats for Runtime Dynamic (RTP)
     if (coredynp.core_ty == OOO) {
       if (coredynp.scheu_ty == PhysicalRegFile) {
         if (coredynp.rm_ty == RAMbased) {
@@ -3637,15 +3693,15 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
 
         iRRAT->stats_t.readAc.access =
             XML->sys.core[ithCore]
-                .rename_writes; // Hack, should be (context switch + branch
-                                // mispredictions)*16
+                .rename_writes;  // Hack, should be (context switch + branch
+                                 // mispredictions)*16
         iRRAT->stats_t.writeAc.access = XML->sys.core[ithCore].rename_writes;
         iRRAT->rtp_stats = iRRAT->stats_t;
 
         fRRAT->stats_t.readAc.access =
             XML->sys.core[ithCore]
-                .fp_rename_writes; // Hack, should be (context switch + branch
-                                   // mispredictions)*16
+                .fp_rename_writes;  // Hack, should be (context switch + branch
+                                    // mispredictions)*16
         fRRAT->stats_t.writeAc.access = XML->sys.core[ithCore].fp_rename_writes;
         fRRAT->rtp_stats = fRRAT->stats_t;
 
@@ -3664,8 +3720,8 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
           iFRAT->stats_t.writeAc.access = XML->sys.core[ithCore].rename_writes;
           iFRAT->stats_t.searchAc.access =
               XML->sys.core[ithCore]
-                  .committed_int_instructions; // hack: not all committed
-                                               // instructions use regs.
+                  .committed_int_instructions;  // hack: not all committed
+                                                // instructions use regs.
           iFRAT->rtp_stats = iFRAT->stats_t;
 
           fFRAT->stats_t.readAc.access = XML->sys.core[ithCore].fp_rename_reads;
@@ -3691,8 +3747,8 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
         ifreeL->stats_t.writeAc.access =
             2 * (XML->sys.core[ithCore].rename_writes +
                  XML->sys.core[ithCore]
-                     .fp_rename_writes); // HACK: 2-> since some of renaming in
-                                         // the same group are terminated early
+                     .fp_rename_writes);  // HACK: 2-> since some of renaming in
+                                          // the same group are terminated early
         ifreeL->rtp_stats = ifreeL->stats_t;
       }
       idcl->stats_t.readAc.access = 3 * coredynp.decodeW * coredynp.decodeW *
@@ -3914,8 +3970,7 @@ void RENAMINGU::computeEnergy(bool is_tdp) {
 }
 
 void RENAMINGU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -4109,8 +4164,7 @@ void RENAMINGU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 }
 
 void SchedulerU::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   double ROB_duty_cycle;
   //	ROB_duty_cycle = ((coredynp.ALU_duty_cycle +
   // coredynp.num_muls>0?coredynp.MUL_duty_cycle:0
@@ -4124,10 +4178,10 @@ void SchedulerU::computeEnergy(bool is_tdp) {
     if (coredynp.core_ty == OOO) {
       int_inst_window->stats_t.readAc.access =
           coredynp.issueW *
-          coredynp.num_pipelines; // int_inst_window->l_ip.num_search_ports;
+          coredynp.num_pipelines;  // int_inst_window->l_ip.num_search_ports;
       int_inst_window->stats_t.writeAc.access =
           coredynp.issueW *
-          coredynp.num_pipelines; // int_inst_window->l_ip.num_wr_ports;
+          coredynp.num_pipelines;  // int_inst_window->l_ip.num_wr_ports;
       int_inst_window->stats_t.searchAc.access =
           coredynp.issueW * coredynp.num_pipelines;
       int_inst_window->tdp_stats = int_inst_window->stats_t;
@@ -4163,16 +4217,16 @@ void SchedulerU::computeEnergy(bool is_tdp) {
     } else if (coredynp.multithreaded) {
       int_inst_window->stats_t.readAc.access =
           coredynp.issueW *
-          coredynp.num_pipelines; // int_inst_window->l_ip.num_search_ports;
+          coredynp.num_pipelines;  // int_inst_window->l_ip.num_search_ports;
       int_inst_window->stats_t.writeAc.access =
           coredynp.issueW *
-          coredynp.num_pipelines; // int_inst_window->l_ip.num_wr_ports;
+          coredynp.num_pipelines;  // int_inst_window->l_ip.num_wr_ports;
       int_inst_window->stats_t.searchAc.access =
           coredynp.issueW * coredynp.num_pipelines;
       int_inst_window->tdp_stats = int_inst_window->stats_t;
     }
 
-  } else { // rtp
+  } else {  // rtp
     if (coredynp.core_ty == OOO) {
       int_inst_window->stats_t.readAc.access =
           XML->sys.core[ithCore].inst_window_reads;
@@ -4296,7 +4350,7 @@ void SchedulerU::computeEnergy(bool is_tdp) {
       power = power + int_inst_window->power;
     }
 
-  } else { // rtp
+  } else {  // rtp
     if (coredynp.core_ty == OOO) {
       int_inst_window->rt_power =
           int_inst_window->power_t +
@@ -4334,8 +4388,7 @@ void SchedulerU::computeEnergy(bool is_tdp) {
 }
 
 void SchedulerU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -4456,11 +4509,10 @@ void SchedulerU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 }
 
 void LoadStoreU::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
 
   executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Syed
+      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);  // Syed
 
   // RF crossbar power (Syed)
   xbar_shared->compute_power();
@@ -4798,7 +4850,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
 
     LSQ->stats_t.readAc.access = (XML->sys.core[ithCore].load_instructions +
                                   XML->sys.core[ithCore].store_instructions) *
-                                 2; // flush overhead considered
+                                 2;  // flush overhead considered
     LSQ->stats_t.writeAc.access = (XML->sys.core[ithCore].load_instructions +
                                    XML->sys.core[ithCore].store_instructions) *
                                   2;
@@ -4869,7 +4921,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
            (tcache.caches->stats_t.readAc.hit +
             tcache.caches->stats_t.writeAc.hit));
 
-  if (cache_p == Write_back) { // write miss will generate a write later
+  if (cache_p == Write_back) {  // write miss will generate a write later
     dcache.power_t.readOp.dynamic +=
         dcache.caches->stats_t.writeAc.miss *
         dcache.caches->local_result.power.writeOp.dynamic;
@@ -4889,7 +4941,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
           sharedmemory.missb->local_result.power.searchOp.dynamic +
       sharedmemory.missb->stats_t.writeAc.access *
           sharedmemory.missb->local_result.power.writeOp
-              .dynamic; // each access to missb involves a CAM and a write
+              .dynamic;  // each access to missb involves a CAM and a write
   sharedmemory.power_t.readOp.dynamic +=
       sharedmemory.ifb->stats_t.readAc.access *
           sharedmemory.ifb->local_result.power.searchOp.dynamic +
@@ -4913,7 +4965,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
           dcache.missb->local_result.power.searchOp.dynamic +
       dcache.missb->stats_t.writeAc.access *
           dcache.missb->local_result.power.writeOp
-              .dynamic; // each access to missb involves a CAM and a write
+              .dynamic;  // each access to missb involves a CAM and a write
   dcache.power_t.readOp.dynamic +=
       dcache.ifb->stats_t.readAc.access *
           dcache.ifb->local_result.power.searchOp.dynamic +
@@ -4937,7 +4989,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
           ccache.missb->local_result.power.searchOp.dynamic +
       ccache.missb->stats_t.writeAc.access *
           ccache.missb->local_result.power.writeOp
-              .dynamic; // each access to missb involves a CAM and a write
+              .dynamic;  // each access to missb involves a CAM and a write
   ccache.power_t.readOp.dynamic +=
       ccache.ifb->stats_t.readAc.access *
           ccache.ifb->local_result.power.searchOp.dynamic +
@@ -4961,7 +5013,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
           tcache.missb->local_result.power.searchOp.dynamic +
       tcache.missb->stats_t.writeAc.access *
           tcache.missb->local_result.power.writeOp
-              .dynamic; // each access to missb involves a CAM and a write
+              .dynamic;  // each access to missb involves a CAM and a write
   tcache.power_t.readOp.dynamic +=
       tcache.ifb->stats_t.readAc.access *
           tcache.ifb->local_result.power.searchOp.dynamic +
@@ -4989,16 +5041,16 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
              LoadQ->local_result.power.readOp.dynamic) +
         LoadQ->stats_t.writeAc.access *
             LoadQ->local_result.power.writeOp
-                .dynamic; // every memory access invloves at least two
-                          // operations on LoadQ
+                .dynamic;  // every memory access invloves at least two
+                           // operations on LoadQ
 
     LSQ->power_t.readOp.dynamic +=
         LSQ->stats_t.readAc.access * (LSQ->local_result.power.searchOp.dynamic +
                                       LSQ->local_result.power.readOp.dynamic) +
         LSQ->stats_t.writeAc.access *
             LSQ->local_result.power.writeOp
-                .dynamic; // every memory access invloves at least two
-                          // operations on LSQ
+                .dynamic;  // every memory access invloves at least two
+                           // operations on LSQ
 
   } else {
     //	LSQ->power_t.readOp.dynamic  +=
@@ -5076,7 +5128,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
     //    			dcache.prefetchb->local_result.power +
     //    			dcache.wbb->local_result.power)*pppm_lkg;
     rt_power.reset();
-    sharedmemory.rt_power.reset(); // Jingwen
+    sharedmemory.rt_power.reset();  // Jingwen
     tcache.rt_power.reset();
     ccache.rt_power.reset();
     dcache.rt_power.reset();
@@ -5138,8 +5190,7 @@ void LoadStoreU::computeEnergy(bool is_tdp) {
 }
 
 void LoadStoreU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -5331,8 +5382,7 @@ void LoadStoreU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 }
 
 void MemManU::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (is_tdp) {
     // init stats for Peak
     itlb->stats_t.readAc.access = itlb->l_ip.num_search_ports;
@@ -5365,14 +5415,16 @@ void MemManU::computeEnergy(bool is_tdp) {
   itlb->power_t.reset();
   dtlb->power_t.reset();
   itlb->power_t.readOp.dynamic +=
-      itlb->stats_t.readAc.access * itlb->local_result.power.searchOp
-                                        .dynamic // FA spent most power in tag,
-                                                 // so use total access not hits
+      itlb->stats_t.readAc.access *
+          itlb->local_result.power.searchOp
+              .dynamic  // FA spent most power in tag,
+                        // so use total access not hits
       + itlb->stats_t.readAc.miss * itlb->local_result.power.writeOp.dynamic;
   dtlb->power_t.readOp.dynamic +=
-      dtlb->stats_t.readAc.access * dtlb->local_result.power.searchOp
-                                        .dynamic // FA spent most power in tag,
-                                                 // so use total access not hits
+      dtlb->stats_t.readAc.access *
+          dtlb->local_result.power.searchOp
+              .dynamic  // FA spent most power in tag,
+                        // so use total access not hits
       + dtlb->stats_t.readAc.miss * dtlb->local_result.power.writeOp.dynamic;
 
   if (is_tdp) {
@@ -5387,8 +5439,7 @@ void MemManU::computeEnergy(bool is_tdp) {
 }
 
 void MemManU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -5452,11 +5503,10 @@ void RegFU::computeEnergy(bool is_tdp) {
    * Therefore, the RF stats can only refer to either ARF or PRF;
    * And the same stats can be used for both.
    */
-  if (!exist)
-    return;
+  if (!exist) return;
 
   executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Syed
+      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);  // Syed
   // RF crossbar power (Syed Gilani)
   xbar_rfu->compute_power();
 
@@ -5486,8 +5536,8 @@ void RegFU::computeEnergy(bool is_tdp) {
     // FRF->l_ip.num_wr_ports*coredynp.FPU_duty_cycle*1.05*coredynp.num_fp_pipelines;
     // FRF->tdp_stats = FRF->stats_t;
     if (coredynp.regWindowing) {
-      RFWIN->stats_t.readAc.access = 0;  // 0.5*RFWIN->l_ip.num_rw_ports;
-      RFWIN->stats_t.writeAc.access = 0; // 0.5*RFWIN->l_ip.num_rw_ports;
+      RFWIN->stats_t.readAc.access = 0;   // 0.5*RFWIN->l_ip.num_rw_ports;
+      RFWIN->stats_t.writeAc.access = 0;  // 0.5*RFWIN->l_ip.num_rw_ports;
       RFWIN->tdp_stats = RFWIN->stats_t;
     }
   } /* if (is_tdp) */
@@ -5499,22 +5549,22 @@ void RegFU::computeEnergy(bool is_tdp) {
     // (each accessing 2 banks) need to be performed per operand
     if (XML->sys.architecture == 1) {
       IRF->stats_t.readAc.access =
-          (XML->sys.core[ithCore].int_regfile_reads / 32) * (4 * 2); /// 1.5;
+          (XML->sys.core[ithCore].int_regfile_reads / 32) * (4 * 2);  /// 1.5;
       IRF->stats_t.writeAc.access =
-          (XML->sys.core[ithCore].int_regfile_writes / 32) * (4 * 2); /// 1.5;
+          (XML->sys.core[ithCore].int_regfile_writes / 32) * (4 * 2);  /// 1.5;
     } else {
       IRF->stats_t.readAc.access =
           (XML->sys.core[ithCore].int_regfile_reads / 32) *
-          (2 * 4); /// 1.5;//TODO: no diff on archi and phy
+          (2 * 4);  /// 1.5;//TODO: no diff on archi and phy
       IRF->stats_t.writeAc.access =
-          (XML->sys.core[ithCore].int_regfile_writes / 32) * (2 * 4); /// 1.5;
+          (XML->sys.core[ithCore].int_regfile_writes / 32) * (2 * 4);  /// 1.5;
     }
     IRF->rtp_stats = IRF->stats_t;
 
     OPC->stats_t.readAc.access =
         (XML->sys.core[ithCore].int_regfile_reads) /*/1.5*/ +
         XML->sys.core[ithCore]
-            .non_rf_operands; /// 1.5;//TODO: no diff on archi and phy
+            .non_rf_operands;  /// 1.5;//TODO: no diff on archi and phy
     OPC->stats_t.writeAc.access = 0;
     OPC->rtp_stats = OPC->stats_t;
 
@@ -5619,8 +5669,7 @@ void RegFU::computeEnergy(bool is_tdp) {
 }
 
 void RegFU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -5737,13 +5786,12 @@ void RegFU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
 }
 
 void EXECU::computeEnergy(bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   // Syed
   double pppm_t[4] = {1, 1, 1, 1};
   double pppm_freqScaling[4] = {rf_fu_clockRate / clockRate, 1, 1, 1};
   executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Syed
+      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);  // Syed
 
   //	rfu->power.reset();
   rfu->rt_power.reset();
@@ -5769,16 +5817,16 @@ void EXECU::computeEnergy(bool is_tdp) {
     set_pppm(
         pppm_t, 2 * coredynp.ALU_cdb_duty_cycle, 2, 2,
         2 * coredynp
-                .ALU_cdb_duty_cycle); // 2 means two source operands needs to
-                                      // be passed for each int instruction.
+                .ALU_cdb_duty_cycle);  // 2 means two source operands needs to
+                                       // be passed for each int instruction.
     // bypass.power = bypass.power + intTagBypass->power*pppm_t +
     // int_bypass->power*pppm_t;
     if (coredynp.num_muls > 0) {
       set_pppm(
           pppm_t, 2 * coredynp.MUL_cdb_duty_cycle, 2, 2,
           2 * coredynp
-                  .MUL_cdb_duty_cycle); // 2 means two source operands needs to
-                                        // be passed for each int instruction.
+                  .MUL_cdb_duty_cycle);  // 2 means two source operands needs to
+                                         // be passed for each int instruction.
       // No conventional bypassing in GPU (Syed)
       // bypass.power = bypass.power + intTag_mul_Bypass->power*pppm_t +
       // int_mul_bypass->power*pppm_t;
@@ -5787,9 +5835,9 @@ void EXECU::computeEnergy(bool is_tdp) {
 
     if (coredynp.num_fpus > 0) {
       set_pppm(pppm_t, 3 * coredynp.FPU_cdb_duty_cycle, 3, 3,
-               3 * coredynp.FPU_cdb_duty_cycle); // 3 means three source
-                                                 // operands needs to be passed
-                                                 // for each fp instruction.
+               3 * coredynp.FPU_cdb_duty_cycle);  // 3 means three source
+                                                  // operands needs to be passed
+                                                  // for each fp instruction.
       // No conventional bypassing in GPU (Syed)
       // bypass.power = bypass.power + fp_bypass->power*pppm_t  +
       // fpTagBypass->power*pppm_t ;
@@ -5809,8 +5857,8 @@ void EXECU::computeEnergy(bool is_tdp) {
     if (coredynp.num_muls > 0) {
       set_pppm(pppm_t, XML->sys.core[ithCore].cdb_mul_accesses, 2, 2,
                XML->sys.core[ithCore]
-                   .cdb_mul_accesses); // 2 means two source operands needs to
-                                       // be passed for each int instruction.
+                   .cdb_mul_accesses);  // 2 means two source operands needs to
+                                        // be passed for each int instruction.
       // bypass.rt_power = bypass.rt_power + intTag_mul_Bypass->power*pppm_t +
       // int_mul_bypass->power*pppm_t;
       rt_power = rt_power + mul->rt_power;
@@ -5831,8 +5879,7 @@ void EXECU::computeEnergy(bool is_tdp) {
 }
 
 void EXECU::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
-  if (!exist)
-    return;
+  if (!exist) return;
   string indent_str(indent, ' ');
   string indent_str_next(indent + 2, ' ');
   bool long_channel = XML->sys.longer_channel_device;
@@ -6410,8 +6457,7 @@ void Core::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
   }
 }
 InstFetchU ::~InstFetchU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (IB) {
     delete IB;
     IB = 0;
@@ -6441,8 +6487,7 @@ InstFetchU ::~InstFetchU() {
 }
 
 BranchPredictor ::~BranchPredictor() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (globalBPT) {
     delete globalBPT;
     globalBPT = 0;
@@ -6470,8 +6515,7 @@ BranchPredictor ::~BranchPredictor() {
 }
 
 RENAMINGU ::~RENAMINGU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (iFRAT) {
     delete iFRAT;
     iFRAT = 0;
@@ -6511,8 +6555,7 @@ RENAMINGU ::~RENAMINGU() {
 }
 
 LoadStoreU ::~LoadStoreU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (LSQ) {
     delete LSQ;
     LSQ = 0;
@@ -6520,8 +6563,7 @@ LoadStoreU ::~LoadStoreU() {
 }
 
 MemManU ::~MemManU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (itlb) {
     delete itlb;
     itlb = 0;
@@ -6533,8 +6575,7 @@ MemManU ::~MemManU() {
 }
 
 RegFU ::~RegFU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (IRF) {
     delete IRF;
     IRF = 0;
@@ -6550,8 +6591,7 @@ RegFU ::~RegFU() {
 }
 
 SchedulerU ::~SchedulerU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (int_inst_window) {
     delete int_inst_window;
     int_inst_window = 0;
@@ -6571,8 +6611,7 @@ SchedulerU ::~SchedulerU() {
 }
 
 EXECU ::~EXECU() {
-  if (!exist)
-    return;
+  if (!exist) return;
   if (int_bypass) {
     delete int_bypass;
     int_bypass = 0;
@@ -6762,7 +6801,7 @@ void Core::set_core_param() {
       coredynp.num_ffreelist_entries = coredynp.num_FRF_entry =
           XML->sys.core[ithCore].phy_Regs_FRF_size;
     } else if (coredynp.scheu_ty ==
-               ReservationStation) { // ROB serves as Phy RF in RS based OOO
+               ReservationStation) {  // ROB serves as Phy RF in RS based OOO
       coredynp.phy_ireg_width =
           int(ceil(log2(XML->sys.core[ithCore].ROB_size)));
       coredynp.phy_freg_width =
@@ -6771,8 +6810,9 @@ void Core::set_core_param() {
       coredynp.num_ffreelist_entries = XML->sys.core[ithCore].ROB_size;
     }
   }
-  coredynp.globalCheckpoint = 32; // best check pointing entries for a 4~8 issue
-                                  // OOO should be 16~48;See TR for reference.
+  coredynp.globalCheckpoint =
+      32;  // best check pointing entries for a 4~8 issue OOO should be
+           // 16~48;See TR for reference.
   coredynp.perThreadState = 8;
   coredynp.instruction_length = 32;
   coredynp.clockRate = XML->sys.core[ithCore].clock_rate;

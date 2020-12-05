@@ -26,10 +26,10 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "../option_parser.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "../option_parser.h"
 
 #ifndef ADDRDEC_H
 #define ADDRDEC_H
@@ -58,7 +58,7 @@ struct addrdec_t {
 };
 
 class linear_to_raw_address_translation {
-public:
+ public:
   linear_to_raw_address_translation();
   void addrdec_setoption(option_parser_t opp);
   void init(unsigned int n_channel, unsigned int n_sub_partition_in_channel);
@@ -67,9 +67,9 @@ public:
   void addrdec_tlx(new_addr_type addr, addrdec_t *tlx) const;
   new_addr_type partition_address(new_addr_type addr) const;
 
-private:
+ private:
   void addrdec_parseoption(const char *option);
-  void sweep_test() const; // sanity check to ensure no overlapping
+  void sweep_test() const;  // sanity check to ensure no overlapping
 
   enum { CHIP = 0, BK = 1, ROW = 2, COL = 3, BURST = 4, N_ADDRDEC };
 

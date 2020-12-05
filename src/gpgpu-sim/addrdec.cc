@@ -27,11 +27,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "addrdec.h"
+#include <math.h>
+#include <string.h>
 #include "../option_parser.h"
 #include "gpu-sim.h"
 #include "hashing.h"
-#include <math.h>
-#include <string.h>
 
 static long int powli(long int x, long int y);
 static unsigned int LOGB2_32(unsigned int v);
@@ -75,8 +75,8 @@ void linear_to_raw_address_translation::addrdec_setoption(option_parser_t opp) {
       "0");
 }
 
-new_addr_type
-linear_to_raw_address_translation::partition_address(new_addr_type addr) const {
+new_addr_type linear_to_raw_address_translation::partition_address(
+    new_addr_type addr) const {
   if (!gap) {
     return addrdec_packbits(~(addrdec_mask[CHIP] | sub_partition_id_mask), addr,
                             64, 0);
@@ -131,66 +131,66 @@ void linear_to_raw_address_translation::addrdec_tlx(new_addr_type addr,
   }
 
   switch (memory_partition_indexing) {
-  case CONSECUTIVE:
-    // Do nothing
-    break;
-  case BITWISE_PERMUTATION: {
-    assert(!gap);
-    tlx->chip =
-        bitwise_hash_function(rest_of_addr_high_bits, tlx->chip, m_n_channel);
-    assert(tlx->chip < m_n_channel);
-    break;
-  }
-  case IPOLY: {
-    // assert(!gap);
-    unsigned sub_partition_addr_mask = m_n_sub_partition_in_channel - 1;
-    unsigned sub_partition = tlx->chip * m_n_sub_partition_in_channel +
-                             (tlx->bk & sub_partition_addr_mask);
-    sub_partition = ipoly_hash_function(rest_of_addr_high_bits, sub_partition,
-                                        nextPowerOf2_m_n_channel *
-                                            m_n_sub_partition_in_channel);
-
-    if (gap) // if it is not 2^n partitions, then take modular
-      sub_partition =
-          sub_partition % (m_n_channel * m_n_sub_partition_in_channel);
-
-    tlx->chip = sub_partition / m_n_sub_partition_in_channel;
-    tlx->sub_partition = sub_partition;
-    assert(tlx->chip < m_n_channel);
-    assert(tlx->sub_partition < m_n_channel * m_n_sub_partition_in_channel);
-    return;
-    break;
-  }
-  case RANDOM: {
-    // This is an unrealistic hashing using software hashtable
-    // we generate a random set for each memory address and save the value in
-    new_addr_type chip_address = (addr >> (ADDR_CHIP_S - log2sub_partition));
-    tr1_hash_map<new_addr_type, unsigned>::const_iterator got =
-        address_random_interleaving.find(chip_address);
-    if (got == address_random_interleaving.end()) {
-      unsigned new_chip_id =
-          rand() % (m_n_channel * m_n_sub_partition_in_channel);
-      address_random_interleaving[chip_address] = new_chip_id;
-      tlx->chip = new_chip_id / m_n_sub_partition_in_channel;
-      tlx->sub_partition = new_chip_id;
-    } else {
-      unsigned new_chip_id = got->second;
-      tlx->chip = new_chip_id / m_n_sub_partition_in_channel;
-      tlx->sub_partition = new_chip_id;
+    case CONSECUTIVE:
+      // Do nothing
+      break;
+    case BITWISE_PERMUTATION: {
+      assert(!gap);
+      tlx->chip =
+          bitwise_hash_function(rest_of_addr_high_bits, tlx->chip, m_n_channel);
+      assert(tlx->chip < m_n_channel);
+      break;
     }
+    case IPOLY: {
+      // assert(!gap);
+      unsigned sub_partition_addr_mask = m_n_sub_partition_in_channel - 1;
+      unsigned sub_partition = tlx->chip * m_n_sub_partition_in_channel +
+                               (tlx->bk & sub_partition_addr_mask);
+      sub_partition = ipoly_hash_function(
+          rest_of_addr_high_bits, sub_partition,
+          nextPowerOf2_m_n_channel * m_n_sub_partition_in_channel);
 
-    assert(tlx->chip < m_n_channel);
-    assert(tlx->sub_partition < m_n_channel * m_n_sub_partition_in_channel);
-    return;
-    break;
-  }
-  case CUSTOM:
-    /* No custom set function implemented */
-    // Do you custom index here
-    break;
-  default:
-    assert("\nUndefined set index function.\n" && 0);
-    break;
+      if (gap)  // if it is not 2^n partitions, then take modular
+        sub_partition =
+            sub_partition % (m_n_channel * m_n_sub_partition_in_channel);
+
+      tlx->chip = sub_partition / m_n_sub_partition_in_channel;
+      tlx->sub_partition = sub_partition;
+      assert(tlx->chip < m_n_channel);
+      assert(tlx->sub_partition < m_n_channel * m_n_sub_partition_in_channel);
+      return;
+      break;
+    }
+    case RANDOM: {
+      // This is an unrealistic hashing using software hashtable
+      // we generate a random set for each memory address and save the value in
+      new_addr_type chip_address = (addr >> (ADDR_CHIP_S - log2sub_partition));
+      tr1_hash_map<new_addr_type, unsigned>::const_iterator got =
+          address_random_interleaving.find(chip_address);
+      if (got == address_random_interleaving.end()) {
+        unsigned new_chip_id =
+            rand() % (m_n_channel * m_n_sub_partition_in_channel);
+        address_random_interleaving[chip_address] = new_chip_id;
+        tlx->chip = new_chip_id / m_n_sub_partition_in_channel;
+        tlx->sub_partition = new_chip_id;
+      } else {
+        unsigned new_chip_id = got->second;
+        tlx->chip = new_chip_id / m_n_sub_partition_in_channel;
+        tlx->sub_partition = new_chip_id;
+      }
+
+      assert(tlx->chip < m_n_channel);
+      assert(tlx->sub_partition < m_n_channel * m_n_sub_partition_in_channel);
+      return;
+      break;
+    }
+    case CUSTOM:
+      /* No custom set function implemented */
+      // Do you custom index here
+      break;
+    default:
+      assert("\nUndefined set index function.\n" && 0);
+      break;
   }
 
   // combine the chip address and the lower bits of DRAM bank address to form
@@ -226,46 +226,47 @@ void linear_to_raw_address_translation::addrdec_parseoption(
   int ofs = 63;
   while ((*cmapping) != '\0') {
     switch (*cmapping) {
-    case 'D':
-    case 'd':
-      assert(dramid_parsed != 1);
-      addrdec_mask[CHIP] |= (1ULL << ofs);
-      ofs--;
-      break;
-    case 'B':
-    case 'b':
-      addrdec_mask[BK] |= (1ULL << ofs);
-      ofs--;
-      break;
-    case 'R':
-    case 'r':
-      addrdec_mask[ROW] |= (1ULL << ofs);
-      ofs--;
-      break;
-    case 'C':
-    case 'c':
-      addrdec_mask[COL] |= (1ULL << ofs);
-      ofs--;
-      break;
-    case 'S':
-    case 's':
-      addrdec_mask[BURST] |= (1ULL << ofs);
-      addrdec_mask[COL] |= (1ULL << ofs);
-      ofs--;
-      break;
-    // ignore bit
-    case '0':
-      ofs--;
-      break;
-    // ignore character
-    case '|':
-    case ' ':
-    case '.':
-      break;
-    default:
-      fprintf(stderr,
-              "ERROR: Invalid address mapping character '%c' in option '%s'\n",
-              *cmapping, option);
+      case 'D':
+      case 'd':
+        assert(dramid_parsed != 1);
+        addrdec_mask[CHIP] |= (1ULL << ofs);
+        ofs--;
+        break;
+      case 'B':
+      case 'b':
+        addrdec_mask[BK] |= (1ULL << ofs);
+        ofs--;
+        break;
+      case 'R':
+      case 'r':
+        addrdec_mask[ROW] |= (1ULL << ofs);
+        ofs--;
+        break;
+      case 'C':
+      case 'c':
+        addrdec_mask[COL] |= (1ULL << ofs);
+        ofs--;
+        break;
+      case 'S':
+      case 's':
+        addrdec_mask[BURST] |= (1ULL << ofs);
+        addrdec_mask[COL] |= (1ULL << ofs);
+        ofs--;
+        break;
+      // ignore bit
+      case '0':
+        ofs--;
+        break;
+      // ignore character
+      case '|':
+      case ' ':
+      case '.':
+        break;
+      default:
+        fprintf(
+            stderr,
+            "ERROR: Invalid address mapping character '%c' in option '%s'\n",
+            *cmapping, option);
     }
     cmapping += 1;
   }
@@ -295,106 +296,105 @@ void linear_to_raw_address_translation::init(
     nchipbits++;
   }
   switch (gpgpu_mem_address_mask) {
-  case 0:
-    // old, added 2row bits, use #define ADDR_CHIP_S 10
-    ADDR_CHIP_S = 10;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000000300;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x0000000000001CFF;
-    break;
-  case 1:
-    ADDR_CHIP_S = 13;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 2:
-    ADDR_CHIP_S = 11;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 3:
-    ADDR_CHIP_S = 11;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x000000000FFFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
+    case 0:
+      // old, added 2row bits, use #define ADDR_CHIP_S 10
+      ADDR_CHIP_S = 10;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000000300;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x0000000000001CFF;
+      break;
+    case 1:
+      ADDR_CHIP_S = 13;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 2:
+      ADDR_CHIP_S = 11;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 3:
+      ADDR_CHIP_S = 11;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x000000000FFFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
 
-  case 14:
-    ADDR_CHIP_S = 14;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 15:
-    ADDR_CHIP_S = 15;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 16:
-    ADDR_CHIP_S = 16;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 6:
-    ADDR_CHIP_S = 6;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 5:
-    ADDR_CHIP_S = 5;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 100:
-    ADDR_CHIP_S = 1;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000000003;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x0000000000001FFC;
-    break;
-  case 103:
-    ADDR_CHIP_S = 3;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000000003;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x0000000000001FFC;
-    break;
-  case 106:
-    ADDR_CHIP_S = 6;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000001800;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x00000000000007FF;
-    break;
-  case 160:
-    // old, added 2row bits, use #define ADDR_CHIP_S 10
-    ADDR_CHIP_S = 6;
-    addrdec_mask[CHIP] = 0x0000000000000000;
-    addrdec_mask[BK] = 0x0000000000000300;
-    addrdec_mask[ROW] = 0x0000000007FFE000;
-    addrdec_mask[COL] = 0x0000000000001CFF;
+    case 14:
+      ADDR_CHIP_S = 14;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 15:
+      ADDR_CHIP_S = 15;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 16:
+      ADDR_CHIP_S = 16;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 6:
+      ADDR_CHIP_S = 6;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 5:
+      ADDR_CHIP_S = 5;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 100:
+      ADDR_CHIP_S = 1;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000000003;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x0000000000001FFC;
+      break;
+    case 103:
+      ADDR_CHIP_S = 3;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000000003;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x0000000000001FFC;
+      break;
+    case 106:
+      ADDR_CHIP_S = 6;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000001800;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x00000000000007FF;
+      break;
+    case 160:
+      // old, added 2row bits, use #define ADDR_CHIP_S 10
+      ADDR_CHIP_S = 6;
+      addrdec_mask[CHIP] = 0x0000000000000000;
+      addrdec_mask[BK] = 0x0000000000000300;
+      addrdec_mask[ROW] = 0x0000000007FFE000;
+      addrdec_mask[COL] = 0x0000000000001CFF;
 
-  default:
-    break;
+    default:
+      break;
   }
 
-  if (addrdec_option != NULL)
-    addrdec_parseoption(addrdec_option);
+  if (addrdec_option != NULL) addrdec_parseoption(addrdec_option);
 
   if (ADDR_CHIP_S != -1) {
     if (!gap) {
@@ -412,7 +412,7 @@ void linear_to_raw_address_translation::init(
         mask = (unsigned long long int)1 << i;
         addrdec_mask[CHIP] |= mask;
       }
-    } // otherwise, no need to change the masks
+    }  // otherwise, no need to change the masks
   } else {
     // make sure n_channel is power of two when explicit dram id mask is used
     assert((n_channel & (n_channel - 1)) == 0);
@@ -453,8 +453,7 @@ void linear_to_raw_address_translation::init(
       if ((addrdec_mask[BK] & ((unsigned long long int)1 << i)) != 0) {
         sub_partition_id_mask |= ((unsigned long long int)1 << i);
         pos++;
-        if (pos >= n_sub_partition_log2)
-          break;
+        if (pos >= n_sub_partition_log2) break;
       }
     }
   }
@@ -464,8 +463,7 @@ void linear_to_raw_address_translation::init(
     sweep_test();
   }
 
-  if (memory_partition_indexing == RANDOM)
-    srand(1);
+  if (memory_partition_indexing == RANDOM) srand(1);
 }
 
 #include "../tr1_hash_map.h"
@@ -490,7 +488,7 @@ bool operator<(const addrdec_t &x, const addrdec_t &y) {
 }
 
 class hash_addrdec_t {
-public:
+ public:
   size_t operator()(const addrdec_t &x) const {
     return (x.chip ^ x.bk ^ x.row ^ x.col ^ x.burst);
   }
@@ -530,8 +528,7 @@ void linear_to_raw_address_translation::sweep_test() const {
       history_map[tlx] = raw_addr;
     }
 
-    if ((raw_addr & 0xffff) == 0)
-      printf("%llu scaned\n", raw_addr);
+    if ((raw_addr & 0xffff) == 0) printf("%llu scaned\n", raw_addr);
   }
 }
 
@@ -544,7 +541,7 @@ void addrdec_t::print(FILE *fp) const {
   fprintf(fp, "\tsub_partition:%x ", sub_partition);
 }
 
-static long int powli(long int x, long int y) // compute x to the y
+static long int powli(long int x, long int y)  // compute x to the y
 {
   long int r = 1;
   int i;
@@ -587,8 +584,7 @@ unsigned next_powerOf2(unsigned n) {
   n = n - 1;
 
   // do till only one bit is left
-  while (n & n - 1)
-    n = n & (n - 1); // unset rightmost bit
+  while (n & n - 1) n = n & (n - 1);  // unset rightmost bit
 
   // n is now a power of two (less than n)
 

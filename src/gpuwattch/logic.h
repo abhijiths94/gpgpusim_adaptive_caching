@@ -38,6 +38,10 @@
 #ifndef LOGIC_H_
 #define LOGIC_H_
 
+#include <cassert>
+#include <cmath>
+#include <cstring>
+#include <iostream>
 #include "XML_Parse.h"
 #include "arch_const.h"
 #include "basic_components.h"
@@ -48,20 +52,16 @@
 #include "cacti/decoder.h"
 #include "cacti/parameter.h"
 #include "xmlParser.h"
-#include <cassert>
-#include <cmath>
-#include <cstring>
-#include <iostream>
 
 using namespace std;
 
 class selection_logic : public Component {
-public:
+ public:
   selection_logic(
       bool _is_default, int win_entries_, int issue_width_,
       const InputParameter *configure_interface,
       enum Device_ty device_ty_ = Core_device,
-      enum Core_type core_ty_ = Inorder); //, const ParseXML *_XML_interface);
+      enum Core_type core_ty_ = Inorder);  //, const ParseXML *_XML_interface);
   bool is_default;
   InputParameter l_ip;
   uca_org_t local_result;
@@ -73,11 +73,11 @@ public:
   enum Core_type core_ty;
 
   void selection_power();
-  void leakage_feedback(double temperature); // TODO
+  void leakage_feedback(double temperature);  // TODO
 };
 
 class dep_resource_conflict_check : public Component {
-public:
+ public:
   dep_resource_conflict_check(const InputParameter *configure_interface,
                               const CoreDynParam &dyn_p_, int compare_bits_,
                               bool _is_default = true);
@@ -100,7 +100,7 @@ public:
 };
 
 class inst_decoder : public Component {
-public:
+ public:
   inst_decoder(bool _is_default, const InputParameter *configure_interface,
                int opcode_length_, int num_decoders_, bool x86_,
                enum Device_ty device_ty_ = Core_device,
@@ -130,7 +130,7 @@ public:
 };
 
 class DFFCell : public Component {
-public:
+ public:
   DFFCell(bool _is_dram, double _WdecNANDn, double _WdecNANDp,
           double _cell_load, const InputParameter *configure_interface);
   InputParameter l_ip;
@@ -154,7 +154,7 @@ public:
 };
 
 class Pipeline : public Component {
-public:
+ public:
   Pipeline(const InputParameter *configure_interface,
            const CoreDynParam &dyn_p_, enum Device_ty device_ty_ = Core_device,
            bool _is_core_pipeline = true, bool _is_default = true);
@@ -191,7 +191,7 @@ public:
 //};
 
 class FunctionalUnit : public Component {
-public:
+ public:
   ParseXML *XML;
   int ithCore;
   InputParameter interface_ip;
@@ -216,7 +216,7 @@ public:
 };
 
 class UndiffCore : public Component {
-public:
+ public:
   UndiffCore(ParseXML *XML_interface, int ithCore_,
              InputParameter *interface_ip_, const CoreDynParam &dyn_p_,
              bool exist_ = true, bool embedded_ = false);

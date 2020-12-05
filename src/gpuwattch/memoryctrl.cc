@@ -79,7 +79,7 @@
  *
  */
 
-MCBackend::MCBackend(InputParameter *interface_ip_, const MCParam &mcp_,
+MCBackend::MCBackend(InputParameter* interface_ip_, const MCParam& mcp_,
                      enum MemoryCtrl_type mc_type_)
     : l_ip(*interface_ip_), mc_type(mc_type_), mcp(mcp_) {
   local_result = init_interface(&l_ip);
@@ -89,8 +89,8 @@ MCBackend::MCBackend(InputParameter *interface_ip_, const MCParam &mcp_,
 void MCBackend::compute() {
   // double max_row_addr_width = 20.0;//Current address 12~18bits
   double C_MCB, mc_power, backend_dyn,
-      backend_gates; //, refresh_period,refresh_freq;//Equivalent per bit Cap
-                     // for backend,
+      backend_gates;  //, refresh_period,refresh_freq;//Equivalent per bit Cap
+                      // for backend,
   double pmos_to_nmos_sizing_r = pmos_to_nmos_sz_ratio();
   double NMOS_sizing, PMOS_sizing;
 
@@ -100,7 +100,7 @@ void MCBackend::compute() {
       // (2.2927*log(peakDataTransferRate)-14.504)*memDataWidth/144.0*(l_ip.F_sz_um/0.09);
       area.set_area((2.7927 * log(mcp.peakDataTransferRate * 2) - 19.862) /
                     2.0 * mcp.dataBusWidth / 128.0 * (l_ip.F_sz_um / 0.09) *
-                    mcp.num_channels * 1e6); // um^2
+                    mcp.num_channels * 1e6);  // um^2
       // assuming the approximately same scaling factor as seen in processors.
       // C_MCB=0.2/1.3/1.3/266/64/0.09*g_ip.F_sz_um;//based on AMD Geode
       // processor which has a very basic mc on chip. C_MCB
@@ -111,52 +111,52 @@ void MCBackend::compute() {
       // by Lahiri et
       mc_power =
           4.32 *
-          0.1; // 4.32W@1GhzMHz @65nm Cadence ChipEstimator 10% for backend
+          0.1;  // 4.32W@1GhzMHz @65nm Cadence ChipEstimator 10% for backend
       C_MCB = mc_power / 1e9 / 72 / 1.1 / 1.1 * l_ip.F_sz_um / 0.065;
       power_t.readOp.dynamic =
           C_MCB * g_tp.peri_global.Vdd * g_tp.peri_global.Vdd *
-          (mcp.dataBusWidth /*+mcp.addressBusWidth*/); // per access energy in
-                                                       // memory controller
+          (mcp.dataBusWidth /*+mcp.addressBusWidth*/);  // per access energy in
+                                                        // memory controller
       power_t.readOp.leakage =
           area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
           cmos_Isub_leakage(g_tp.min_w_nmos_,
                             g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
       power_t.readOp.gate_leakage =
           area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
           cmos_Ig_leakage(g_tp.min_w_nmos_,
                           g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
 
     } else {
       NMOS_sizing = g_tp.min_w_nmos_;
       PMOS_sizing = g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r;
       area.set_area(0.15 * mcp.dataBusWidth / 72.0 * (l_ip.F_sz_um / 0.065) *
-                    (l_ip.F_sz_um / 0.065) * mcp.num_channels * 1e6); // um^2
+                    (l_ip.F_sz_um / 0.065) * mcp.num_channels * 1e6);  // um^2
       backend_dyn =
           0.9e-9 / 800e6 * mcp.clockRate / 12800 * mcp.peakDataTransferRate *
           mcp.dataBusWidth / 72.0 * g_tp.peri_global.Vdd / 1.1 *
           g_tp.peri_global.Vdd / 1.1 *
-          (l_ip.F_sz_nm / 65.0); // Average on DDR2/3 protocol controller and
-                                 // DDRC 1600/800A in Cadence ChipEstimate
+          (l_ip.F_sz_nm / 65.0);  // Average on DDR2/3 protocol controller and
+                                  // DDRC 1600/800A in Cadence ChipEstimate
       // Scaling to technology and DIMM feature. The base IP support
       // DDR3-1600(PC3 12800)
-      backend_gates =
-          50000 * mcp.dataBusWidth / 64.0; // 5000 is from Cadence ChipEstimator
+      backend_gates = 50000 * mcp.dataBusWidth /
+                      64.0;  // 5000 is from Cadence ChipEstimator
 
       power_t.readOp.dynamic = backend_dyn;
       power_t.readOp.leakage =
           (backend_gates)*cmos_Isub_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
       power_t.readOp.gate_leakage =
           (backend_gates)*cmos_Ig_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
     }
-  } else { // skip old model
+  } else {  // skip old model
     cout << "Unknown memory controllers" << endl;
     exit(0);
     area.set_area(0.243 * mcp.dataBusWidth /
-                  8); // area based on Cadence ChipEstimator for 8bit bus
+                  8);  // area based on Cadence ChipEstimator for 8bit bus
     // mc_power = 4.32*0.1;//4.32W@1GhzMHz @65nm Cadence ChipEstimator 10% for
     // backend
     C_MCB = mc_power / 1e9 / 72 / 1.1 / 1.1 * l_ip.F_sz_um / 0.065;
@@ -164,12 +164,12 @@ void MCBackend::compute() {
         area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
         cmos_Isub_leakage(g_tp.min_w_nmos_,
                           g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-        g_tp.peri_global.Vdd; // unit W
+        g_tp.peri_global.Vdd;  // unit W
     power_t.readOp.gate_leakage =
         area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
         cmos_Ig_leakage(g_tp.min_w_nmos_,
                         g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-        g_tp.peri_global.Vdd; // unit W
+        g_tp.peri_global.Vdd;  // unit W
     power_t.readOp.dynamic *= 1.2;
     power_t.readOp.leakage *= 1.2;
     power_t.readOp.gate_leakage *= 1.2;
@@ -185,13 +185,13 @@ void MCBackend::compute() {
 void MCBackend::computeEnergy(bool is_tdp) {
   // backend uses internal data buswidth
   if (is_tdp) {
-    power.reset(); // Jingwen
+    power.reset();  // Jingwen
     // init stats for Peak
     stats_t.readAc.access = 0.5 * mcp.num_channels;
     stats_t.writeAc.access = 0.5 * mcp.num_channels;
     tdp_stats = stats_t;
   } else {
-    rt_power.reset(); // Jingwen
+    rt_power.reset();  // Jingwen
     // init stats for runtime power (RTP)
     // Jingwen: should use stats from XML object, modified in
     // MemoryController::computeEnergy
@@ -217,7 +217,7 @@ void MCBackend::computeEnergy(bool is_tdp) {
   }
 }
 
-MCPHY::MCPHY(InputParameter *interface_ip_, const MCParam &mcp_,
+MCPHY::MCPHY(InputParameter* interface_ip_, const MCParam& mcp_,
              enum MemoryCtrl_type mc_type_)
     : l_ip(*interface_ip_), mc_type(mc_type_), mcp(mcp_) {
   local_result = init_interface(&l_ip);
@@ -244,7 +244,7 @@ void MCPHY::compute() {
       // (6.4323*log(peakDataTransferRate)-34.76)*memDataWidth/128.0*(l_ip.F_sz_um/0.09);
       area.set_area((6.4323 * log(mcp.peakDataTransferRate * 2) - 48.134) *
                     mcp.dataBusWidth / 128.0 * (l_ip.F_sz_um / 0.09) *
-                    mcp.num_channels * 1e6 / 2); // TODO:/2
+                    mcp.num_channels * 1e6 / 2);  // TODO:/2
       // This is from curve fitting based on Niagara 1 and 2's PHY die photo.
       // This is power not energy, 10mw/Gb/s @90nm for each channel and scaling
       // down power.readOp.dynamic = 0.02*memAccesses*llcBlocksize*8;//change
@@ -256,12 +256,12 @@ void MCPHY::compute() {
           area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
           cmos_Isub_leakage(g_tp.min_w_nmos_,
                             g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
       power_t.readOp.gate_leakage =
           area.get_area() / 2 * (g_tp.scaling_factor.core_tx_density) *
           cmos_Ig_leakage(g_tp.min_w_nmos_,
                           g_tp.min_w_nmos_ * pmos_to_nmos_sizing_r, 1, inv) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
 
     } else {
       NMOS_sizing = g_tp.min_w_nmos_;
@@ -272,7 +272,7 @@ void MCPHY::compute() {
       area.set_area(1.3 * non_IO_percentage / 2133.0e6 * mcp.clockRate / 17066 *
                     mcp.peakDataTransferRate * mcp.dataBusWidth / 16.0 *
                     (l_ip.F_sz_um / 0.040) * (l_ip.F_sz_um / 0.040) *
-                    mcp.num_channels * 1e6); // um^2
+                    mcp.num_channels * 1e6);  // um^2
       phy_gates = 200000 * mcp.dataBusWidth / 64.0;
       power_per_gb_per_s = 0.01;
       // This is power not energy, 10mw/Gb/s @90nm for each channel and scaling
@@ -283,16 +283,16 @@ void MCPHY::compute() {
       power_t.readOp.leakage =
           (mcp.withPHY ? phy_gates : 0) *
           cmos_Isub_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
       power_t.readOp.gate_leakage =
           (mcp.withPHY ? phy_gates : 0) *
           cmos_Ig_leakage(NMOS_sizing, PMOS_sizing, 2, nand) *
-          g_tp.peri_global.Vdd; // unit W
+          g_tp.peri_global.Vdd;  // unit W
     }
 
   } else {
     area.set_area(0.4e6 / 2 * mcp.dataBusWidth /
-                  8); // area based on Cadence ChipEstimator for 8bit bus
+                  8);  // area based on Cadence ChipEstimator for 8bit bus
   }
 
   //  double phy_factor = (int)ceil(mcp.dataBusWidth/72.0);//Previous phy power
@@ -308,13 +308,13 @@ void MCPHY::compute() {
 
 void MCPHY::computeEnergy(bool is_tdp) {
   if (is_tdp) {
-    power.reset(); // Jingwen
+    power.reset();  // Jingwen
     // init stats for Peak
-    stats_t.readAc.access = 0.5 * mcp.num_channels; // time share on buses
+    stats_t.readAc.access = 0.5 * mcp.num_channels;  // time share on buses
     stats_t.writeAc.access = 0.5 * mcp.num_channels;
     tdp_stats = stats_t;
   } else {
-    rt_power.reset(); // Jingwen
+    rt_power.reset();  // Jingwen
     // init stats for runtime power (RTP)
     // Jingwen: should use stats from XML object, modified in
     // MemoryController::computeEnergy
@@ -352,17 +352,23 @@ void MCPHY::computeEnergy(bool is_tdp) {
   }
 }
 
-MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
-                       const MCParam &mcp_, enum MemoryCtrl_type mc_type_)
-    : XML(XML_interface), interface_ip(*interface_ip_), mc_type(mc_type_),
-      mcp(mcp_), MC_arb(0), frontendBuffer(0), readBuffer(0), writeBuffer(0),
+MCFrontEnd::MCFrontEnd(ParseXML* XML_interface, InputParameter* interface_ip_,
+                       const MCParam& mcp_, enum MemoryCtrl_type mc_type_)
+    : XML(XML_interface),
+      interface_ip(*interface_ip_),
+      mc_type(mc_type_),
+      mcp(mcp_),
+      MC_arb(0),
+      frontendBuffer(0),
+      readBuffer(0),
+      writeBuffer(0),
       coalesce_scale(1.0) {
   /* All computations are for a single MC
    *
    */
 
   int tag, data;
-  bool is_default = true; // indication for default setup
+  bool is_default = true;  // indication for default setup
 
   /* MC frontend engine channels share the same engines but logically
    * partitioned For all hardware inside MC. different channels do not share
@@ -410,10 +416,11 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
                           1, &interface_ip, Uncore_device);
 
   // read buffers.
-  data = (int)ceil(mcp.dataBusWidth / 8.0); // Support key words first operation
-                                            // //8 means converting bit to Byte
+  data =
+      (int)ceil(mcp.dataBusWidth / 8.0);  // Support key words first operation
+                                          // //8 means converting bit to Byte
   interface_ip.cache_sz =
-      data * XML->sys.mc.IO_buffer_size_per_channel; //*llcBlockSize;
+      data * XML->sys.mc.IO_buffer_size_per_channel;  //*llcBlockSize;
   interface_ip.line_sz = data;
   interface_ip.assoc = 1;
   interface_ip.nbanks = 1;
@@ -429,7 +436,7 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
   interface_ip.obj_func_leak_power = 0;
   interface_ip.obj_func_cycle_t = 1;
   interface_ip.num_rw_ports =
-      0; // XML->sys.mc.memory_channels_per_mc*2>2?2:XML->sys.mc.memory_channels_per_mc*2;
+      0;  // XML->sys.mc.memory_channels_per_mc*2>2?2:XML->sys.mc.memory_channels_per_mc*2;
   interface_ip.num_rd_ports = XML->sys.mc.memory_channels_per_mc;
   interface_ip.num_wr_ports = interface_ip.num_rd_ports;
   interface_ip.num_se_rd_ports = 0;
@@ -441,10 +448,11 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
                                       XML->sys.mc.memory_channels_per_mc);
 
   // write buffer
-  data = (int)ceil(mcp.dataBusWidth / 8.0); // Support key words first operation
-                                            // //8 means converting bit to Byte
+  data =
+      (int)ceil(mcp.dataBusWidth / 8.0);  // Support key words first operation
+                                          // //8 means converting bit to Byte
   interface_ip.cache_sz =
-      data * XML->sys.mc.IO_buffer_size_per_channel; //*llcBlockSize;
+      data * XML->sys.mc.IO_buffer_size_per_channel;  //*llcBlockSize;
   interface_ip.line_sz = data;
   interface_ip.assoc = 1;
   interface_ip.nbanks = 1;
@@ -482,8 +490,8 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
    *
    */
   data =
-      64; // Support key words first operation //8 means converting bit to Byte
-  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries; // PRT table;
+      64;  // Support key words first operation //8 means converting bit to Byte
+  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries;  // PRT table;
   interface_ip.line_sz = data;
   interface_ip.assoc = 1;
   interface_ip.nbanks = 1;
@@ -516,7 +524,7 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
    *
    */
   data = 2;
-  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries * 16; // PRT table;
+  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries * 16;  // PRT table;
   interface_ip.line_sz = data;
   interface_ip.assoc = 1;
   interface_ip.nbanks = 1;
@@ -544,7 +552,7 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
    * 1-byte data, PRT entries deep
    */
   data = 1;
-  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries; // PRT table;
+  interface_ip.cache_sz = data * XML->sys.mc.PRT_entries;  // PRT table;
   interface_ip.line_sz = data;
   interface_ip.assoc = 1;
   interface_ip.nbanks = 1;
@@ -571,7 +579,7 @@ MCFrontEnd::MCFrontEnd(ParseXML *XML_interface, InputParameter *interface_ip_,
 void DRAM::computeEnergy(bool is_tdp) {
   if (is_tdp) {
     power.reset();
-    return; /// not supporting TDP calculation for DRAM
+    return;  /// not supporting TDP calculation for DRAM
   }
   rt_power.reset();
   dramp.executionTime =
@@ -625,7 +633,7 @@ void MCFrontEnd::computeEnergy(bool is_tdp) {
     PRC->tdp_stats = threadMasks->stats_t;
 
   } else {
-    rt_power.reset(); // Jingwen
+    rt_power.reset();  // Jingwen
     // init stats for runtime power (RTP)
     frontendBuffer->stats_t.readAc.access =
         XML->sys.mc.memory_reads * mcp.llcBlockSize * 8.0 / mcp.dataBusWidth *
@@ -640,10 +648,10 @@ void MCFrontEnd::computeEnergy(bool is_tdp) {
 
     readBuffer->stats_t.readAc.access =
         XML->sys.mc.memory_reads * mcp.llcBlockSize * 8.0 /
-        mcp.dataBusWidth; // support key word first
+        mcp.dataBusWidth;  // support key word first
     readBuffer->stats_t.writeAc.access =
         XML->sys.mc.memory_reads * mcp.llcBlockSize * 8.0 /
-        mcp.dataBusWidth; // support key word first
+        mcp.dataBusWidth;  // support key word first
     readBuffer->rtp_stats = readBuffer->stats_t;
 
     writeBuffer->stats_t.readAc.access =
@@ -920,17 +928,22 @@ void MCFrontEnd::displayEnergy(uint32_t indent, int plevel, bool is_tdp) {
   }
 }
 
-DRAM::DRAM(ParseXML *XML_interface, InputParameter *interface_ip_,
+DRAM::DRAM(ParseXML* XML_interface, InputParameter* interface_ip_,
            enum Dram_type dram_type_)
     : XML(XML_interface), interface_ip(*interface_ip_), dram_type(dram_type_) {
   set_dram_param();
 }
-MemoryController::MemoryController(ParseXML *XML_interface,
-                                   InputParameter *interface_ip_,
+MemoryController::MemoryController(ParseXML* XML_interface,
+                                   InputParameter* interface_ip_,
                                    enum MemoryCtrl_type mc_type_,
                                    enum Dram_type dram_type_)
-    : XML(XML_interface), interface_ip(*interface_ip_), mc_type(mc_type_),
-      frontend(0), transecEngine(0), PHY(0), pipeLogic(0) {
+    : XML(XML_interface),
+      interface_ip(*interface_ip_),
+      mc_type(mc_type_),
+      frontend(0),
+      transecEngine(0),
+      PHY(0),
+      pipeLogic(0) {
   /* All computations are for a single MC
    *
    */
@@ -991,16 +1004,18 @@ MemoryController::MemoryController(ParseXML *XML_interface,
   /// clockNetwork.optimize_wire();
 }
 void MemoryController::computeEnergy(bool is_tdp) {
-  rt_power.reset(); // Jingwen
+  rt_power.reset();  // Jingwen
   frontend->rt_power.reset();
   transecEngine->rt_power.reset();
   dram->rt_power.reset();
-  mcp.executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Jingwen
+  mcp.executionTime = XML->sys.total_cycles /
+                      (XML->sys.target_core_clockrate * 1e6);  // Jingwen
   frontend->mcp.executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Jingwen
+      XML->sys.total_cycles /
+      (XML->sys.target_core_clockrate * 1e6);  // Jingwen
   transecEngine->mcp.executionTime =
-      XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6); // Jingwen
+      XML->sys.total_cycles /
+      (XML->sys.target_core_clockrate * 1e6);  // Jingwen
 
   /*Jingwen: give stats for backend and phy */
   transecEngine->mcp.reads = XML->sys.mc.memory_reads;
@@ -1012,12 +1027,11 @@ void MemoryController::computeEnergy(bool is_tdp) {
   transecEngine->computeEnergy(is_tdp);
   dram->computeEnergy(is_tdp);
   if (mcp.type == 0 || (mcp.type == 1 && mcp.withPHY)) {
-    if (!is_tdp)
-      PHY->rt_power.reset(); // Jingwen
+    if (!is_tdp) PHY->rt_power.reset();  // Jingwen
     PHY->mcp.reads = XML->sys.mc.memory_reads;
     PHY->mcp.writes = XML->sys.mc.memory_writes;
     PHY->mcp.executionTime = XML->sys.total_cycles /
-                             (XML->sys.target_core_clockrate * 1e6); // Jingwen
+                             (XML->sys.target_core_clockrate * 1e6);  // Jingwen
     PHY->computeEnergy(is_tdp);
   }
   if (is_tdp) {
@@ -1142,17 +1156,17 @@ void DRAM::set_dram_param() {
 
 void MemoryController::set_mc_param() {
   if (mc_type == MC) {
-    mcp.clockRate = XML->sys.mc.mc_clock * 2; // DDR double pumped
+    mcp.clockRate = XML->sys.mc.mc_clock * 2;  // DDR double pumped
     mcp.clockRate *= 1e6;
     mcp.executionTime =
         XML->sys.total_cycles / (XML->sys.target_core_clockrate * 1e6);
 
     mcp.llcBlockSize = int(ceil(XML->sys.mc.llc_line_length / 8.0)) +
-                       XML->sys.mc.llc_line_length; // ecc overhead
+                       XML->sys.mc.llc_line_length;  // ecc overhead
     mcp.dataBusWidth =
         int(ceil(XML->sys.mc.databus_width / 8.0)) + XML->sys.mc.databus_width;
-    mcp.addressBusWidth = int(
-        ceil(XML->sys.mc.addressbus_width)); // XML->sys.physical_address_width;
+    mcp.addressBusWidth = int(ceil(
+        XML->sys.mc.addressbus_width));  // XML->sys.physical_address_width;
     mcp.opcodeW = 16;
     mcp.num_mcs = XML->sys.mc.number_mcs;
     mcp.num_channels = XML->sys.mc.memory_channels_per_mc;
@@ -1165,8 +1179,8 @@ void MemoryController::set_mc_param() {
     //++++++++++++++PHY ++++++++++++++++++++++++++ //TODO needs better numbers
     // PHY.memAccesses=PHY.peakDataTransferRate;//this is the max power
     // PHY.llcBlocksize=llcBlockSize;
-    mcp.frontend_duty_cycle = 0.5; // for max power, the actual off-chip links
-                                   // is bidirectional but time shared
+    mcp.frontend_duty_cycle = 0.5;  // for max power, the actual off-chip links
+                                    // is bidirectional but time shared
     mcp.LVDS = XML->sys.mc.LVDS;
     mcp.type = XML->sys.mc.type;
     mcp.withPHY = XML->sys.mc.withPHY;
