@@ -61,7 +61,7 @@ mem_fetch::mem_fetch(const mem_access_t &access, const warp_inst_t *inst,
     : m_access(access)
 
 {
-  fprintf(stdout, "ABSO : MF request created ..... !!!! %s 0x%llX\n ", conv_acc_type(access.get_type()), access.get_addr());
+  DBPRINTF(stdout, "ABSO : MF request created ..... !!!! %s 0x%llX\n ", conv_acc_type(access.get_type()), access.get_addr());
   m_request_uid = sm_next_mf_request_uid++;
   m_access = access;
   if (inst) {
@@ -87,6 +87,7 @@ mem_fetch::mem_fetch(const mem_access_t &access, const warp_inst_t *inst,
   original_wr_mf = m_original_wr_mf;
   /* Bit to track access in L2 */
   m_was_accessed_prior = false;
+  bypass_predict = false;
   if (m_original_mf) {
     m_raw_addr.chip = m_original_mf->get_tlx_addr().chip;
     m_raw_addr.sub_partition = m_original_mf->get_tlx_addr().sub_partition;

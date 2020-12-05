@@ -998,6 +998,8 @@ class warp_inst_t : public inst_t {
     m_uid = 0;
     m_empty = true;
     m_config = NULL;
+    m_inst_cache_bypass_predicted = 2;
+
   }
   warp_inst_t(const core_config *config) {
     m_uid = 0;
@@ -1151,6 +1153,10 @@ class warp_inst_t : public inst_t {
   unsigned get_uid() const { return m_uid; }
   unsigned get_schd_id() const { return m_scheduler_id; }
   active_mask_t get_warp_active_mask() const { return m_warp_active_mask; }
+
+
+  /* Adaptive caching support */
+  int m_inst_cache_bypass_predicted;
 
  protected:
   unsigned m_uid;

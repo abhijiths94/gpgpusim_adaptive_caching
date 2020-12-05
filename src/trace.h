@@ -89,4 +89,18 @@ void init();
 
 #endif
 
+#define DBG_ENABLE 0u
+
+#if DBG_ENABLE
+
+#define DBPRINTF(...)              \
+  do{                             \
+    fprintf(__VA_ARGS__);         \
+  }while(0)
+
+#else
+#define DBPRINTF(...)\
+  do {                   \
+  } while (0)
+#endif /* DBG_ENABLE */
 #endif

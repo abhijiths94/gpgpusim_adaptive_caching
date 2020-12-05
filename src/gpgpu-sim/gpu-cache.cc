@@ -31,6 +31,7 @@
 #include "gpu-sim.h"
 #include "hashing.h"
 #include "stat-tool.h"
+#include "../trace.h"
 
 // used to allocate memory that is large enough to adapt the changes in cache
 // size across kernels
@@ -1136,7 +1137,7 @@ void baseline_cache::send_read_request(new_addr_type addr,
       m_tag_array->add_pending_line(mf);
     }
 
-    fprintf(stdout, "ABSO : send_read_request : addr %X\n", addr);
+    DBPRINTF(stdout, "ABSO : send_read_request : addr %X\n", addr);
     m_extra_mf_fields[mf] = extra_mf_fields(
         mshr_addr, mf->get_addr(), cache_index, mf->get_data_size(), m_config);
     mf->set_data_size(m_config.get_atom_sz());
@@ -1171,7 +1172,7 @@ cache_request_status data_cache::wr_hit_wb(new_addr_type addr,
                                            unsigned time,
                                            std::list<cache_event> &events,
                                            enum cache_request_status status) {
-  fprintf(stdout, "ABSO : wr_hit_wb\n");
+  DBPRINTF(stdout, "ABSO : wr_hit_wb\n");
   new_addr_type block_addr = m_config.block_addr(addr);
   m_tag_array->access(block_addr, time, cache_index, mf);  // update LRU state
   cache_block_t *block = m_tag_array->get_block(cache_index);
@@ -1186,7 +1187,7 @@ cache_request_status data_cache::wr_hit_wt(new_addr_type addr,
                                            unsigned time,
                                            std::list<cache_event> &events,
                                            enum cache_request_status status) {
-  fprintf(stdout, "ABSO : wr_hit_wt\n");
+  DBPRINTF(stdout, "ABSO : wr_hit_wt\n");
   if (miss_queue_full(0)) {
     m_stats.inc_fail_stats(mf->get_access_type(), MISS_QUEUE_FULL);
     return RESERVATION_FAIL;  // cannot handle request this cycle
@@ -1210,7 +1211,7 @@ cache_request_status data_cache::wr_hit_we(new_addr_type addr,
                                            unsigned time,
                                            std::list<cache_event> &events,
                                            enum cache_request_status status) {
-  fprintf(stdout, "ABSO : wr_hit_we\n");
+  DBPRINTF(stdout, "ABSO : wr_hit_we\n");
   if (miss_queue_full(0)) {
     m_stats.inc_fail_stats(mf->get_access_type(), MISS_QUEUE_FULL);
     return RESERVATION_FAIL;  // cannot handle request this cycle
@@ -1231,7 +1232,7 @@ enum cache_request_status data_cache::wr_hit_global_we_local_wb(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
 
-  fprintf(stdout, "ABSO : wr_hit_global_we_local_wb\n");
+  DBPRINTF(stdout, "ABSO : wr_hit_global_we_local_wb\n");
   bool evict = (mf->get_access_type() ==
                 GLOBAL_ACC_W);  // evict a line that hits on global memory write
   if (evict)
@@ -1250,7 +1251,7 @@ enum cache_request_status data_cache::wr_miss_wa_naive(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
 
-  fprintf(stdout, "ABSO : wr_miss_wa_naive\n");
+  DBPRINTF(stdout, "ABSO : wr_miss_wa_naive\n");
   new_addr_type block_addr = m_config.block_addr(addr);
   new_addr_type mshr_addr = m_config.mshr_addr(mf->get_addr());
 
@@ -1329,7 +1330,7 @@ enum cache_request_status data_cache::wr_miss_wa_fetch_on_write(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
 
-  fprintf(stdout, "ABSO : wr_miss_wa_fetch_on_write\n");
+  DBPRINTF(stdout, "ABSO : wr_miss_wa_fetch_on_write\n");
   new_addr_type block_addr = m_config.block_addr(addr);
   new_addr_type mshr_addr = m_config.mshr_addr(mf->get_addr());
 
@@ -1448,7 +1449,7 @@ enum cache_request_status data_cache::wr_miss_wa_lazy_fetch_on_read(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
   new_addr_type block_addr = m_config.block_addr(addr);
-  fprintf(stdout, "ABSO : wr_miss_wa_lazy_fetch_on_read\n");
+  DBPRINTF(stdout, "ABSO : wr_miss_wa_lazy_fetch_on_read\n");
   // if the request writes to the whole cache line/sector, then, write and set
   // cache line Modified. and no need to send read request to memory or reserve
   // mshr
@@ -1501,7 +1502,7 @@ enum cache_request_status data_cache::wr_miss_no_wa(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
     
-  fprintf(stdout, "ABSO : wr_miss_no_wa\n");
+  DBPRINTF(stdout, "ABSO : wr_miss_no_wa\n");
   if (miss_queue_full(0)) {
     m_stats.inc_fail_stats(mf->get_access_type(), MISS_QUEUE_FULL);
     return RESERVATION_FAIL;  // cannot handle request this cycle
@@ -1521,7 +1522,7 @@ enum cache_request_status data_cache::wr_miss_no_wa(
 enum cache_request_status data_cache::rd_hit_base(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
-  fprintf(stdout, "ABSO : rd_hit_base\n");
+  DBPRINTF(stdout, "ABSO : rd_hit_base\n");
   new_addr_type block_addr = m_config.block_addr(addr);
   m_tag_array->access(block_addr, time, cache_index, mf);
   // Atomics treated as global read/write requests - Perform read, mark line as
@@ -1542,7 +1543,7 @@ enum cache_request_status data_cache::rd_hit_base(
 enum cache_request_status data_cache::rd_miss_base(
     new_addr_type addr, unsigned cache_index, mem_fetch *mf, unsigned time,
     std::list<cache_event> &events, enum cache_request_status status) {
-  fprintf(stdout, "ABSO : rd_miss_base\n");
+  DBPRINTF(stdout, "ABSO : rd_miss_base\n");
   if (miss_queue_full(1)) {
     // cannot handle request this cycle
     // (might need to generate two requests)
@@ -1558,7 +1559,7 @@ enum cache_request_status data_cache::rd_miss_base(
                     evicted, events, false, false);
 
   if (do_miss) {
-    fprintf(stdout, "ABSO : In do miss for addr 0x%X... \n", addr);
+    DBPRINTF(stdout, "ABSO : In do miss for addr 0x%X... \n", addr);
     // If evicted block is modified and not a write-through
     // (already modified lower level)
     if (wb && (m_config.m_write_policy != WRITE_THROUGH)) {
@@ -1629,7 +1630,7 @@ enum cache_request_status data_cache::process_tag_probe(
   // options. Function pointers were used to avoid many long conditional
   // branches resulting from many cache configuration options.
 
-  fprintf(stdout, "ABSO : probe status of 0x%X %d\n",addr, probe_status);
+  DBPRINTF(stdout, "ABSO : probe status of 0x%X %d\n",addr, probe_status);
   cache_request_status access_status = probe_status;
   if (wr) {  // Write
     if (probe_status == HIT) {
@@ -1676,14 +1677,14 @@ enum cache_request_status data_cache::access(new_addr_type addr, mem_fetch *mf,
   bool wr = mf->get_is_write();
   if(wr)
   {
-    fprintf(stdout, "ABSO : ");
+    DBPRINTF(stdout, "ABSO : ");
     print_level(stdout);
-    fprintf(stdout, ": Cache write access for addr : 0x%X access type : %d\n", addr, mf->get_access_type());
+    DBPRINTF(stdout, ": Cache write access for addr : 0x%X access type : %d\n", addr, mf->get_access_type());
   }
   else
-  { fprintf(stdout, "ABSO : ");
+  { DBPRINTF(stdout, "ABSO : ");
     print_level(stdout);
-    fprintf(stdout, ": Cache read access for addr : 0x%X access type %d:\n", addr,  mf->get_access_type());
+    DBPRINTF(stdout, ": Cache read access for addr : 0x%X access type %d:\n", addr,  mf->get_access_type());
   }
   new_addr_type block_addr = m_config.block_addr(addr);
   unsigned cache_index = (unsigned)-1;
@@ -1723,13 +1724,13 @@ enum cache_request_status l2_cache::access(new_addr_type addr, mem_fetch *mf,
     if (it == m_accessed_list.end())
     {
       m_accessed_list.push_back(m_config.block_addr(addr));
-      fprintf(stdout, "ABSO : L2 cache .. not seen before : set_accessed_prior : false\n");
+      DBPRINTF(stdout, "ABSO : L2 cache .. not seen before : set_accessed_prior : false\n");
       mf->set_accessed_prior(false);
     }
     else
     {
       /* has seen this access before and is a miss again, so set bit to indicate */
-      fprintf(stdout, "ABSO : L2 cache ..  seen before : set_accessed_prior : true\n");
+      DBPRINTF(stdout, "ABSO : L2 cache ..  seen before : set_accessed_prior : true\n");
       mf->set_accessed_prior(true);
     }
   }

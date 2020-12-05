@@ -450,13 +450,13 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
   if (!m_config->m_L2_config.disabled()) {
 
     if (m_L2cache->access_ready() && !m_L2_icnt_queue->full()) {
-    fprintf(stdout, "ABSO : L2 Cache response ready 2 .. pushing to icnt \n");
+    DBPRINTF(stdout, "ABSO : L2 Cache response ready 2 .. pushing to icnt \n");
 
       mem_fetch *mf = m_L2cache->next_access();
       if (mf->get_access_type() !=
           L2_WR_ALLOC_R) {  // Don't pass write allocate read request back to
                             // upper level cache
-        fprintf(stdout, "ABSO : L2 Cache response ready 1 .. pushing to icnt 0x%X\n", mf->get_addr() );
+        DBPRINTF(stdout, "ABSO : L2 Cache response ready 1 .. pushing to icnt 0x%X\n", mf->get_addr() );
 
         mf->set_reply();
         mf->set_status(IN_PARTITION_L2_TO_ICNT_QUEUE,
@@ -474,7 +474,7 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
 
           m_L2_icnt_queue->push(original_wr_mf);
         }
-        fprintf(stdout, "ABSO : L2 Cache response ready 2 .. pushing to icnt 0x%x\n", mf->get_addr() );
+        DBPRINTF(stdout, "ABSO : L2 Cache response ready 2 .. pushing to icnt 0x%x\n", mf->get_addr() );
 
         m_request_tracker.erase(mf);
         delete mf;
@@ -484,7 +484,7 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
 
   // DRAM to L2 (texture) and icnt (not texture)
   if (!m_dram_L2_queue->empty()) {
-    fprintf(stdout, "ABSO : L2 Cache ... DRAM to L2 /icnt \n" );
+    DBPRINTF(stdout, "ABSO : L2 Cache ... DRAM to L2 /icnt \n" );
 
     mem_fetch *mf = m_dram_L2_queue->top();
     if (!m_config->m_L2_config.disabled() && m_L2cache->waiting_for_fill(mf)) {
@@ -509,7 +509,7 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
 
   // new L2 texture accesses and/or non-texture accesses
   if (!m_L2_dram_queue->full() && !m_icnt_L2_queue->empty()) {
-    fprintf(stdout, "ABSO : L2 Cache new L2 texture accesses and/or non-texture accesses\n");
+    DBPRINTF(stdout, "ABSO : L2 Cache new L2 texture accesses and/or non-texture accesses\n");
 
     mem_fetch *mf = m_icnt_L2_queue->top();
     if (!m_config->m_L2_config.disabled() &&
@@ -531,10 +531,10 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
         bool write_sent = was_write_sent(events);
         bool read_sent = was_read_sent(events);
 
-        fprintf(stdout, "ABSO : Probing L2 cache Address=%llx, status=%u\n",
+        DBPRINTF(stdout, "ABSO : Probing L2 cache Address=%llx, status=%u\n",
                             mf->get_addr(), status);
 
-        fprintf(stdout , "ABSO : Read sent %d Write Sent %d\n", read_sent, write_sent);
+        DBPRINTF(stdout , "ABSO : Read sent %d Write Sent %d\n", read_sent, write_sent);
         
 
         MEM_SUBPART_DPRINTF("Probing L2 cache Address=%llx, status=%u\n",
@@ -545,11 +545,11 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
             // L2 cache replies
             assert(!read_sent);
             if (mf->get_access_type() == L1_WRBK_ACC) {
-              fprintf(stdout, "ABSO : L2 cache - L1 WRBK access ...\n");
+              DBPRINTF(stdout, "ABSO : L2 cache - L1 WRBK access ...\n");
               m_request_tracker.erase(mf);
               delete mf;
             } else {
-              fprintf(stdout, "ABSO : L2 cache - NOT L1 WRBK access ... push to icnt queue\n");
+              DBPRINTF(stdout, "ABSO : L2 cache - NOT L1 WRBK access ... push to icnt queue\n");
               mf->set_reply();
               mf->set_status(IN_PARTITION_L2_TO_ICNT_QUEUE,
                              m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle);
@@ -581,7 +581,7 @@ void memory_sub_partition::cache_cycle(unsigned cycle) {
       }
     } else {
       // L2 is disabled or non-texture access to texture-only L2
-      fprintf(stdout, "ABSO : L2 Cache L2 is disabled or non-texture access to texture-only L2\n");
+      DBPRINTF(stdout, "ABSO : L2 Cache L2 is disabled or non-texture access to texture-only L2\n");
 
       mf->set_status(IN_PARTITION_L2_TO_DRAM_QUEUE,
                      m_gpu->gpu_sim_cycle + m_gpu->gpu_tot_sim_cycle);

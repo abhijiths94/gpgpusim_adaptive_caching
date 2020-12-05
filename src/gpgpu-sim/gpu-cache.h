@@ -33,8 +33,11 @@
 #include <stdlib.h>
 #include "../abstract_hardware_model.h"
 #include "../tr1_hash_map.h"
+#include "../trace.h"
+
 #include "gpu-misc.h"
 #include "mem_fetch.h"
+
 
 #include <iostream>
 #include <algorithm>
@@ -1364,7 +1367,7 @@ class data_cache : public baseline_cache {
 
   virtual ~data_cache() {}
 
-  virtual void print_level(FILE *fp){ fprintf(fp, "cache : ");  }
+  virtual void print_level(FILE *fp){ DBPRINTF(fp, "cache : ");  }
 
 
   virtual void init(mem_fetch_allocator *mfcreator) {
@@ -1561,7 +1564,7 @@ class l1_cache : public data_cache {
                                            unsigned time,
                                            std::list<cache_event> &events);
 
-  void print_level(FILE *fp){ fprintf(fp, "L1 cache : ");  }
+  void print_level(FILE *fp){ DBPRINTF(fp, "L1 cache : ");  }
 
   const cache_config& get_m_config(){return m_config;}
 
@@ -1575,7 +1578,7 @@ class l1_cache : public data_cache {
           if (m_l1_prediction_list[it->first] < (2*PREDICT_THRESH)-1){
             m_l1_prediction_list[it->first] ++;
           }
-          fprintf(stdout, "ABSO : strengthen prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
+          DBPRINTF(stdout, "ABSO : strengthen prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
 
       }
       else
@@ -1593,7 +1596,7 @@ class l1_cache : public data_cache {
             m_l1_prediction_list[it->first] --;
           }
 
-          fprintf(stdout, "ABSO : weaken prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
+          DBPRINTF(stdout, "ABSO : weaken prediction for 0x%llX : %d\n",addr,  m_l1_prediction_list[it->first]);
       }
       else
       {
@@ -1626,7 +1629,7 @@ class l2_cache : public data_cache {
   virtual enum cache_request_status access(new_addr_type addr, mem_fetch *mf,
                                            unsigned time,
                                            std::list<cache_event> &events);
-  void print_level(FILE *fp){ fprintf(fp, "L2 cache : ");  }
+  void print_level(FILE *fp){ DBPRINTF(fp, "L2 cache : ");  }
 
 std::vector<new_addr_type> m_accessed_list;
 

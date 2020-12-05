@@ -104,6 +104,12 @@ class mem_fetch {
   void set_accessed_prior(bool acc_p){ m_was_accessed_prior =  acc_p;}
   bool was_accessed_prior(){ return m_was_accessed_prior; }
 
+  void set_bypass_predict(bool bp){ bypass_predict = bp;}
+  bool get_bypass_predict(){ return bypass_predict; }
+
+
+
+
   void set_return_timestamp(unsigned t) { m_timestamp2 = t; }
   void set_icnt_receive_time(unsigned t) { m_icnt_receive_time = t; }
   unsigned get_timestamp() const { return m_timestamp; }
@@ -173,6 +179,7 @@ class mem_fetch {
   unsigned icnt_flit_size;
 
   bool m_was_accessed_prior;
+  bool bypass_predict;
 
   mem_fetch
       *original_mf;  // this pointer is set up when a request is divided into

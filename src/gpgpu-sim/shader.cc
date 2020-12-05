@@ -1815,7 +1815,7 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue(cache_t *cache,
       inst, inst.accessq_back(),
       m_core->get_gpu()->gpu_sim_cycle + m_core->get_gpu()->gpu_tot_sim_cycle);
   std::list<cache_event> events;
-  fprintf(stdout, "ABSO : ldst : process_memory_access_queue .......\n ");
+  DBPRINTF(stdout, "ABSO : ldst : process_memory_access_queue .......\n ");
   fflush(stdout);
   enum cache_request_status status = cache->access(
       mf->get_addr(), mf,
@@ -1826,7 +1826,7 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue(cache_t *cache,
 
 mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
     l1_cache *cache, warp_inst_t &inst) {
-  fprintf(stdout, "ABSO : ldst_unit : process_memory_access_queue_l1cache \n");
+  DBPRINTF(stdout, "ABSO : ldst_unit : process_memory_access_queue_l1cache \n");
   mem_stage_stall_type result = NO_RC_FAIL;
   if (inst.accessq_empty()) return result;
 
@@ -1840,6 +1840,15 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
           m_mf_allocator->alloc(inst, inst.accessq_back(),
                                 m_core->get_gpu()->gpu_sim_cycle +
                                     m_core->get_gpu()->gpu_tot_sim_cycle);
+      if(inst.m_inst_cache_bypass_predicted == 0)
+      {
+        mf->set_bypass_predict(false);
+      }
+      else if(inst.m_inst_cache_bypass_predicted == 1)
+      {
+        mf->set_bypass_predict(true);
+      }
+      
       unsigned bank_id = m_config->m_L1D_config.set_bank(mf->get_addr());
       assert(bank_id < m_config->m_L1D_config.l1_banks);
 
@@ -1887,12 +1896,12 @@ mem_stage_stall_type ldst_unit::process_memory_access_queue_l1cache(
 void ldst_unit::L1_latency_queue_cycle() {  
   for (int j = 0; j < m_config->m_L1D_config.l1_banks; j++) {
     if ((l1_latency_queue[j][0]) != NULL) {
-      fprintf(stdout, "ABSO : ldst_unit::L1_latency_queue_cycle  : bank %d \n",j);
+      DBPRINTF(stdout, "ABSO : ldst_unit::L1_latency_queue_cycle  : bank %d \n",j);
 
       mem_fetch *mf_next = l1_latency_queue[j][0];
       std::list<cache_event> events;
       
-      fprintf(stdout, "ABSO : calling L1D cache access .......\n ");    
+      DBPRINTF(stdout, "ABSO : calling L1D cache access .......\n ");    
 
       enum cache_request_status status =
           m_L1D->access(mf_next->get_addr(), mf_next,
@@ -1903,7 +1912,7 @@ void ldst_unit::L1_latency_queue_cycle() {
       bool write_sent = was_write_sent(events);
       bool read_sent = was_read_sent(events);
 
-      fprintf(stdout, "ABSO : Read sent %d Write sent %d \n", read_sent, write_sent);
+      DBPRINTF(stdout, "ABSO : Read sent %d Write sent %d \n", read_sent, write_sent);
 
       if (status == HIT) {
         assert(!read_sent);
@@ -1917,7 +1926,7 @@ void ldst_unit::L1_latency_queue_cycle() {
                   --m_pending_writes[mf_next->get_inst().warp_id()]
                                     [mf_next->get_inst().out[r]];
               if (!still_pending) {
-                fprintf(stdout, "ABSO : calling L1D cache hit......... :%d\n", mf_next->get_inst().out[r]);    
+                DBPRINTF(stdout, "ABSO : calling L1D cache hit......... :%d\n", mf_next->get_inst().out[r]);    
                 m_pending_writes[mf_next->get_inst().warp_id()].erase(
                     mf_next->get_inst().out[r]);
                 m_scoreboard->releaseRegister(mf_next->get_inst().warp_id(),
@@ -2047,18 +2056,18 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
     
     
     bypassL1D = predict_bypass;
-    fprintf(stdout, "-----------------------------------------------\n"
+    DBPRINTF(stdout, "-----------------------------------------------\n"
                     "ABSO : predict bypass = %d !!!!!!!!!!!!!!\n", predict_bypass);
   }
   else
   {
-    fprintf(stdout, "-----------------------------------------------\n");
+    DBPRINTF(stdout, "-----------------------------------------------\n");
   }
   
   
 
   if (bypassL1D) {
-    fprintf(stdout,"ABSO : ldst_memcycle : MF push bypassed :  addr 0x%X \n", access.get_addr());
+    DBPRINTF(stdout,"ABSO : ldst_memcycle : MF push bypassed :  addr 0x%X \n", access.get_addr());
     // bypass L1 cache
     unsigned control_size =
         inst.is_store() ? WRITE_PACKET_SIZE : READ_PACKET_SIZE;
@@ -2071,7 +2080,7 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
           m_mf_allocator->alloc(inst, access,
                                 m_core->get_gpu()->gpu_sim_cycle +
                                     m_core->get_gpu()->gpu_tot_sim_cycle);
-
+      mf->set_bypass_predict(bypassL1D);
       m_icnt->push(mf);
       inst.accessq_pop_back();
       // inst.clear_active( access.get_warp_mask() );
@@ -2083,8 +2092,9 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
         m_core->inc_store_req(inst.warp_id());
     }
   } else {
-    fprintf(stdout, "ABSO : ldst_memcycle : MF push not bypassed :  addr 0x%X \n", access.get_addr());
+    DBPRINTF(stdout, "ABSO : ldst_memcycle : MF push not bypassed :  addr 0x%X \n", access.get_addr());
     assert(CACHE_UNDEFINED != inst.cache_op);
+    inst.m_inst_cache_bypass_predicted = 0;
     stall_cond = process_memory_access_queue_l1cache(m_L1D, inst);
   }
   if (!inst.accessq_empty() && stall_cond == NO_RC_FAIL)
@@ -2105,7 +2115,7 @@ bool ldst_unit::response_buffer_full() const {
 }
 
 void ldst_unit::fill(mem_fetch *mf) {
-  fprintf(stdout, "ABSO : ldst unit fill : 0x%llX\n", mf->get_addr());
+  DBPRINTF(stdout, "ABSO : ldst unit fill : 0x%llX\n", mf->get_addr());
   mf->set_status(
       IN_SHADER_LDST_RESPONSE_FIFO,
       m_core->get_gpu()->gpu_sim_cycle + m_core->get_gpu()->gpu_tot_sim_cycle);
@@ -2443,7 +2453,7 @@ void ldst_unit::issue(register_set &reg_set) {
 void ldst_unit::writeback() {
   // process next instruction that is going to writeback
   if (!m_next_wb.empty()) {
-    fprintf(stdout, "ABSO : ldst_unit writeback not empty \n");
+    DBPRINTF(stdout, "ABSO : ldst_unit writeback not empty \n");
     if (m_operand_collector->writeback(m_next_wb)) {
       bool insn_completed = false;
       for (unsigned r = 0; r < MAX_OUTPUT_VALUES; r++) {
@@ -2457,13 +2467,13 @@ void ldst_unit::writeback() {
               m_scoreboard->releaseRegister(m_next_wb.warp_id(),
                                             m_next_wb.out[r]);
 
-              fprintf(stdout, "ABSO : Releasing register : 0x%llX  \n", m_next_wb.get_addr(0));
+              DBPRINTF(stdout, "ABSO : Releasing register : 0x%llX  \n", m_next_wb.get_addr(0));
               insn_completed = true;
             }
           } else {  // shared
             m_scoreboard->releaseRegister(m_next_wb.warp_id(),
                                           m_next_wb.out[r]);
-            fprintf(stdout, "ABSO : Releasing register 0x%llX \n", m_next_wb.get_addr(0));
+            DBPRINTF(stdout, "ABSO : Releasing register 0x%llX \n", m_next_wb.get_addr(0));
             insn_completed = true;
           }
         }
@@ -2513,7 +2523,7 @@ void ldst_unit::writeback() {
         break;
       case 3:  // global/local
         if (m_next_global) {
-          fprintf(stdout, "ABSO : ldst_unit gl/lc writeback : 0x%llX\n", m_next_global->get_addr());
+          DBPRINTF(stdout, "ABSO : ldst_unit gl/lc writeback : 0x%llX\n", m_next_global->get_addr());
           m_next_wb = m_next_global->get_inst();
           if (m_next_global->isatomic()) {
             m_core->decrement_atomic_count(
@@ -2529,7 +2539,7 @@ void ldst_unit::writeback() {
         if (m_L1D && m_L1D->access_ready()) {
           mem_fetch *mf = m_L1D->next_access();
           m_next_wb = mf->get_inst();
-          fprintf(stdout, "ABSO : ldst unit - L1D access ready : 0x%llX\n", mf->get_addr());
+          DBPRINTF(stdout, "ABSO : ldst unit - L1D access ready : 0x%llX\n", mf->get_addr());
           delete mf;
           serviced_client = next_client;
         }
@@ -2606,7 +2616,7 @@ void ldst_unit::cycle() {
     } else {
       if (mf->get_type() == WRITE_ACK ||
           (m_config->gpgpu_perfect_mem && mf->get_is_write())) {
-        fprintf(stdout, "ABSO : WRITE_ACK recieved\n");
+        DBPRINTF(stdout, "ABSO : WRITE_ACK recieved\n");
         m_core->store_ack(mf);
         m_response_fifo.pop_front();
         delete mf;
@@ -2621,30 +2631,30 @@ void ldst_unit::cycle() {
                        GLOBAL_ACC_W) {  // global memory access
           if (m_core->get_config()->gmem_skip_L1D) bypassL1D = true;
         }
-        fprintf(stdout, "ABSO : ldst_cycle : L1 load miss data recieved  bypassed : %d ...0x%llX\n", bypassL1D, mf->get_addr());
+        DBPRINTF(stdout, "ABSO : ldst_cycle : L1 load miss data recieved  bypassed : %d ...0x%llX\n", bypassL1D, mf->get_addr());
 
 
         /* Verify L2 cache bit to see if this miss needs to be filled */
-        bool predict_bypass ;
+        bool predict_bypass  = mf->get_bypass_predict();
 
         if(bypassL1D == false)
         {
           /* Check if we had bypassed this access via predictor */
 
-          std::map<new_addr_type, int >::iterator it = 
-            m_L1D->m_l1_prediction_list.find(m_L1D->get_m_config().block_addr(mf->get_addr()));
+          // std::map<new_addr_type, int >::iterator it = 
+          //   m_L1D->m_l1_prediction_list.find(m_L1D->get_m_config().block_addr(mf->get_addr()));
 
-          if(it != m_L1D->m_l1_prediction_list.end())
-          {
-              predict_bypass = it->second >= PREDICT_THRESH ? true : false; 
-          }
-          else
-          {
-            assert (m_L1D->get_m_config().block_addr(mf->get_addr())
-                                  && "Prediction entry not found ");
-          }
+          // if(it != m_L1D->m_l1_prediction_list.end())
+          // {
+          //     predict_bypass = it->second >= PREDICT_THRESH ? true : false; 
+          // }
+          // else
+          // {
+          //   assert (m_L1D->get_m_config().block_addr(mf->get_addr())
+          //                         && "Prediction entry not found ");
+          // }
 
-          fprintf(stdout, "ABSO : predicted : %d , was accessed prior : %d \n", predict_bypass, mf->was_accessed_prior());
+          DBPRINTF(stdout, "ABSO : predicted : %d , was accessed prior : %d \n", predict_bypass, mf->was_accessed_prior());
 
           /* if predicted bypass, check the bit from L2 cache*/
           if (predict_bypass && mf->was_accessed_prior()) 
@@ -2662,8 +2672,6 @@ void ldst_unit::cycle() {
 
         if (bypassL1D) {
           if (m_next_global == NULL) {
-                      //fprintf(stdout, "ABSO : Cache cnt : %d \n", cnt++);
-
             mf->set_status(IN_SHADER_FETCHED,
                            m_core->get_gpu()->gpu_sim_cycle +
                                m_core->get_gpu()->gpu_tot_sim_cycle);
@@ -2672,7 +2680,7 @@ void ldst_unit::cycle() {
           }
         } else {
           if (m_L1D->fill_port_free()) {
-            fprintf(stdout, "ABSO : Fill L1 cache for 0x%llX\n", mf->get_addr());
+            DBPRINTF(stdout, "ABSO : Fill L1 cache for 0x%llX\n", mf->get_addr());
             fflush(stdout);
             m_L1D->fill(mf, m_core->get_gpu()->gpu_sim_cycle +
                                 m_core->get_gpu()->gpu_tot_sim_cycle);

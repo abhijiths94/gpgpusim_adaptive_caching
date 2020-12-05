@@ -55,7 +55,6 @@
 #include "stats.h"
 #include "traffic_breakdown.h"
 
-#define PREDICT_THRESH 1u
 
 #define NO_OP_FLAG 0xFF
 
