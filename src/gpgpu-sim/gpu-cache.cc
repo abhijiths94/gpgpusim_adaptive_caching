@@ -1718,12 +1718,12 @@ enum cache_request_status l2_cache::access(new_addr_type addr, mem_fetch *mf,
 
   /* if read , append to accessed list if not seen before */
 
-  std::vector<new_addr_type>::iterator it = std::find(m_accessed_list.begin(), m_accessed_list.end(), addr);
+  std::vector<new_addr_type>::iterator it = std::find(m_accessed_list.begin(), m_accessed_list.end(), mf->get_inst().pc);
   if (!mf->is_write())
   {
     if (it == m_accessed_list.end())
     {
-      m_accessed_list.push_back(m_config.block_addr(addr));
+      m_accessed_list.push_back(mf->get_inst().pc);
       DBPRINTF(stdout, "ABSO : L2 cache .. not seen before : set_accessed_prior : false\n");
       mf->set_accessed_prior(false);
     }

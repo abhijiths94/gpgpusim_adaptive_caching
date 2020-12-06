@@ -1568,7 +1568,7 @@ class l1_cache : public data_cache {
 
   const cache_config& get_m_config(){return m_config;}
 
-  /* Additional logic for adaptive cache bypassing */
+  /* Additional logic for adaptive cache bypassing ; maps PC to counter */
   std::map<new_addr_type, int > m_l1_prediction_list;
 
   void strengthen_prediction(new_addr_type addr){

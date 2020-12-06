@@ -201,7 +201,7 @@ void gpgpu_context::exit_simulation() {
 }
 
 gpgpu_sim *gpgpu_context::gpgpu_ptx_sim_init_perf() {
-  
+  fprintf(stdout, "ABSO : GPU starting .....\n");
   fflush(stdout);
   srand(1);
   print_splash();

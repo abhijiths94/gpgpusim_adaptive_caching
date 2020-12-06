@@ -2036,12 +2036,15 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
 
   /* ABSO Todo : add additional logic here to bypass cache */
   /* Check prediction table to see if bypass should be enabled */
+
+  DBPRINTF(stdout, "ABSO : Warp inst pc.................. : 0x%llX\n", inst.pc);
+
   if(bypassL1D == false)
   {
     bool predict_bypass ;
 
     std::map<new_addr_type, int >::iterator it = 
-      m_L1D->m_l1_prediction_list.find(m_L1D->get_m_config().block_addr(access.get_addr()));
+      m_L1D->m_l1_prediction_list.find(inst.pc);
 
     if(it != m_L1D->m_l1_prediction_list.end())
     {
@@ -2050,7 +2053,7 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
     else
     {
       /* first access to this address, add to prediction list*/
-      m_L1D->m_l1_prediction_list[m_L1D->get_m_config().block_addr(access.get_addr())] = 2*PREDICT_THRESH -1 ;
+      m_L1D->m_l1_prediction_list[inst.pc] = 2*PREDICT_THRESH -1 ;
       predict_bypass = 2*PREDICT_THRESH -1 ;
     }
     
@@ -2654,17 +2657,17 @@ void ldst_unit::cycle() {
           //                         && "Prediction entry not found ");
           // }
 
-          DBPRINTF(stdout, "ABSO : predicted : %d , was accessed prior : %d \n", predict_bypass, mf->was_accessed_prior());
+          DBPRINTF(stdout, "ABSO :PC=0x%llX predicted : %d , was accessed prior : %d \n",mf->get_inst().pc, predict_bypass, mf->was_accessed_prior());
 
           /* if predicted bypass, check the bit from L2 cache*/
           if (predict_bypass && mf->was_accessed_prior()) 
           {
             /* Fix the prediction and add it to cache */
-              m_L1D->weaken_prediction(m_L1D->get_m_config().block_addr(mf->get_addr()));
+              m_L1D->weaken_prediction(mf->get_inst().pc);
           }
           else if (predict_bypass && !mf->was_accessed_prior())
           {
-              m_L1D->strengthen_prediction(m_L1D->get_m_config().block_addr(mf->get_addr()));
+              m_L1D->strengthen_prediction(mf->get_inst().pc);
           }
         }
 
@@ -2680,7 +2683,7 @@ void ldst_unit::cycle() {
           }
         } else {
           if (m_L1D->fill_port_free()) {
-            DBPRINTF(stdout, "ABSO : Fill L1 cache for 0x%llX\n", mf->get_addr());
+            DBPRINTF(stdout, "ABSO : Fill L1 cache for 0x%llX : PC =0x%llX\n", mf->get_addr(), mf->get_inst().pc);
             fflush(stdout);
             m_L1D->fill(mf, m_core->get_gpu()->gpu_sim_cycle +
                                 m_core->get_gpu()->gpu_tot_sim_cycle);
