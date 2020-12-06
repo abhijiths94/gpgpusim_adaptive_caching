@@ -89,7 +89,7 @@ void init();
 
 #endif
 
-#define DBG_ENABLE 1u
+#define DBG_ENABLE 0u
 
 #if DBG_ENABLE
 
