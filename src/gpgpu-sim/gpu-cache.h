@@ -1631,7 +1631,7 @@ class l2_cache : public data_cache {
                                            std::list<cache_event> &events);
   void print_level(FILE *fp){ DBPRINTF(fp, "L2 cache : ");  }
 
-std::vector<new_addr_type> m_accessed_list;
+  std::map<unsigned int, std::vector<new_addr_type>* > m_accessed_list;
 
 
 };
