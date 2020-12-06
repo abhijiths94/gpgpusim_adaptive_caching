@@ -1718,12 +1718,24 @@ enum cache_request_status l2_cache::access(new_addr_type addr, mem_fetch *mf,
 
   /* if read , append to accessed list if not seen before */
 
-  std::vector<new_addr_type>::iterator it = std::find(m_accessed_list.begin(), m_accessed_list.end(), mf->get_inst().pc);
+  // get core details :
+  auto sid = mf->get_sid();
+  
+ //check if sid entry exists
+ auto sid_it = m_accessed_list.find(sid);
+ if(sid_it == m_accessed_list.end())
+ {
+    // doesnt exist, add vector
+    m_accessed_list[sid] = new std::vector<new_addr_type>();
+    //m_accessed_list.insert(std::pair< int , std::vector<new_addr_type> > (sid, std::vector<new_addr_type>));
+ }
+
+  auto it = std::find(m_accessed_list[sid]->begin(), m_accessed_list[sid]->end(), mf->get_inst().pc);
   if (!mf->is_write())
   {
-    if (it == m_accessed_list.end())
+    if (it == m_accessed_list[sid]->end())
     {
-      m_accessed_list.push_back(mf->get_inst().pc);
+      m_accessed_list[sid]->push_back(mf->get_inst().pc);
       DBPRINTF(stdout, "ABSO : L2 cache .. not seen before : set_accessed_prior : false\n");
       mf->set_accessed_prior(false);
     }

@@ -1622,7 +1622,8 @@ class l2_cache : public data_cache {
            mem_fetch_interface *memport, mem_fetch_allocator *mfcreator,
            enum mem_fetch_status status, class gpgpu_sim *gpu)
       : data_cache(name, config, core_id, type_id, memport, mfcreator, status,
-                   L2_WR_ALLOC_R, L2_WRBK_ACC, gpu) {}
+                   L2_WR_ALLOC_R, L2_WRBK_ACC, gpu) {
+                   }
 
   virtual ~l2_cache() {}
 
@@ -1631,7 +1632,8 @@ class l2_cache : public data_cache {
                                            std::list<cache_event> &events);
   void print_level(FILE *fp){ DBPRINTF(fp, "L2 cache : ");  }
 
-std::vector<new_addr_type> m_accessed_list;
+//accessed list per core m_accessed_list[core][addr]
+std::map<unsigned int, std::vector<new_addr_type>* > m_accessed_list;
 
 
 };
