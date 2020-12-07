@@ -2041,7 +2041,8 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
 
   if(bypassL1D == false)
   {
-    bool predict_bypass ;
+    bool predict_bypass;
+    
 
     std::map<new_addr_type, int >::iterator it = 
       m_L1D->m_l1_prediction_list.find(inst.pc);
@@ -2057,8 +2058,12 @@ bool ldst_unit::memory_cycle(warp_inst_t &inst,
       predict_bypass = 2*PREDICT_THRESH -1 ;
     }
     
+
     
     bypassL1D = predict_bypass;
+    by_stats.tot_accesses ++;
+
+    //fprintf (stdout, "Update .......... %lld\n", by_stats.tot_accesses);
     DBPRINTF(stdout, "-----------------------------------------------\n"
                     "ABSO : predict bypass = %d !!!!!!!!!!!!!!\n", predict_bypass);
   }
@@ -2663,6 +2668,7 @@ void ldst_unit::cycle() {
           if (predict_bypass && mf->was_accessed_prior()) 
           {
             /* Fix the prediction and add it to cache */
+              by_stats.tot_mispredict++;
               m_L1D->weaken_prediction(mf->get_inst().pc);
           }
           else if (predict_bypass && !mf->was_accessed_prior())

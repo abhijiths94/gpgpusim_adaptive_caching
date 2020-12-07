@@ -37,11 +37,16 @@
 #include "gpgpu-sim/icnt_wrapper.h"
 #include "option_parser.h"
 #include "stream_manager.h"
+#include "trace.h"
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 static int sg_argc = 3;
 static const char *sg_argv[] = {"", "-config", "gpgpusim.config"};
+
+//extern bypass_unit_stats by_stats;
+
+bypass_unit_stats by_stats;
 
 void *gpgpu_sim_thread_sequential(void *ctx_ptr) {
   gpgpu_context *ctx = (gpgpu_context *)ctx_ptr;
@@ -276,6 +281,10 @@ void gpgpu_context::print_simulation_time() {
   printf("gpgpu_simulation_rate = %u (cycle/sec)\n", cycles_per_sec);
   printf("gpgpu_silicon_slowdown = %ux\n",
          the_gpgpusim->g_the_gpu->shader_clock() * 1000 / cycles_per_sec);
+
+  printf("Bypass tot access : %lld \n", by_stats.tot_accesses);
+  printf("Bypass mispredict : %lld \n", by_stats.tot_mispredict);
+  printf("Bypass  mispredict rate : %f \n", by_stats.tot_mispredict/by_stats.tot_accesses);
   fflush(stdout);
 }
 

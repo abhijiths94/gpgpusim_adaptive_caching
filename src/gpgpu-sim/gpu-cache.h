@@ -45,7 +45,7 @@
 
 #include "addrdec.h"
 
-#define PREDICT_THRESH 1u
+#define PREDICT_THRESH 2u
 
 
 #define MAX_DEFAULT_CACHE_SIZE_MULTIBLIER 4

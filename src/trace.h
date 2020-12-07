@@ -103,4 +103,18 @@ void init();
   do {                   \
   } while (0)
 #endif /* DBG_ENABLE */
+
+
+class bypass_unit_stats{
+  public:
+    bypass_unit_stats()
+    :tot_accesses(0),
+    tot_mispredict(0){};
+
+    unsigned long long int tot_accesses;
+    unsigned long long int tot_mispredict;
+};
+
+extern bypass_unit_stats by_stats;
+
 #endif
